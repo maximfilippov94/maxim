@@ -71,7 +71,7 @@ $CDEK_CITIES = [
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=5.0.0">
+<link rel="stylesheet" href="/assets/style.css?v=6.0.0">
 <style>
 .checkoutPage{width:min(1100px,calc(100vw - 48px));margin:0 auto;padding:100px 0 80px}
 .checkoutGrid{display:grid;grid-template-columns:1fr 400px;gap:40px;align-items:start}
@@ -369,7 +369,7 @@ select.checkoutInput{cursor:pointer}
 <?php render_footer($pdo); ?>
 
 <div id="cartToast" class="cartToast">Добавлено в корзину</div>
-<script src="/assets/script.js?v=5.0.0"></script>
+<script src="/assets/script.js?v=6.0.0"></script>
 <script>
 // ── Инициализация ──────────────────────────────────────────────────────
 let selectedDelivery = 'cdek_pvz';

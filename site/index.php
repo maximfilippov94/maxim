@@ -29,7 +29,7 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"LUKA OUTDOOR","url":"https://lukaoutdoor.com","logo":"https://lukaoutdoor.com/assets/images/logo_luka_new.png","description":"<?=h($desc)?>","contactPoint":{"@type":"ContactPoint","telephone":"<?=h(setting('phone'))?>","contactType":"sales","areaServed":"RU","availableLanguage":"Russian"}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=5.0.0">
+<link rel="stylesheet" href="assets/style.css?v=6.0.0">
 </head>
 
 <body>
@@ -336,5 +336,5 @@ foreach($dynamicBlocks as $db_block):
 <?php render_footer($pdo); ?>
 
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="assets/script.js?v=5.0.0"></script>
+<script src="assets/script.js?v=6.0.0"></script>
 </body></html>

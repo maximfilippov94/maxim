@@ -78,7 +78,7 @@ $totalCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_active=1"
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=5.0.0">
+<link rel="stylesheet" href="assets/style.css?v=6.0.0">
 <style>
 .catalogPage{width:min(var(--max),calc(100vw - 120px));margin:0 auto;padding:120px 0 100px}
 .catalogHeader{margin-bottom:40px}
@@ -236,7 +236,7 @@ echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','it
 <?php render_footer($pdo); ?>
 
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="assets/script.js?v=5.0.0"></script>
+<script src="assets/script.js?v=6.0.0"></script>
 <script>
 // ── Состояние ────────────────────────────────────────────────────────────
 let catalogState = {
