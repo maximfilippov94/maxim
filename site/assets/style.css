@@ -470,7 +470,7 @@ button:focus-visible { border-radius: var(--radius-sm); }
 /* ═══════════════════════════════════════════════════════════════════
    SHARED LAYOUT CONTAINERS
    ═══════════════════════════════════════════════════════════════════ */
-.heroV2,
+
 .desktopIntro,
 .manifest,
 .splitRitual,
