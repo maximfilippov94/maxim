@@ -95,17 +95,50 @@ try {
 .megaFooterRow a{font-size:11px;font-weight:700;color:var(--accent);text-decoration:none;letter-spacing:.08em;text-transform:uppercase}
 .megaCount{font-size:11px;color:rgba(243,241,236,.3);text-transform:uppercase;letter-spacing:.1em}
 /* Mobile menu */
-.mobileMenuLinks{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;flex:1;padding:8px 0}
-.mobileNavLink{font-family:var(--head)!important;font-size:clamp(36px,10vw,52px);line-height:1;text-transform:uppercase;color:var(--text);padding:12px 0;border-bottom:1px solid rgba(243,241,236,.06);text-decoration:none;display:flex;align-items:center;justify-content:space-between;transition:.2s;letter-spacing:.015em}
-.mobileNavLink::after{content:"→";font-family:var(--body);font-size:20px;color:var(--copper2);opacity:0;transform:translateX(-10px);transition:.2s}
-.mobileNavLink:hover{color:var(--copper2);padding-left:6px}.mobileNavLink:hover::after{opacity:1;transform:none}
+.mobileMenuLinks{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:8px 0}
+.mobileMenuInner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;height:100dvh;padding:0 28px 28px;justify-content:space-between}
+/* All nav links — большой размер */
+.mobileNavLink,
+.mobileMenuLinks a.mobileNavLink{
+  font-family:"Bebas Neue",Impact,Arial,sans-serif!important;
+  font-size:clamp(38px,11vw,56px)!important;
+  line-height:1!important;
+  text-transform:uppercase!important;
+  color:#f3f1ec!important;
+  padding:10px 0!important;
+  border-bottom:1px solid rgba(243,241,236,.07)!important;
+  text-decoration:none!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  transition:.2s!important;
+  letter-spacing:.015em!important;
+  font-weight:400!important;
+}
+.mobileNavLink::after{content:"→";font-family:Manrope,Arial,sans-serif;font-size:20px;color:#e89a42;opacity:0;transform:translateX(-10px);transition:.2s}
+.mobileNavLink:hover{color:#e89a42!important;padding-left:6px!important}
+.mobileNavLink:hover::after{opacity:1;transform:none}
 /* Accordion wrapper */
-.mobileAccordion{border-bottom:1px solid rgba(243,241,236,.06)}
-.mobileAccordionHead{font-family:var(--head)!important;font-size:clamp(36px,10vw,52px);line-height:1;text-transform:uppercase;color:var(--text);padding:12px 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:.2s;letter-spacing:.015em}
-.mobileAccordionHead:hover{color:var(--copper2)}
-.mobileAccordion.open .mobileAccordionHead{color:var(--copper2)}
+.mobileAccordion{border-bottom:1px solid rgba(243,241,236,.07)}
+.mobileAccordionHead{
+  font-family:"Bebas Neue",Impact,Arial,sans-serif!important;
+  font-size:clamp(38px,11vw,56px)!important;
+  line-height:1!important;
+  text-transform:uppercase!important;
+  color:#f3f1ec;
+  padding:10px 0;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  transition:.2s;
+  letter-spacing:.015em;
+}
+.mobileAccordionHead:hover{color:#e89a42}
+.mobileAccordion.open .mobileAccordionHead{color:#e89a42}
 .mobileAccordionChevron{width:38px;height:38px;border-radius:50%;border:1px solid rgba(243,241,236,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.35s;background:rgba(255,255,255,.04)}
-.mobileAccordion.open .mobileAccordionChevron{background:rgba(201,121,43,.15);border-color:var(--copper);transform:rotate(180deg)}
+.mobileAccordion.open .mobileAccordionChevron{background:rgba(201,121,43,.15);border-color:#c9792b;transform:rotate(180deg)}
 .mobileAccordionBody{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1)}
 .mobileAccordion.open .mobileAccordionBody{max-height:900px}
 /* Categories */
