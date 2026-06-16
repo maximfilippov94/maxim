@@ -3,7 +3,6 @@ require __DIR__.'/includes/db.php';
 require __DIR__.'/includes/nav.php';
 $pdo = db();
 
-// Список городов — берём из нашего массива
 require __DIR__.'/includes/cities_data.php';
 
 $title = 'Доставка по России — LUKA OUTDOOR';
@@ -15,78 +14,135 @@ $desc  = 'Доставляем костровые чаши и outdoor снаря
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=h($title)?></title>
 <meta name="description" content="<?=h($desc)?>">
+<link rel="canonical" href="https://lukaoutdoor.com/cities.php">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=5.0.0">
+<link rel="stylesheet" href="/assets/style.css?v=6.1.0">
+<style>
+.citiesPage { width: min(var(--max), calc(100vw - 120px)); margin: 0 auto; padding: 120px 0 100px; }
+.citiesHeader { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(243,241,236,.08); }
+.citiesHeader h1 { font-family: var(--head); font-size: clamp(48px,8vw,88px); text-transform: uppercase; line-height: .9; margin: 0 0 12px; }
+.citiesHeader p { font-size: 16px; color: var(--muted); max-width: 480px; line-height: 1.55; margin: 0; }
+
+.popularSection { margin-bottom: 40px; }
+.popularChips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.popularChip {
+  border: 1px solid rgba(201,121,43,.3);
+  border-radius: var(--radius-pill);
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--copper2);
+  text-decoration: none;
+  background: rgba(201,121,43,.06);
+  transition: background 200ms ease, border-color 200ms ease;
+}
+.popularChip:hover { background: rgba(201,121,43,.16); border-color: rgba(201,121,43,.6); }
+
+.alphaNav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 24px; margin-top: 12px; }
+.alphaBtn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(243,241,236,.1);
+  border-radius: 8px;
+  font-size: 13px; font-weight: 700;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 200ms ease, border-color 200ms ease;
+}
+.alphaBtn:hover { color: var(--copper2); border-color: rgba(201,121,43,.4); }
+
+.letterGroup { margin-bottom: 28px; }
+.letterHeading { font-family: var(--head); font-size: 32px; color: var(--copper2); line-height: 1; margin-bottom: 10px; }
+.cityLinks { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+.cityLink {
+  padding: 9px 14px;
+  border: 1px solid rgba(243,241,236,.07);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text);
+  text-decoration: none;
+  background: rgba(255,255,255,.02);
+  transition: border-color 200ms ease, color 200ms ease;
+}
+.cityLink:hover { border-color: rgba(201,121,43,.35); color: var(--copper2); }
+
+@media(max-width:980px) {
+  .citiesPage { width: calc(100vw - 48px); padding: 90px 0 80px; }
+}
+@media(max-width:520px) {
+  .citiesPage { width: calc(100vw - 32px); }
+  .cityLinks { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
 </head>
 <body>
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+   m[i].l=1*new Date();
+   for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window, document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
+   ym(109475188, 'init', {clickmap:true, trackLinks:true, accurateTrackBounce:true, webvisor:true, ecommerce:"dataLayer"});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/109475188" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
 <?php render_topbar($pdo); ?>
 
-<main style="padding-top:100px;padding-bottom:60px">
-  <div style="width:min(1200px,calc(100vw - 120px));margin:0 auto">
+<main class="citiesPage">
+  <nav class="breadcrumbs" aria-label="Хлебные крошки">
+    <a href="/">Главная</a><span aria-hidden="true">›</span>
+    <b aria-current="page">Города доставки</b>
+  </nav>
 
-    <nav style="font-size:12px;color:var(--muted);margin-bottom:20px">
-      <a href="/" style="color:var(--muted)">Главная</a>
-      <span style="margin:0 6px">›</span>
-      <b style="color:var(--text)">Города доставки</b>
-    </nav>
+  <div class="citiesHeader">
+    <p class="eyebrow">ДОСТАВКА ПО РОССИИ</p>
+    <h1>Города доставки</h1>
+    <p>Доставляем через СДЭК по всей России. Выберите ваш город и узнайте адреса пунктов выдачи.</p>
+  </div>
 
-    <div style="margin-bottom:32px;padding-bottom:28px;border-bottom:1px solid rgba(243,241,236,.08)">
-      <p class="eyebrow">ДОСТАВКА</p>
-      <h1 style="font-family:var(--head);font-size:clamp(36px,4vw,64px);text-transform:uppercase;line-height:.9;margin:0 0 12px">Города доставки</h1>
-      <p style="font-size:15px;color:var(--muted);max-width:480px;line-height:1.5">Доставляем через СДЭК по всей России. Выберите ваш город.</p>
-    </div>
+  <?php
+  $grouped = [];
+  foreach($cities_data as $city){
+      $letter = mb_strtoupper(mb_substr($city['name'], 0, 1));
+      $grouped[$letter][] = $city;
+  }
+  ksort($grouped);
 
-    <?php
-    // Группируем по первой букве
-    $grouped = [];
-    foreach($cities_data as $city){
-        $letter = mb_strtoupper(mb_substr($city['name'], 0, 1));
-        $grouped[$letter][] = $city;
-    }
-    ksort($grouped);
+  $popular = ['Москва','Санкт-Петербург','Екатеринбург','Новосибирск','Казань','Краснодар','Нижний Новгород','Самара','Ростов-на-Дону','Уфа','Челябинск','Тюмень'];
+  $popularCities = array_filter($cities_data, fn($c) => in_array($c['name'], $popular));
+  ?>
 
-    // Популярные города — выносим отдельно
-    $popular = ['Москва','Санкт-Петербург','Екатеринбург','Новосибирск','Казань','Краснодар','Нижний Новгород','Самара','Ростов-на-Дону','Уфа','Челябинск','Тюмень'];
-    $popularCities = array_filter($cities_data, fn($c) => in_array($c['name'], $popular));
-    ?>
-
-    <!-- Популярные -->
-    <div style="margin-bottom:28px">
-      <p class="eyebrow" style="margin-bottom:10px">ПОПУЛЯРНЫЕ</p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <?php foreach($popularCities as $city): ?>
-        <a href="/city/<?=h($city['slug'])?>" style="border:1px solid rgba(201,121,43,.3);border-radius:999px;padding:7px 16px;font-size:13px;font-weight:600;color:var(--copper2);text-decoration:none;background:rgba(201,121,43,.06);transition:.2s" onmouseover="this.style.background='rgba(201,121,43,.14)'" onmouseout="this.style.background='rgba(201,121,43,.06)'"><?=h($city['name'])?></a>
-        <?php endforeach; ?>
-      </div>
-    </div>
-
-    <!-- Все города по алфавиту -->
-    <div style="margin-bottom:24px">
-      <p class="eyebrow" style="margin-bottom:10px">ВСЕ ГОРОДА</p>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:20px">
-        <?php foreach(array_keys($grouped) as $letter): ?>
-        <a href="#letter-<?=$letter?>" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1px solid rgba(243,241,236,.12);border-radius:6px;font-size:13px;font-weight:700;color:var(--muted);text-decoration:none;transition:.2s" onmouseover="this.style.color='var(--copper2)';this.style.borderColor='rgba(201,121,43,.4)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='rgba(243,241,236,.12)'"><?=$letter?></a>
-        <?php endforeach; ?>
-      </div>
-
-      <?php foreach($grouped as $letter => $lcities): ?>
-      <div id="letter-<?=$letter?>" style="margin-bottom:20px">
-        <div style="font-family:var(--head);font-size:28px;color:var(--copper2);margin-bottom:8px;line-height:1"><?=$letter?></div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">
-          <?php foreach($lcities as $city): ?>
-          <a href="/city/<?=h($city['slug'])?>" style="padding:8px 12px;border:1px solid rgba(243,241,236,.07);border-radius:10px;font-size:13px;color:var(--text);text-decoration:none;transition:.2s;background:rgba(255,255,255,.02)" onmouseover="this.style.borderColor='rgba(201,121,43,.3)';this.style.color='var(--copper2)'" onmouseout="this.style.borderColor='rgba(243,241,236,.07)';this.style.color='var(--text)'"><?=h($city['name'])?></a>
-          <?php endforeach; ?>
-        </div>
-      </div>
+  <div class="popularSection">
+    <p class="eyebrow">ПОПУЛЯРНЫЕ ГОРОДА</p>
+    <div class="popularChips">
+      <?php foreach($popularCities as $city): ?>
+      <a class="popularChip" href="/city/<?=h($city['slug'])?>"><?=h($city['name'])?></a>
       <?php endforeach; ?>
     </div>
-
   </div>
+
+  <p class="eyebrow">ВСЕ ГОРОДА</p>
+  <nav class="alphaNav" aria-label="Алфавитный указатель">
+    <?php foreach(array_keys($grouped) as $letter): ?>
+    <a class="alphaBtn" href="#letter-<?=$letter?>"><?=$letter?></a>
+    <?php endforeach; ?>
+  </nav>
+
+  <?php foreach($grouped as $letter => $lcities): ?>
+  <div class="letterGroup" id="letter-<?=$letter?>">
+    <div class="letterHeading"><?=$letter?></div>
+    <div class="cityLinks">
+      <?php foreach($lcities as $city): ?>
+      <a class="cityLink" href="/city/<?=h($city['slug'])?>"><?=h($city['name'])?></a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+  <?php endforeach; ?>
 </main>
 
 <?php render_footer($pdo); ?>
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="/assets/script.js?v=5.0.0"></script>
+<script src="/assets/script.js?v=6.1.0"></script>
 </body>
 </html>
