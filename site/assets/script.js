@@ -58,8 +58,17 @@ function goCheckout(){
   ymGoal('begin_checkout', {cart_total: cart.reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||1),0)});
   location.href='/checkout.php';
 }
-function openCart(){ document.getElementById('cartPanel')?.classList.add('open'); document.getElementById('shade')?.classList.add('show'); }
-function closeCart(){ document.getElementById('cartPanel')?.classList.remove('open'); document.getElementById('shade')?.classList.remove('show'); }
+function openCart(){
+  document.getElementById('cartPanel')?.classList.add('open');
+  document.getElementById('shade')?.classList.add('show');
+  document.body.style.overflow='hidden';
+}
+function closeCart(){
+  document.getElementById('cartPanel')?.classList.remove('open');
+  document.getElementById('shade')?.classList.remove('show');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeCart(); closeMenu(); } });
 function openMenu(){
   document.getElementById('mobileMenu')?.classList.add('open');
   document.getElementById('mobileMenuShade')?.classList.add('open');
