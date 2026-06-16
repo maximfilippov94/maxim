@@ -54,7 +54,8 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
     <p class="eyebrow"><?=h(block_text('hero','eyebrow','PREMIUM OUTDOOR FIRE CULTURE'))?></p>
     <h1><?=nl2br(h(block_text('hero','title','ОГОНЬ\nДЛЯ НАСТОЯЩИХ\nВСТРЕЧ')))?></h1>
     <p class="heroLead"><?=h(block_text('hero','text','Костровые системы и outdoor аксессуары для живого огня, кухни на природе и атмосферных вечеров.'))?></p>
-    <div class="actions"><a class="btn primary" href="#catalog"><?=h(block_text('hero','cta_text','ВЫБРАТЬ СИСТЕМУ'))?></a><a class="btn ghost" href="#ritual">Узнать больше</a></div>
+    <div class="heroSocProof">★ 4.9 &nbsp;·&nbsp; Более 500 заказов &nbsp;·&nbsp; Ручная работа</div>
+    <div class="actions"><a class="btn primary" href="#catalog"><?=h(block_text('hero','cta_text','ВЫБРАТЬ СИСТЕМУ'))?></a><a class="btn ghost" href="#craft">Узнать больше</a></div>
   </div>
   <div class="heroMeta"><span>STEEL</span><span>FIRE COOKING</span><span>SLOW OUTDOOR</span></div>
 </section>

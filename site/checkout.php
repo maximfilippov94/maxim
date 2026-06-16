@@ -199,6 +199,7 @@ select.checkoutInput{cursor:pointer}
     <!-- LEFT: FORM -->
     <div class="checkoutLeft">
       <h1>Оформление</h1>
+      <p class="guestCheckoutNote">Регистрация не требуется — оформляйте как гость</p>
 
       <!-- 1. Контакты -->
       <div class="checkoutSection">
@@ -348,7 +349,12 @@ select.checkoutInput{cursor:pointer}
           <div class="summaryRow"><span>Доставка</span><span id="summaryDelivery">—</span></div>
           <div class="summaryRow total"><span>Итого</span><span id="summaryTotal">0 ₽</span></div>
         </div>
-        <button id="placeOrderBtn" onclick="placeOrder()" style="width:100%;background:linear-gradient(180deg,#e8943a,#c9792b);color:#fff;border:none;border-radius:14px;padding:18px;font:900 16px/1 Manrope,sans-serif;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;margin-top:20px;transition:.2s;display:block">
+        <div class="trustBadges">
+          <span>🔒 Безопасная оплата</span>
+          <span>🚚 СДЭК</span>
+          <span>↩ Возврат 14 дней</span>
+        </div>
+        <button id="placeOrderBtn" onclick="placeOrder()" style="width:100%;background:linear-gradient(180deg,#e8943a,#c9792b);color:#fff;border:none;border-radius:14px;padding:18px;font:900 16px/1 Manrope,sans-serif;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;margin-top:16px;transition:.2s;display:block">
           Оформить заказ →
         </button>
         <p id="checkoutResult" style="text-align:center;font-size:13px;margin-top:12px;color:var(--copper2)"></p>
