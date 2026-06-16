@@ -204,8 +204,26 @@ foreach($dynamicBlocks as $db_block):
   </div>
   <?php if(!empty($bextra)): ?>
   <div class="craftCards">
-    <?php foreach(array_values($bextra) as $mi=>$mat): ?>
-    <article><span><?=h($mat)?></span></article>
+    <?php
+    $craftIcons = [
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+    ];
+    foreach(array_values($bextra) as $mi=>$mat):
+      $parts = explode(':', $mat, 2);
+      $mtitle = trim($parts[0]);
+      $mdesc  = trim($parts[1] ?? '');
+      $icon = $craftIcons[$mi % count($craftIcons)];
+    ?>
+    <article>
+      <div class="craftCardIcon"><?=$icon?></div>
+      <span><?=h($mtitle)?></span>
+      <?php if($mdesc): ?><p><?=h($mdesc)?></p><?php endif; ?>
+    </article>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
@@ -242,11 +260,15 @@ foreach($dynamicBlocks as $db_block):
     <?php if($btext): ?><p><?=$btext?></p><?php endif; ?>
   </div>
   <?php if(!empty($bextra)): ?>
-  <div class="craftCards">
-    <?php foreach(array_values($bextra) as $ti=>$trust): 
+  <div class="featuresGrid">
+    <?php foreach(array_values($bextra) as $trust):
       $parts = explode(':', $trust, 2);
+      $ttitle = trim($parts[0]); $tdesc = trim($parts[1] ?? '');
     ?>
-    <article><span><?=h(trim($parts[0]))?></span><?php if(!empty($parts[1])): ?><p style="color:var(--muted);font-size:14px;margin-top:8px"><?=h(trim($parts[1]))?></p><?php endif; ?></article>
+    <div class="featureCard">
+      <div class="featureIcon"><?=feature_icon($ttitle)?></div>
+      <div><p class="featureTitle"><?=h($ttitle)?></p><?php if($tdesc):?><p class="featureDesc"><?=h($tdesc)?></p><?php endif;?></div>
+    </div>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
@@ -260,11 +282,15 @@ foreach($dynamicBlocks as $db_block):
     <?php if($btext): ?><p><?=$btext?></p><?php endif; ?>
   </div>
   <?php if(!empty($bextra)): ?>
-  <div class="craftCards">
-    <?php foreach($bextra as $di=>$ditem): 
+  <div class="featuresGrid">
+    <?php foreach($bextra as $ditem):
       $parts = explode(':', $ditem, 2);
+      $dtitle = trim($parts[0]); $ddesc = trim($parts[1] ?? '');
     ?>
-    <article><span><?=h(trim($parts[0]))?></span><?php if(!empty($parts[1])): ?><p style="color:var(--muted);font-size:14px;margin-top:8px"><?=h(trim($parts[1]))?></p><?php endif; ?></article>
+    <div class="featureCard">
+      <div class="featureIcon"><?=feature_icon($dtitle)?></div>
+      <div><p class="featureTitle"><?=h($dtitle)?></p><?php if($ddesc):?><p class="featureDesc"><?=h($ddesc)?></p><?php endif;?></div>
+    </div>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
@@ -297,8 +323,8 @@ foreach($dynamicBlocks as $db_block):
 
 <?php elseif($btype==='quote'): ?>
 <section class="manifest reveal">
-  <p><?=$btitle?></p>
-  <?php if($btext): ?><p><?=$btext?></p><?php endif; ?>
+  <p class="manifestQuote"><?=$btitle?></p>
+  <?php if($btext): ?><p class="manifestSub"><?=$btext?></p><?php endif; ?>
 </section>
 
 <?php endif; ?>
