@@ -66,6 +66,8 @@ $CDEK_CITIES = [
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="<?=csrf_token()?>">
 <title><?=h($title)?></title>
+<link rel="canonical" href="https://lukaoutdoor.com/checkout.php">
+<meta name="robots" content="noindex,nofollow">
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

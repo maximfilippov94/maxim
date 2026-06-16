@@ -204,7 +204,7 @@ try {
     <?php endforeach; ?>
   </nav>
   <button class="menuBtn" onclick="openMenu()" aria-label="Меню"><span></span><span></span><span></span></button>
-  <button class="cartBtn" onclick="openCart()">Корзина <b id="cartCount">0</b></button>
+  <button class="cartBtn" onclick="openCart()">Корзина <b id="cartCount" aria-live="polite" aria-atomic="true">0</b></button>
 </header>
 
 <script>

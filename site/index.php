@@ -24,7 +24,9 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=h($title)?></title>
 <meta name="description" content="<?=h($desc)?>">
+<link rel="canonical" href="https://lukaoutdoor.com/">
 <meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($heroImage)?>">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"LUKA OUTDOOR","url":"https://lukaoutdoor.com","logo":"https://lukaoutdoor.com/assets/images/logo_luka_new.png","description":"<?=h($desc)?>","contactPoint":{"@type":"ContactPoint","telephone":"<?=h(setting('phone'))?>","contactType":"sales","areaServed":"RU","availableLanguage":"Russian"}}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css?v=5.0.0">

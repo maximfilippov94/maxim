@@ -25,7 +25,36 @@ $baseUrl = 'https://lukaoutdoor.com';
 $ogImage = $p['image'] ? $baseUrl.'/'.$p['image'] : $baseUrl.'/assets/images/hero.webp';
 $ogUrl   = $baseUrl.'/product.php?slug='.urlencode($p['slug'] ?: $p['id']);
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="<?=csrf_token()?>"><title><?=h($title)?></title><meta name="description" content="<?=h($desc)?>"><meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($ogImage)?>"><meta property="og:url" content="<?=h($ogUrl)?>"><meta property="og:type" content="product"><link rel="canonical" href="<?=h($ogUrl)?>"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/style.css?v=5.0.0"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"<?=h($p['name'])?>","description":"<?=h($desc)?>","image":"<?=h($p['image'])?>","offers":{"@type":"Offer","price":"<?=h($p['price'])?>","priceCurrency":"RUB","availability":"https://schema.org/InStock"}}</script></head><body>
+<?php
+$imagesJson = json_encode(array_map(fn($img) => $baseUrl.'/'.$img, $gallery), JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+$ldJson = [
+  '@context'    => 'https://schema.org',
+  '@type'       => 'Product',
+  'name'        => $p['name'],
+  'description' => strip_tags($desc),
+  'image'       => json_decode($imagesJson),
+  'brand'       => ['@type'=>'Brand','name'=>'LUKA OUTDOOR'],
+  'sku'         => 'LO-'.$p['id'],
+  'offers'      => [
+    '@type'           => 'Offer',
+    'price'           => (int)$p['price'],
+    'priceCurrency'   => 'RUB',
+    'availability'    => 'https://schema.org/InStock',
+    'url'             => $ogUrl,
+    'seller'          => ['@type'=>'Organization','name'=>'LUKA OUTDOOR'],
+  ],
+];
+if($avgRating > 0 && count($reviews) > 0){
+  $ldJson['aggregateRating'] = ['@type'=>'AggregateRating','ratingValue'=>$avgRating,'reviewCount'=>count($reviews),'bestRating'=>5,'worstRating'=>1];
+  $ldJson['review'] = array_map(fn($r)=>['@type'=>'Review','author'=>['@type'=>'Person','name'=>h($r['author'])],'reviewRating'=>['@type'=>'Rating','ratingValue'=>(int)$r['rating'],'bestRating'=>5],'reviewBody'=>h($r['text'])], array_slice($reviews,0,5));
+}
+$breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>[
+  ['@type'=>'ListItem','position'=>1,'name'=>'Главная','item'=>$baseUrl.'/'],
+  ['@type'=>'ListItem','position'=>2,'name'=>'Каталог','item'=>$baseUrl.'/catalog.php'],
+  ['@type'=>'ListItem','position'=>3,'name'=>$p['name'],'item'=>$ogUrl],
+]];
+?>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="<?=csrf_token()?>"><title><?=h($title)?></title><meta name="description" content="<?=h($desc)?>"><meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($ogImage)?>"><meta property="og:url" content="<?=h($ogUrl)?>"><meta property="og:type" content="product"><link rel="canonical" href="<?=h($ogUrl)?>"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/style.css?v=5.0.0"><script type="application/ld+json"><?=json_encode($ldJson,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT)?></script><script type="application/ld+json"><?=json_encode($breadcrumbLd,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script></head><body>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};

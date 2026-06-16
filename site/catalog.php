@@ -261,7 +261,20 @@ async function loadCatalog(){
   const count = document.getElementById('catalogCount');
   const header = document.getElementById('catalogHeader');
 
-  grid.style.opacity = '.4';
+  // Skeleton loader
+  grid.innerHTML = Array(6).fill(0).map(()=>`
+    <article class="cardV2 skeleton-card">
+      <div class="skeleton-img"></div>
+      <div class="productBody">
+        <div class="skeleton-line" style="width:40%;height:10px;margin-bottom:10px"></div>
+        <div class="skeleton-line" style="width:70%;height:18px;margin-bottom:8px"></div>
+        <div class="skeleton-line" style="width:90%;height:14px;margin-bottom:20px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto">
+          <div class="skeleton-line" style="width:35%;height:22px"></div>
+          <div class="skeleton-circle"></div>
+        </div>
+      </div>
+    </article>`).join('');
   grid.style.pointerEvents = 'none';
 
   const params = new URLSearchParams();
@@ -312,7 +325,6 @@ async function loadCatalog(){
     console.error('Catalog load error:', e);
   }
 
-  grid.style.opacity   = '1';
   grid.style.pointerEvents = '';
 }
 
