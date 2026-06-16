@@ -101,3 +101,120 @@ function appendUtmToFormData(fd){
 }
 
 renderCart(); updateConfig();
+
+// ── Mobile Animations ──────────────────────────────────────────────────────
+
+// 1. Scroll-reveal via IntersectionObserver
+(function initScrollReveal(){
+  if(typeof IntersectionObserver === 'undefined') return;
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+    });
+  },{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+  // Auto-mark key elements on mobile
+  const isMob = window.innerWidth <= 980;
+  if(isMob){
+    document.querySelectorAll([
+      '.cardV2','.featureCard','.craftCards article',
+      '.catCard','.reviewCard','.journalCards article',
+      '.sectionHeadV2','.desktopIntro','.manifest',
+      '.splitRitual','.productSpecs article','.stepsGrid article',
+      '.includedGrid article','.productLifestyle img',
+      '.trustItem','.stickyBuy'
+    ].join(',')).forEach((el,i)=>{
+      if(!el.classList.contains('sr')){
+        el.classList.add('sr');
+        // group stagger for grids
+        const par = el.parentElement;
+        if(par && !par.classList.contains('sr-group') &&
+           par.querySelectorAll('.sr').length > 1) par.classList.add('sr-group');
+      }
+      io.observe(el);
+    });
+  } else {
+    // Desktop: only observe existing .sr elements
+    document.querySelectorAll('.sr').forEach(el=>io.observe(el));
+  }
+})();
+
+// 2. Navbar auto-hide on scroll down, show on scroll up (mobile)
+(function initNavScroll(){
+  if(window.innerWidth > 980) return;
+  const topbar = document.querySelector('.topbar');
+  if(!topbar) return;
+  let lastY = 0, ticking = false;
+  window.addEventListener('scroll',()=>{
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(()=>{
+      const y = window.scrollY;
+      if(y > 80){
+        topbar.classList.toggle('nav-hidden', y > lastY);
+      } else {
+        topbar.classList.remove('nav-hidden');
+      }
+      lastY = y;
+      ticking = false;
+    });
+  },{passive:true});
+})();
+
+// 3. Sticky buy bar entrance
+(function initStickyBuy(){
+  const sb = document.querySelector('.stickyBuy');
+  if(!sb) return;
+  const io2 = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      sb.classList.toggle('sticky-visible', !e.isIntersecting);
+    });
+  },{threshold:.5});
+  const hero = document.querySelector('.heroV2,.productHero');
+  if(hero) io2.observe(hero); else sb.classList.add('sticky-visible');
+})();
+
+// 4. Tap ripple effect on buttons
+(function initRipple(){
+  function spawnRipple(el, e){
+    const rect = el.getBoundingClientRect();
+    const x = (e.touches?.[0]?.clientX ?? e.clientX) - rect.left;
+    const y = (e.touches?.[0]?.clientY ?? e.clientY) - rect.top;
+    const sz = Math.max(rect.width, rect.height) * 1.4;
+    const wave = document.createElement('span');
+    wave.className = 'ripple-wave';
+    wave.style.cssText = `width:${sz}px;height:${sz}px;left:${x-sz/2}px;top:${y-sz/2}px`;
+    el.classList.add('ripple-host');
+    el.appendChild(wave);
+    wave.addEventListener('animationend',()=>wave.remove());
+  }
+  document.addEventListener('touchstart',e=>{
+    const btn = e.target.closest('.btn,.priceLine button,.chip,.mobileMenuSocials a');
+    if(btn) spawnRipple(btn, e);
+  },{passive:true});
+})();
+
+// 5. Cart button pulse on add
+const _origSaveCart = saveCart;
+// Already defined above, just patch cartBtn pulse into showToast
+const _origShowToast = showToast;
+function showToast(message){
+  _origShowToast(message);
+  const cb = document.querySelector('.cartBtn');
+  if(cb){ cb.classList.remove('cart-pulse'); void cb.offsetWidth; cb.classList.add('cart-pulse'); }
+}
+
+// 6. Image lazy-load fade-in
+(function initLazyFade(){
+  if(typeof IntersectionObserver === 'undefined') return;
+  const imgObs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting) return;
+      const img = e.target;
+      img.classList.add('lazy-pending');
+      if(img.complete){ img.classList.add('lazy-loaded'); }
+      else { img.addEventListener('load',()=>img.classList.add('lazy-loaded'),{once:true}); }
+      imgObs.unobserve(img);
+    });
+  },{rootMargin:'200px'});
+  document.querySelectorAll('img[loading="lazy"]').forEach(img=>imgObs.observe(img));
+})();

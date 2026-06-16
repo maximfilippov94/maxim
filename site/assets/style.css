@@ -192,3 +192,79 @@ body:after{content:"";position:fixed;inset:0;z-index:-4;pointer-events:none;opac
 .oneClickBox p{color:var(--muted);font-size:14px;margin:0 0 24px}
 .oneClickClose{position:absolute;top:18px;right:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10);color:var(--text);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
 .oneClickClose:hover{background:rgba(255,255,255,.14)}
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ──────────────────────────────────────────────────── */
+@keyframes srFadeUp{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:none}}
+@keyframes srFadeLeft{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:none}}
+@keyframes srScale{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:scale(1)}}
+@keyframes navbarShow{from{transform:translateY(-100%)}to{transform:translateY(0)}}
+@keyframes rippleOut{from{transform:scale(0);opacity:.55}to{transform:scale(2.8);opacity:0}}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+@keyframes pulseGlow{0%,100%{box-shadow:0 0 0 0 rgba(201,121,43,0)}50%{box-shadow:0 0 0 8px rgba(201,121,43,.18)}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* ── Scroll-reveal base ─────────────────────────────────────────── */
+.sr{opacity:0;transform:translateY(28px);transition:opacity .55s cubic-bezier(.4,0,.2,1),transform .55s cubic-bezier(.4,0,.2,1);will-change:opacity,transform}
+.sr.sr--left{transform:translateX(-24px)}
+.sr.sr--scale{transform:scale(.94)}
+.sr.in{opacity:1;transform:none}
+
+/* stagger for child elements */
+.sr-group>.sr:nth-child(1){transition-delay:.05s}
+.sr-group>.sr:nth-child(2){transition-delay:.12s}
+.sr-group>.sr:nth-child(3){transition-delay:.19s}
+.sr-group>.sr:nth-child(4){transition-delay:.26s}
+.sr-group>.sr:nth-child(5){transition-delay:.33s}
+.sr-group>.sr:nth-child(6){transition-delay:.40s}
+
+/* ── Topbar hide/show on scroll (mobile) ────────────────────────── */
+@media(max-width:980px){
+  .topbar{transition:transform .3s cubic-bezier(.4,0,.2,1),background .3s;will-change:transform}
+  .topbar.nav-hidden{transform:translateY(-100%)}
+}
+
+/* ── Touch ripple ───────────────────────────────────────────────── */
+.ripple-host{position:relative;overflow:hidden}
+.ripple-wave{position:absolute;border-radius:50%;background:rgba(255,255,255,.18);pointer-events:none;animation:rippleOut .55s ease forwards;transform-origin:center}
+
+/* ── Touch press state (mobile cards & buttons) ─────────────────── */
+@media(max-width:980px){
+  .cardV2{transition:transform .15s ease,border-color .3s,box-shadow .3s}
+  .cardV2:active{transform:scale(.975)}
+  .catCard{transition:transform .15s ease,border-color .3s,box-shadow .3s}
+  .catCard:active{transform:scale(.975)}
+  .featureCard:active{transform:scale(.975)}
+  .btn:active:not(:disabled){transform:scale(.96)!important}
+  .chip:active{transform:scale(.94)}
+  .priceLine button:active{transform:scale(.88)!important}
+  .mobileMenuSocials a:active{transform:scale(.88)}
+}
+
+/* ── Sticky buy — slide-up entrance ────────────────────────────── */
+@media(max-width:980px){
+  .stickyBuy{transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;opacity:0}
+  .stickyBuy.sticky-visible{transform:translateY(0);opacity:1}
+}
+
+/* ── Cart button pulse when item added ──────────────────────────── */
+.cartBtn.cart-pulse{animation:pulseGlow .5s ease}
+
+/* ── Image lazy-load fade ───────────────────────────────────────── */
+img.lazy-pending{opacity:0;transition:opacity .4s ease}
+img.lazy-loaded{opacity:1}
+
+/* ── Floating icon on hero (subtle) ────────────────────────────── */
+@media(max-width:980px){
+  .emberLayer i{animation-duration:6s}
+}
+
+/* ── Respect prefers-reduced-motion ────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  .sr,.sr.in{opacity:1;transform:none;transition:none}
+  .topbar{transition:none}
+  .stickyBuy{transition:none}
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
