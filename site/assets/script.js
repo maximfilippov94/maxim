@@ -60,8 +60,16 @@ function goCheckout(){
 }
 function openCart(){ document.getElementById('cartPanel')?.classList.add('open'); document.getElementById('shade')?.classList.add('show'); }
 function closeCart(){ document.getElementById('cartPanel')?.classList.remove('open'); document.getElementById('shade')?.classList.remove('show'); }
-function openMenu(){ document.getElementById('mobileMenu')?.classList.add('open'); }
-function closeMenu(){ document.getElementById('mobileMenu')?.classList.remove('open'); }
+function openMenu(){
+  document.getElementById('mobileMenu')?.classList.add('open');
+  document.getElementById('mobileMenuShade')?.classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closeMenu(){
+  document.getElementById('mobileMenu')?.classList.remove('open');
+  document.getElementById('mobileMenuShade')?.classList.remove('open');
+  document.body.style.overflow='';
+}
 function updateConfig(){ const size=document.getElementById('cfgSize'); if(!size) return; let total=+size.value; let parts=[size.options[size.selectedIndex].text.split(' — ')[0]]; document.querySelectorAll('.cfgExtra:checked').forEach(e=>{ total+=+e.value; parts.push(e.dataset.name); }); document.getElementById('cfgText')&&(document.getElementById('cfgText').textContent=parts.join(' + ')); document.getElementById('cfgTotal')&&(document.getElementById('cfgTotal').textContent=fmt(total)); }
 function addConfigToCart(){ const size=document.getElementById('cfgSize'); if(!size) return; let total=+size.value, name='Комплект '+size.options[size.selectedIndex].text.split(' — ')[0]; document.querySelectorAll('.cfgExtra:checked').forEach(e=>{ total+=+e.value; name+=' + '+e.dataset.name; }); addToCart({id:'cfg-'+Date.now(),name,price:total,image:'assets/images/hero.webp'}); }
 document.querySelectorAll('#cfgSize,.cfgExtra').forEach(e=>e.addEventListener('change',updateConfig));

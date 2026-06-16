@@ -95,34 +95,40 @@ try {
 .megaFooterRow a{font-size:11px;font-weight:700;color:var(--accent);text-decoration:none;letter-spacing:.08em;text-transform:uppercase}
 .megaCount{font-size:11px;color:rgba(243,241,236,.3);text-transform:uppercase;letter-spacing:.1em}
 /* Mobile menu */
-.mobileMenuLinks{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column}
-.mobileNavLink{font-family:var(--head)!important;font-size:clamp(36px,10vw,52px);line-height:1;text-transform:uppercase;color:var(--text);padding:10px 0;border-bottom:1px solid rgba(243,241,236,.07);text-decoration:none;display:block;transition:.15s;letter-spacing:.015em}
-.mobileNavLink:hover{color:var(--copper2)}
+.mobileMenuLinks{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;flex:1;padding:8px 0}
+.mobileNavLink{font-family:var(--head)!important;font-size:clamp(36px,10vw,52px);line-height:1;text-transform:uppercase;color:var(--text);padding:12px 0;border-bottom:1px solid rgba(243,241,236,.06);text-decoration:none;display:flex;align-items:center;justify-content:space-between;transition:.2s;letter-spacing:.015em}
+.mobileNavLink::after{content:"→";font-family:var(--body);font-size:20px;color:var(--copper2);opacity:0;transform:translateX(-10px);transition:.2s}
+.mobileNavLink:hover{color:var(--copper2);padding-left:6px}.mobileNavLink:hover::after{opacity:1;transform:none}
 /* Accordion wrapper */
-.mobileAccordion{border-bottom:1px solid rgba(243,241,236,.07)}
-.mobileAccordionHead{font-family:var(--head)!important;font-size:clamp(36px,10vw,52px);line-height:1;text-transform:uppercase;color:var(--text);padding:10px 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:.15s;letter-spacing:.015em}
+.mobileAccordion{border-bottom:1px solid rgba(243,241,236,.06)}
+.mobileAccordionHead{font-family:var(--head)!important;font-size:clamp(36px,10vw,52px);line-height:1;text-transform:uppercase;color:var(--text);padding:12px 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:.2s;letter-spacing:.015em}
+.mobileAccordionHead:hover{color:var(--copper2)}
 .mobileAccordion.open .mobileAccordionHead{color:var(--copper2)}
-.mobileAccordionChevron{width:36px;height:36px;border-radius:50%;border:1px solid rgba(243,241,236,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.35s;background:rgba(255,255,255,.04)}
-.mobileAccordion.open .mobileAccordionChevron{background:rgba(201,121,43,.15);border-color:var(--accent);transform:rotate(180deg)}
+.mobileAccordionChevron{width:38px;height:38px;border-radius:50%;border:1px solid rgba(243,241,236,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:.35s;background:rgba(255,255,255,.04)}
+.mobileAccordion.open .mobileAccordionChevron{background:rgba(201,121,43,.15);border-color:var(--copper);transform:rotate(180deg)}
 .mobileAccordionBody{max-height:0;overflow:hidden;transition:max-height .4s cubic-bezier(.4,0,.2,1)}
 .mobileAccordion.open .mobileAccordionBody{max-height:900px}
-/* Categories — все одинаковые */
-.mobileCatList{padding:6px 0 12px;display:flex;flex-direction:column}
-.mobileCatRow{border-bottom:1px solid rgba(243,241,236,.06);padding:0 2px}
+/* Categories */
+.mobileCatList{padding:4px 0 14px;display:flex;flex-direction:column}
+.mobileCatRow{border-bottom:1px solid rgba(243,241,236,.05);padding:0 2px}
 .mobileCatRow:last-child{border-bottom:none}
 .mobileCatHead{display:flex;align-items:center}
-.mobileCatLink{flex:1;font-family:Manrope,sans-serif;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(243,241,236,.85);padding:12px 0;text-decoration:none;transition:.15s}
+.mobileCatLink{flex:1;font-family:Manrope,sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(243,241,236,.7);padding:11px 0;text-decoration:none;transition:.15s}
 .mobileCatLink:active{color:var(--copper2)}
-.mobileCatBtn{width:40px;height:40px;border:none;background:rgba(255,255,255,.04);color:rgba(243,241,236,.3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.25s;flex-shrink:0;border-radius:8px;border:1px solid rgba(243,241,236,.08)}
-.mobileCatBtn.open{color:var(--accent);background:rgba(201,121,43,.08)}
+.mobileCatBtn{width:36px;height:36px;border:1px solid rgba(243,241,236,.1);background:rgba(255,255,255,.04);color:rgba(243,241,236,.35);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.25s;flex-shrink:0;border-radius:8px}
+.mobileCatBtn.open{color:var(--copper2);background:rgba(201,121,43,.1);border-color:rgba(201,121,43,.25)}
 .mobileCatBtn svg{transition:transform .25s}
 .mobileCatBtn.open svg{transform:rotate(180deg)}
 /* Подкатегории */
-.mobileCatSubs{max-height:0;overflow:hidden;transition:max-height .3s cubic-bezier(.4,0,.2,1);border-left:2px solid rgba(201,121,43,.2);margin-left:4px}
+.mobileCatSubs{max-height:0;overflow:hidden;transition:max-height .3s cubic-bezier(.4,0,.2,1);border-left:2px solid rgba(201,121,43,.25);margin-left:4px}
 .mobileCatSubs.open{max-height:400px}
-.mobileCatSub{display:block;font-family:Manrope,sans-serif;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:rgba(243,241,236,.45);padding:9px 0 9px 14px;text-decoration:none;transition:.15s;border-bottom:1px solid rgba(243,241,236,.04)}
+.mobileCatSub{display:block;font-family:Manrope,sans-serif;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(243,241,236,.4);padding:9px 0 9px 14px;text-decoration:none;transition:.15s;border-bottom:1px solid rgba(243,241,236,.04)}
 .mobileCatSub:last-child{border-bottom:none}
-.mobileCatSub:active{color:rgba(243,241,236,.85)}
+.mobileCatSub:active,.mobileCatSub:hover{color:var(--copper2)}
+/* Hamburger button */
+.menuBtn{display:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;width:44px;height:44px;border:1px solid rgba(255,255,255,.14)!important;border-radius:12px!important;background:rgba(255,255,255,.07)!important;padding:0!important;cursor:pointer}
+.menuBtn span{display:block;width:18px;height:1.5px;background:rgba(243,241,236,.85);transition:.25s;border-radius:2px}
+@media(max-width:980px){.menuBtn{display:flex}}
 </style>
 <header class="topbar">
   <a class="brand logoOnly" href="<?=h($logoHref)?>"><img src="<?=h($logo)?>" alt="LUKA OUTDOOR"></a>
@@ -167,7 +173,7 @@ try {
     <?php endif; ?>
     <?php endforeach; ?>
   </nav>
-  <button class="menuBtn" onclick="openMenu()">Меню</button>
+  <button class="menuBtn" onclick="openMenu()" aria-label="Меню"><span></span><span></span><span></span></button>
   <button class="cartBtn" onclick="openCart()">Корзина <b id="cartCount">0</b></button>
 </header>
 
@@ -189,12 +195,14 @@ function toggleMobileSubs(btn){
   if(!isOpen){ subs.classList.add('open'); btn.classList.add('open'); }
 }
 </script>
-<div id="mobileMenu" class="mobileMenu">
+<div id="mobileMenuShade" class="mobileMenuShade" onclick="closeMenu()"></div>
+<div id="mobileMenu" class="mobileMenu" role="dialog" aria-modal="true" aria-label="Навигация">
   <div class="mobileMenuInner">
     <div class="mobileMenuTop">
       <div class="menuLogo"><img src="<?=h($logo)?>" alt="LUKA OUTDOOR" class="menuLogoImg"></div>
-      <button class="mobileMenuClose" onclick="closeMenu()">&#x2715;</button>
+      <button class="mobileMenuClose" onclick="closeMenu()" aria-label="Закрыть меню">&#x2715;</button>
     </div>
+
     <nav class="mobileMenuLinks">
       <?php foreach($items as $item):
         $isCatalogMob = stripos($item['label'], 'каталог') !== false || $item['url'] === '/catalog.php';
@@ -214,7 +222,7 @@ function toggleMobileSubs(btn){
             <div class="mobileCatHead">
               <a class="mobileCatLink" href="/catalog.php?cat=<?=h($mc['slug'])?>" onclick="closeMenu()"><?=h($mc['name'])?></a>
               <?php if(!empty($mc['children'])): ?>
-              <button class="mobileCatBtn" onclick="toggleMobileSubs(this)">
+              <button class="mobileCatBtn" onclick="toggleMobileSubs(this)" aria-label="Подкатегории">
                 <svg width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
               <?php endif; ?>
@@ -232,28 +240,23 @@ function toggleMobileSubs(btn){
         </div>
       </div>
       <?php else: ?>
-      <a onclick="closeMenu()" href="<?=h($item['url'])?>"<?=$item['open_new_tab'] ? ' target="_blank" rel="noopener"' : ''?>><?=h($item['label'])?></a>
+      <a class="mobileNavLink" onclick="closeMenu()" href="<?=h($item['url'])?>"<?=$item['open_new_tab'] ? ' target="_blank" rel="noopener"' : ''?>><?=h($item['label'])?></a>
       <?php endif; ?>
       <?php endforeach; ?>
     </nav>
+
     <div class="mobileMenuFooter">
-      <?php $phone = setting('phone'); if($phone): ?>
-      <a href="tel:<?=h(preg_replace('/[^0-9+]/','',$phone))?>" style="display:block;font-size:18px;font-weight:800;color:var(--text);letter-spacing:.02em;margin-bottom:8px;text-decoration:none"><?=h($phone)?></a>
+      <?php if($phone): ?>
+      <a href="tel:<?=h(preg_replace('/[^0-9+]/','',$phone))?>" class="mobileMenuPhone"><?=h($phone)?></a>
       <?php endif; ?>
       <div class="mobileMenuFooterBottom">
-      <span>LUKA OUTDOOR</span>
-      <div class="mobileMenuSocials">
-        <a href="<?=h($ig)?>" target="_blank" aria-label="Instagram">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-        </a>
-        <a href="<?=h($tg)?>" target="_blank" aria-label="Telegram">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>
-        </a>
-        <a href="<?=h($yt)?>" target="_blank" aria-label="YouTube">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M23.499 6.203a3.008 3.008 0 0 0-2.089-2.089c-1.87-.501-9.4-.501-9.4-.501s-7.509-.01-9.399.501A3.008 3.008 0 0 0 .522 6.203a31.503 31.503 0 0 0-.522 5.8 31.503 31.503 0 0 0 .522 5.783 3.008 3.008 0 0 0 2.089 2.088c1.868.502 9.4.502 9.4.502s7.509 0 9.399-.502a3.008 3.008 0 0 0 2.089-2.088 31.516 31.516 0 0 0 .5-5.783 31.516 31.516 0 0 0-.5-5.8zM9.609 15.601V8.408l6.264 3.602z"/></svg>
-        </a>
+        <span>LUKA OUTDOOR</span>
+        <div class="mobileMenuSocials">
+          <?php if($ig_raw): ?><a href="<?=h($ig)?>" target="_blank" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a><?php endif; ?>
+          <?php if($tg_raw): ?><a href="<?=h($tg)?>" target="_blank" aria-label="Telegram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg></a><?php endif; ?>
+          <?php if($yt_raw): ?><a href="<?=h($yt)?>" target="_blank" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.499 6.203a3.008 3.008 0 0 0-2.089-2.089c-1.87-.501-9.4-.501-9.4-.501s-7.509-.01-9.399.501A3.008 3.008 0 0 0 .522 6.203a31.503 31.503 0 0 0-.522 5.8 31.503 31.503 0 0 0 .522 5.783 3.008 3.008 0 0 0 2.089 2.088c1.868.502 9.4.502 9.4.502s7.509 0 9.399-.502a3.008 3.008 0 0 0 2.089-2.088 31.516 31.516 0 0 0 .5-5.783 31.516 31.516 0 0 0-.5-5.8zM9.609 15.601V8.408l6.264 3.602z"/></svg></a><?php endif; ?>
+        </div>
       </div>
-      </div><!-- /mobileMenuFooterBottom -->
     </div>
   </div>
 </div>
