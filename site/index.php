@@ -100,21 +100,6 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
 </section>
 
 <?php
-// Все активные блоки из БД кроме hero и culture (они системные)
-$dynamicBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code NOT IN ('hero','culture') ORDER BY sort_order,id")->fetchAll(PDO::FETCH_ASSOC);
-foreach($dynamicBlocks as $db_block):
-  $btype = $db_block['type'];
-  $btitle = h($db_block['title'] ?? '');
-  $btext = h($db_block['text'] ?? '');
-  $beyebrow = h($db_block['eyebrow'] ?? '');
-  $bsub = h($db_block['subtitle'] ?? '');
-  $bimage = $db_block['image'] ? h($db_block['image']) : '';
-  $bcta = h($db_block['cta_text'] ?? '');
-  $bctalink = h($db_block['cta_link'] ?? '#catalog');
-  $bextra = array_filter(array_map('trim', explode('|', $db_block['extra'] ?? '')));
-?>
-
-<?php
 // SVG иконки для feature-карточек по ключевым словам
 function feature_icon(string $text): string {
   $t = mb_strtolower($text);
@@ -130,9 +115,21 @@ function feature_icon(string $text): string {
     return '<svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
   if(str_contains($t,'возврат') || str_contains($t,'обмен'))
     return '<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>';
-  // default — star
   return '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
 }
+
+// Все активные блоки из БД кроме hero и culture (они системные)
+$dynamicBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code NOT IN ('hero','culture') ORDER BY sort_order,id")->fetchAll(PDO::FETCH_ASSOC);
+foreach($dynamicBlocks as $db_block):
+  $btype = $db_block['type'];
+  $btitle = h($db_block['title'] ?? '');
+  $btext = h($db_block['text'] ?? '');
+  $beyebrow = h($db_block['eyebrow'] ?? '');
+  $bsub = h($db_block['subtitle'] ?? '');
+  $bimage = $db_block['image'] ? h($db_block['image']) : '';
+  $bcta = h($db_block['cta_text'] ?? '');
+  $bctalink = h($db_block['cta_link'] ?? '#catalog');
+  $bextra = array_filter(array_map('trim', explode('|', $db_block['extra'] ?? '')));
 ?>
 <?php if($btype==='features'): ?>
 <section class="sectionV2 reveal" style="padding:40px 0 80px">
