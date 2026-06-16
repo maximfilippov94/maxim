@@ -1,7 +1,15 @@
 <?php
 require __DIR__.'/includes/db.php';
+session_start();
 header('Content-Type: application/json; charset=utf-8');
 try{
+    // CSRF check — пропускаем только quick_request без токена (oneclick форма)
+    $csrfToken = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!empty($csrfToken) && !hash_equals($_SESSION['csrf_token'] ?? '', $csrfToken)) {
+        http_response_code(403);
+        echo json_encode(['ok'=>false,'message'=>'Недопустимый запрос'], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
     $quick = !empty($_POST['quick_request']);
     $name = trim($_POST['customer_name'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
@@ -44,5 +52,13 @@ try{
     else { foreach($cart as $i){ $item->execute([$orderId,is_numeric($i['id'] ?? null)?(int)$i['id']:null,$i['name'] ?? 'Товар',(int)($i['price'] ?? 0),max(1,(int)($i['qty'] ?? 1))]); } }
     $pdo->commit();
     echo json_encode(['ok'=>true,'message'=>'Заявка отправлена. Мы свяжемся с вами в ближайшее время.','redirect'=>'/thanks.php'], JSON_UNESCAPED_UNICODE);
-}catch(Throwable $e){ if(isset($pdo) && $pdo->inTransaction()) $pdo->rollBack(); echo json_encode(['ok'=>false,'message'=>$e->getMessage()], JSON_UNESCAPED_UNICODE); }
+}catch(Throwable $e){
+    if(isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+    // Пользовательские исключения показываем, системные — скрываем
+    $userMsg = ($e instanceof InvalidArgumentException || str_contains($e->getMessage(), 'Заполните') || str_contains($e->getMessage(), 'пустая') || str_contains($e->getMessage(), 'Укажите'))
+        ? $e->getMessage()
+        : 'Произошла ошибка. Попробуйте ещё раз.';
+    error_log('[order.php] '.$e->getMessage());
+    echo json_encode(['ok'=>false,'message'=>$userMsg], JSON_UNESCAPED_UNICODE);
+}
 

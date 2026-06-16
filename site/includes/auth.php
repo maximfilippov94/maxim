@@ -1,8 +1,15 @@
 <?php
+// Secure session cookie settings (HTTPS-only, no JS access)
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path'     => '/',
+    'secure'   => true,
+    'httponly' => true,
+    'samesite' => 'Strict',
+]);
 session_start();
 
-// Пароль по умолчанию: admin123
-// ВАЖНО: после загрузки на хостинг замените пароль и hash.
+// ВАЖНО: смените этот хеш! Сгенерировать: php -r "echo password_hash('YOUR_PASSWORD', PASSWORD_BCRYPT, ['cost'=>12]);"
 const ADMIN_PASSWORD_HASH = '$2y$12$bFZdgLnXV4nctqOcvSETmOMp6XS1mYdwofDpTqx/Y2jOmTRCQQUcC';
 
 function is_admin(): bool { return !empty($_SESSION['admin']); }

@@ -211,7 +211,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if($a==='pending_orders'){
       // Возвращаем заказы новее чем last_id
       $lastId=(int)($_POST['last_id']??0);
-      $rows=$pdo->query("SELECT o.*, GROUP_CONCAT(i.product_name||' x'||i.qty,', ') as items_str FROM orders o LEFT JOIN order_items i ON i.order_id=o.id WHERE o.id>$lastId GROUP BY o.id ORDER BY o.id DESC LIMIT 10")->fetchAll(PDO::FETCH_ASSOC);
+      $st=$pdo->prepare("SELECT o.*, GROUP_CONCAT(i.product_name||' x'||i.qty,', ') as items_str FROM orders o LEFT JOIN order_items i ON i.order_id=o.id WHERE o.id>? GROUP BY o.id ORDER BY o.id DESC LIMIT 10");
+      $st->execute([$lastId]);
+      $rows=$st->fetchAll(PDO::FETCH_ASSOC);
       echo json_encode(['orders'=>$rows]);exit;
     }
     if($a==='update_order'){

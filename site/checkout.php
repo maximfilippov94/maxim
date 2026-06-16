@@ -64,6 +64,7 @@ $CDEK_CITIES = [
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="csrf-token" content="<?=csrf_token()?>">
 <title><?=h($title)?></title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -663,6 +664,7 @@ async function placeOrder(){
   fd.append('comment', comment);
   fd.append('cart', JSON.stringify(cart));
   fd.append('source', 'checkout');
+  fd.append('csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
   Object.entries(utm).forEach(([k,v])=>fd.append(k,v));
   fd.append('page_referer', document.referrer||'');
 

@@ -25,7 +25,7 @@ $baseUrl = 'https://lukaoutdoor.com';
 $ogImage = $p['image'] ? $baseUrl.'/'.$p['image'] : $baseUrl.'/assets/images/hero.webp';
 $ogUrl   = $baseUrl.'/product.php?slug='.urlencode($p['slug'] ?: $p['id']);
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=h($title)?></title><meta name="description" content="<?=h($desc)?>"><meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($ogImage)?>"><meta property="og:url" content="<?=h($ogUrl)?>"><meta property="og:type" content="product"><link rel="canonical" href="<?=h($ogUrl)?>"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/style.css?v=5.0.0"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"<?=h($p['name'])?>","description":"<?=h($desc)?>","image":"<?=h($p['image'])?>","offers":{"@type":"Offer","price":"<?=h($p['price'])?>","priceCurrency":"RUB","availability":"https://schema.org/InStock"}}</script></head><body>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="<?=csrf_token()?>"><title><?=h($title)?></title><meta name="description" content="<?=h($desc)?>"><meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($ogImage)?>"><meta property="og:url" content="<?=h($ogUrl)?>"><meta property="og:type" content="product"><link rel="canonical" href="<?=h($ogUrl)?>"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/style.css?v=5.0.0"><script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"<?=h($p['name'])?>","description":"<?=h($desc)?>","image":"<?=h($p['image'])?>","offers":{"@type":"Offer","price":"<?=h($p['price'])?>","priceCurrency":"RUB","availability":"https://schema.org/InStock"}}</script></head><body>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -312,6 +312,7 @@ document.getElementById('oneClickForm').addEventListener('submit', async functio
   const res = document.getElementById('oneClickResult');
   btn.disabled = true; btn.textContent = 'Отправка...';
   const fd = new FormData(this);
+  fd.append('csrf_token', document.querySelector('meta[name="csrf-token"]')?.content || '');
   try {
     const r = await fetch('/order.php', {method:'POST', body:fd});
     const d = await r.json();

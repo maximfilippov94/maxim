@@ -1,4 +1,12 @@
 <?php
+// Security headers — отправляются на каждой странице
+if (!headers_sent()) {
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('X-XSS-Protection: 1; mode=block');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
 function db(): PDO {
     static $pdo = null;
     if ($pdo) return $pdo;
@@ -80,6 +88,26 @@ function init_db(PDO $pdo): void {
 }
 function setting(string $key, string $fallback=''){ $pdo=db(); $st=$pdo->prepare('SELECT value FROM settings WHERE key=?'); $st->execute([$key]); $v=$st->fetchColumn(); return $v!==false?$v:$fallback; }
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+function send_security_headers(): void {
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('X-XSS-Protection: 1; mode=block');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+}
+function csrf_token(): string {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+function csrf_check(): void {
+    $token = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+        http_response_code(403);
+        exit(json_encode(['ok' => false, 'message' => 'Недопустимый запрос']));
+    }
+}
 function money($n){ return number_format((int)$n,0,' ',' ') . ' ₽'; }
 function slugify($s){$s=trim(mb_strtolower($s));$map=['а'=>'a','б'=>'b','в'=>'v','г'=>'g','д'=>'d','е'=>'e','ё'=>'e','ж'=>'zh','з'=>'z','и'=>'i','й'=>'y','к'=>'k','л'=>'l','м'=>'m','н'=>'n','о'=>'o','п'=>'p','р'=>'r','с'=>'s','т'=>'t','у'=>'u','ф'=>'f','х'=>'h','ц'=>'c','ч'=>'ch','ш'=>'sh','щ'=>'sch','ъ'=>'','ы'=>'y','ь'=>'','э'=>'e','ю'=>'yu','я'=>'ya'];$s=strtr($s,$map);$s=preg_replace('~[^a-z0-9]+~','-',$s);return trim($s,'-') ?: 'item';}
 ?>

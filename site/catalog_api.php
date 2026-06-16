@@ -8,8 +8,9 @@ header('Content-Type: application/json; charset=utf-8');
 $pdo = db();
 
 $catSlug = trim($_GET['cat'] ?? '');
-$search  = trim($_GET['q'] ?? '');
-$sort    = $_GET['sort'] ?? 'popular';
+$search  = trim(mb_substr($_GET['q'] ?? '', 0, 100));
+$validSorts = ['popular', 'price_asc', 'price_desc', 'new'];
+$sort = in_array($_GET['sort'] ?? '', $validSorts) ? $_GET['sort'] : 'popular';
 
 $where = ['p.is_active=1'];
 $params = [];
