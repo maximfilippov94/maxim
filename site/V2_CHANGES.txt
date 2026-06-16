@@ -1,0 +1,18 @@
+LUKA OUTDOOR V2 — что изменено
+
+1. Полностью переписан index.php под premium outdoor lifestyle структуру.
+2. Hero теперь динамически берет изображение из блока hero в админке и добавляет ?v=time(), чтобы не залипал кэш.
+3. Полностью переписан assets/style.css: новый темный premium стиль, copper accent, mobile-first, editorial blocks.
+4. Добавлены новые секции:
+   - Manifest / позиционирование
+   - Fire Ritual
+   - Fire Systems Collection
+   - Crafted from Steel
+   - Fire Cooking
+   - Configurator
+   - Outdoor Journal
+   - Lead Form
+5. Сохранены корзина, фильтры, заявки, товары из базы и админки.
+6. Product.php оставлен совместимым, но подтянут новым CSS.
+
+Важно: если на хостинге включен кэш, после загрузки очистить кэш браузера/хостинга.

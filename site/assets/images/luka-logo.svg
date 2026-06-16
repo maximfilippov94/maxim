@@ -1,0 +1,7 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M58 42L91 18L111 42L132 28L166 60L139 50L126 38L110 54L96 31L69 54L58 42Z" fill="#F3F1EC"/>
+  <path d="M83 45L94 34L103 48L93 42L83 45Z" fill="#050505" opacity=".9"/>
+  <path d="M116 46L128 35L146 53L128 45L116 46Z" fill="#050505" opacity=".9"/>
+  <text x="160" y="68" text-anchor="middle" font-family="Montserrat, Arial, sans-serif" font-size="50" letter-spacing="22" fill="#F3F1EC">LUKA</text>
+  <text x="160" y="96" text-anchor="middle" font-family="Montserrat, Arial, sans-serif" font-size="14" letter-spacing="14" fill="#C9792B">OUTDOOR</text>
+</svg>

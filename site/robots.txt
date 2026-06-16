@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+Disallow: /admin/
+Disallow: /admin
+Disallow: /order.php
+Disallow: /thanks.php
+Disallow: /data/
+Disallow: /includes/
+
+Sitemap: https://lukaoutdoor.com/sitemap.php
