@@ -114,18 +114,48 @@ foreach($dynamicBlocks as $db_block):
   $bextra = array_filter(array_map('trim', explode('|', $db_block['extra'] ?? '')));
 ?>
 
+<?php
+// SVG иконки для feature-карточек по ключевым словам
+function feature_icon(string $text): string {
+  $t = mb_strtolower($text);
+  if(str_contains($t,'доставк') || str_contains($t,'курьер') || str_contains($t,'сдэк'))
+    return '<svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>';
+  if(str_contains($t,'гарант') || str_contains($t,'качест') || str_contains($t,'надёж') || str_contains($t,'надеж'))
+    return '<svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
+  if(str_contains($t,'производств') || str_contains($t,'россия') || str_contains($t,'россий') || str_contains($t,'сделан'))
+    return '<svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>';
+  if(str_contains($t,'поддержк') || str_contains($t,'помощ') || str_contains($t,'вопрос') || str_contains($t,'консульт') || str_contains($t,'связ'))
+    return '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg>';
+  if(str_contains($t,'оплат') || str_contains($t,'безопасн') || str_contains($t,'карт'))
+    return '<svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+  if(str_contains($t,'возврат') || str_contains($t,'обмен'))
+    return '<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>';
+  // default — star
+  return '<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+}
+?>
 <?php if($btype==='features'): ?>
-<section class="sectionV2 reveal" style="padding:80px 0">
+<section class="sectionV2 reveal" style="padding:40px 0 80px">
+  <?php if($btitle || $beyebrow): ?>
   <div class="sectionHeadV2">
     <?php if($beyebrow): ?><p class="eyebrow"><?=$beyebrow?></p><?php endif; ?>
-    <h2><?=$btitle?></h2>
+    <?php if($btitle): ?><h2><?=$btitle?></h2><?php endif; ?>
     <?php if($btext): ?><p><?=$btext?></p><?php endif; ?>
   </div>
+  <?php endif; ?>
   <?php if(!empty($bextra)): ?>
   <div class="featuresGrid">
-    <?php foreach($bextra as $feat): ?>
+    <?php foreach($bextra as $feat):
+      $parts = explode(':', $feat, 2);
+      $ftitle = trim($parts[0]);
+      $fdesc  = trim($parts[1] ?? '');
+    ?>
     <div class="featureCard">
-      <span><?=h($feat)?></span>
+      <div class="featureIcon"><?=feature_icon($ftitle)?></div>
+      <div>
+        <p class="featureTitle"><?=h($ftitle)?></p>
+        <?php if($fdesc): ?><p class="featureDesc"><?=h($fdesc)?></p><?php endif; ?>
+      </div>
     </div>
     <?php endforeach; ?>
   </div>
