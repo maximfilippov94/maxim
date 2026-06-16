@@ -318,7 +318,7 @@ foreach($dynamicBlocks as $db_block):
   </div>
   <?php if($bimage): ?>
   <div class="editorialGrid">
-    <img src="<?=$bimage?>" alt="">
+    <img src="<?=$bimage?>" alt="<?=$btitle ? h($btitle) : 'LUKA OUTDOOR'?>">
   </div>
   <?php endif; ?>
 </section>

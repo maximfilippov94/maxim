@@ -102,7 +102,7 @@ if($hasSpecs): ?>
 </section>
 <?php elseif($pb['type']==='lifestyle' || $pb['type']==='text_image'): ?>
 <section class="productLifestyle">
-  <img src="<?=h($pb['image'] ?: 'assets/images/lifestyle.webp')?>" alt="">
+  <img src="<?=h($pb['image'] ?: 'assets/images/lifestyle.webp')?>" alt="<?=h($pb['title'] ?: $p['name'])?>">
   <div>
     <?php if($pb['subtitle']):?><p class="eyebrow"><?=h($pb['subtitle'])?></p><?php endif;?>
     <h2><?=h($pb['title'])?></h2>

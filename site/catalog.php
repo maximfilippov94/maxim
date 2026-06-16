@@ -66,11 +66,14 @@ $totalCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_active=1"
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=$pageTitle?></title>
-<meta name="description" content="<?=$currentCat ? h($currentCat['seo_description'] ?: 'Купить '.h($currentCat['name']).' в интернет-магазине LUKA OUTDOOR. Премиальное outdoor снаряжение с доставкой по России.') : 'Каталог LUKA OUTDOOR — костровые системы, одежда и outdoor аксессуары. Доставка по всей России.'?>">
+<meta name="description" content="<?=$currentCat ? h($currentCat['seo_description'] ?: 'Купить '.h($currentCat['name']).' в интернет-магазине LUKA OUTDOOR. Премиальное outdoor снаряжение ручной работы. Быстрая доставка по всей России.') : 'Каталог LUKA OUTDOOR — костровые системы, походная одежда и outdoor аксессуары ручной работы. Более 50 товаров. Быстрая доставка по всей России.'?>">
 <link rel="canonical" href="https://lukaoutdoor.com/catalog.php<?=$catSlug ? '?cat='.urlencode($catSlug) : ''?>">
 <meta property="og:title" content="<?=$pageTitle?>">
 <meta property="og:description" content="<?=$currentCat ? h($currentCat['name']).' — купить в LUKA OUTDOOR' : 'Весь каталог LUKA OUTDOOR'?>">
 <meta property="og:url" content="https://lukaoutdoor.com/catalog.php<?=$catSlug ? '?cat='.urlencode($catSlug) : ''?>">
+<meta property="og:image" content="https://lukaoutdoor.com/assets/images/hero.webp">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -97,6 +100,16 @@ $totalCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_active=1"
 @media(max-width:520px){.catalogGrid{grid-template-columns:1fr}.catalogPage{width:calc(100vw - 32px)}.catGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:520px){.catalogGrid{grid-template-columns:1fr}.catalogPage{width:calc(100vw - 32px)}}
 </style>
+<script type="application/ld+json">
+<?php
+$breadcrumbs = [
+  ['@type'=>'ListItem','position'=>1,'name'=>'Главная','item'=>'https://lukaoutdoor.com/'],
+  ['@type'=>'ListItem','position'=>2,'name'=>'Каталог','item'=>'https://lukaoutdoor.com/catalog.php'],
+];
+if($currentCat) $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$currentCat['name'],'item'=>'https://lukaoutdoor.com/catalog.php?cat='.urlencode($catSlug)];
+echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$breadcrumbs],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+?>
+</script>
 </head>
 <body>
 <!-- Yandex.Metrika counter -->
