@@ -95,7 +95,7 @@ try {
 .megaFooterRow a{font-size:11px;font-weight:700;color:var(--accent);text-decoration:none;letter-spacing:.08em;text-transform:uppercase}
 .megaCount{font-size:11px;color:rgba(243,241,236,.3);text-transform:uppercase;letter-spacing:.1em}
 /* Mobile menu */
-.mobileMenuLinks{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:8px 0}
+.mobileMenuLinks{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;padding:8px 0;flex:1}
 .mobileMenuInner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%;height:100dvh;padding:0 28px 28px;justify-content:space-between}
 /* All nav links — большой размер */
 .mobileNavLink,
@@ -104,7 +104,7 @@ try {
   font-size:clamp(38px,11vw,56px)!important;
   line-height:1!important;
   text-transform:uppercase!important;
-  color:#f3f1ec!important;
+  color:#e89a42!important;
   padding:10px 0!important;
   border-bottom:1px solid rgba(243,241,236,.07)!important;
   text-decoration:none!important;
@@ -115,9 +115,7 @@ try {
   letter-spacing:.015em!important;
   font-weight:400!important;
 }
-.mobileNavLink::after{content:"→";font-family:Manrope,Arial,sans-serif;font-size:20px;color:#e89a42;opacity:0;transform:translateX(-10px);transition:.2s}
-.mobileNavLink:hover{color:#e89a42!important;padding-left:6px!important}
-.mobileNavLink:hover::after{opacity:1;transform:none}
+.mobileNavLink:active{opacity:.7!important}
 /* Accordion wrapper */
 .mobileAccordion{border-bottom:1px solid rgba(243,241,236,.07)}
 .mobileAccordionHead{
