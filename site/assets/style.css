@@ -54,7 +54,7 @@
    RESET & BASE
    ═══════════════════════════════════════════════════════════════════ */
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; max-width: 100%; }
 body {
   margin: 0;
   background: var(--bg);
@@ -63,6 +63,7 @@ body {
   font-size: 17px;
   line-height: 1.6;
   overflow-x: hidden;
+  max-width: 100%;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
 }
