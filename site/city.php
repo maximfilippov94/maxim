@@ -73,8 +73,8 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
 
 .cityCatsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
 }
 .cityCatCard {
   position: relative;
@@ -91,6 +91,31 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
 .cityCatCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cityCatCard .overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.82), transparent 60%); z-index: 1; }
 .cityCatCard .label { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 12px; z-index: 2; font-family: var(--head); font-size: 17px; text-transform: uppercase; color: #fff; line-height: 1; }
+.cityCatPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 110%, rgba(201,121,43,.2) 0%, transparent 70%),
+    linear-gradient(160deg, #0f0f0d 0%, #050505 100%);
+}
+.cityCatPlaceholder::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(45deg, rgba(201,121,43,.03) 0px, rgba(201,121,43,.03) 1px, transparent 1px, transparent 22px);
+  pointer-events: none;
+}
+.cityCatPlaceholder svg {
+  width: 36px; height: 36px;
+  opacity: .65;
+  position: relative;
+  filter: drop-shadow(0 0 8px rgba(201,121,43,.5));
+}
 .cityCatAll {
   border-radius: var(--radius-md);
   aspect-ratio: 3 / 2;
@@ -195,7 +220,11 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
       <?php foreach($categories as $cat): ?>
       <a class="cityCatCard" href="/catalog.php?cat=<?=h($cat['slug'])?>">
         <?php if(!empty($cat['image'])): ?>
-        <img src="/<?=h($cat['image'])?>" alt="<?=h($cat['name'])?>">
+          <img src="/<?=h($cat['image'])?>" alt="<?=h($cat['name'])?>">
+        <?php else: ?>
+          <div class="cityCatPlaceholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#c9792b" stroke-width="1.5" aria-hidden="true"><path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/><path d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/></svg>
+          </div>
         <?php endif; ?>
         <div class="overlay"></div>
         <div class="label"><?=h($cat['name'])?></div>
@@ -266,8 +295,13 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
     if(!pvz.length){ list.innerHTML = '<p style="color:var(--muted);font-size:13px">Нет данных о пунктах выдачи</p>'; return; }
     list.innerHTML = pvz.slice(0,6).map(p => `
       <div class="pvzCard">
-        <strong>${p.address}</strong>
-        <small>${p.work_time || ''}</small>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--copper2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <div>
+            <strong>${p.address}</strong>
+            <small>${p.work_time || ''}</small>
+          </div>
+        </div>
       </div>
     `).join('');
   } catch(e) {}
