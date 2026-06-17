@@ -1,790 +1,417 @@
 <?php
 /**
- * admin/crm.php — LUKA OUTDOOR CRM
- * Канбан, детальные карточки, СДЭК накладные
+ * admin/crm.php — LUKA OUTDOOR — Standalone CRM (orders & customers)
  */
-require __DIR__ . '/../includes/db.php';
-require __DIR__ . '/../includes/auth.php';
-
-$pdo = db();
-require_admin();
-
-// Миграция
-foreach ([
-    'cdek_order_uuid TEXT DEFAULT ""',
-    'cdek_track TEXT DEFAULT ""',
-    'cdek_status TEXT DEFAULT ""',
-    'cdek_pvz_code TEXT DEFAULT ""',
-    'delivery_cost INTEGER DEFAULT 0',
-    'cdek_raw TEXT DEFAULT ""',
-    'email TEXT DEFAULT ""',
-] as $col_def) {
-    $col = explode(' ', $col_def)[0];
-    try { $pdo->exec("ALTER TABLE orders ADD COLUMN $col_def"); } catch (Exception $e) {}
+require __DIR__.'/../includes/db.php'; require __DIR__.'/../includes/auth.php';
+$pdo=db();
+// миграция полей СДЭК / источника
+foreach(['cdek_order_uuid TEXT DEFAULT ""','cdek_track TEXT DEFAULT ""','cdek_status TEXT DEFAULT ""','cdek_pvz_code TEXT DEFAULT ""','delivery_cost INTEGER DEFAULT 0','cdek_raw TEXT DEFAULT ""','manager_note TEXT DEFAULT ""','source TEXT DEFAULT "site"','email TEXT DEFAULT ""','ym_uid TEXT DEFAULT ""'] as $col_def){
+  try{$pdo->exec("ALTER TABLE orders ADD COLUMN $col_def");}catch(Exception $e){}
 }
 
-$orders = $pdo->query("SELECT o.*, GROUP_CONCAT(i.product_name||' x'||i.qty, ', ') as items_str, COUNT(i.id) as items_count FROM orders o LEFT JOIN order_items i ON i.order_id=o.id GROUP BY o.id ORDER BY o.id DESC")->fetchAll(PDO::FETCH_ASSOC);
+if(!is_admin()){ header('Location:/admin'); exit; }
 
-$stats = [
-    'total'      => count($orders),
-    'new'        => count(array_filter($orders, fn($o) => $o['status'] === 'new')),
-    'processing' => count(array_filter($orders, fn($o) => $o['status'] === 'processing')),
-    'done'       => count(array_filter($orders, fn($o) => $o['status'] === 'done')),
-    'revenue'    => array_sum(array_column(array_filter($orders, fn($o) => $o['status'] !== 'cancelled'), 'total')),
-    'cdek'       => count(array_filter($orders, fn($o) => !empty($o['cdek_order_uuid']))),
-];
-
-// Группируем по статусам для канбана
-$columns = [
-    'new'        => ['label' => 'Новые',    'color' => '#e8943a', 'orders' => []],
-    'processing' => ['label' => 'В работе', 'color' => '#3a8ae8', 'orders' => []],
-    'done'       => ['label' => 'Готово',   'color' => '#4caf50', 'orders' => []],
-    'cancelled'  => ['label' => 'Отмена',   'color' => '#666',    'orders' => []],
-];
-foreach ($orders as $o) {
-    $s = $o['status'] ?? 'new';
-    if (isset($columns[$s])) $columns[$s]['orders'][] = $o;
+// ── POST HANDLERS (order CRUD; CDEK lives in cdek_order.php) ─────────────
+if($_SERVER['REQUEST_METHOD']==='POST'){
+  header('Content-Type: application/json; charset=utf-8');
+  $a=$_POST['action']??'';
+  if($a==='update_order'){
+    $orderId=(int)$_POST['id'];
+    $newStatus=trim($_POST['status']??'new');
+    $note=trim($_POST['manager_note']??'');
+    $oldRow=$pdo->prepare('SELECT status,total,ym_uid FROM orders WHERE id=?');
+    $oldRow->execute([$orderId]); $oldOrder=$oldRow->fetch(PDO::FETCH_ASSOC);
+    $pdo->prepare('UPDATE orders SET status=?,manager_note=? WHERE id=?')->execute([$newStatus,$note,$orderId]);
+    // офлайн-конверсия в Яндекс.Метрику при переводе в "Готово"
+    if($newStatus==='done' && ($oldOrder['status']??'')!=='done' && !empty($oldOrder['ym_uid'])){
+      try{
+        $ymData=['id'=>'luka-order-'.$orderId,'date_time'=>date('Y-m-d\TH:i:s'),'client_id'=>$oldOrder['ym_uid'],'target'=>'purchase','price'=>(float)($oldOrder['total']??0),'currency'=>'RUB'];
+        $ch=curl_init('https://api-metrika.yandex.net/management/v1/counter/109475188/offline_conversions/upload');
+        curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(['conversions'=>[$ymData]]),CURLOPT_HTTPHEADER=>['Authorization: OAuth y0__wgBEKW57BcYz9BCILD7uNkXkiUmFv4ceEovyav43JHemXdvGIQ','Content-Type: application/json'],CURLOPT_TIMEOUT=>5,CURLOPT_SSL_VERIFYPEER=>false]);
+        curl_exec($ch); curl_close($ch);
+      }catch(Exception $e){}
+    }
+    echo json_encode(['ok'=>true]); exit;
+  }
+  if($a==='delete_order'){ $pdo->prepare('DELETE FROM orders WHERE id=?')->execute([(int)$_POST['id']]); echo json_encode(['ok'=>true]); exit; }
+  if($a==='pending_orders'){
+    $lastId=(int)($_POST['last_id']??0);
+    $st=$pdo->prepare("SELECT o.*, GROUP_CONCAT(i.product_name||' x'||i.qty,', ') as items_str, COUNT(i.id) items_count FROM orders o LEFT JOIN order_items i ON i.order_id=o.id WHERE o.id>? GROUP BY o.id ORDER BY o.id DESC LIMIT 20");
+    $st->execute([$lastId]);
+    echo json_encode(['orders'=>$st->fetchAll(PDO::FETCH_ASSOC)]); exit;
+  }
+  echo json_encode(['ok'=>false,'error'=>'unknown: '.$a]); exit;
 }
 
-function time_ago($dt) {
-    $diff = time() - strtotime($dt);
-    if ($diff < 60) return 'только что';
-    if ($diff < 3600) return floor($diff/60).' мин назад';
-    if ($diff < 86400) return floor($diff/3600).' ч назад';
-    return date('d.m.Y', strtotime($dt));
+// ── CSV export ──────────────────────────────────────────────────────────
+if(isset($_GET['export']) && $_GET['export']==='orders'){
+  header('Content-Type:text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="luka-orders.csv"');
+  $out=fopen('php://output','w'); fwrite($out,"\xEF\xBB\xBF");
+  fputcsv($out,['id','date','status','name','phone','city','total','comment','items','manager_note'],';');
+  $orders=$pdo->query("SELECT * FROM orders ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+  foreach($orders as $o){$it=$pdo->prepare('SELECT product_name,price,qty FROM order_items WHERE order_id=?');$it->execute([$o['id']]);$items=[];foreach($it->fetchAll(PDO::FETCH_ASSOC) as $i){$items[]=$i['product_name'].' x'.$i['qty'].' '.money($i['price']);}fputcsv($out,[$o['id'],$o['created_at'],$o['status'],$o['customer_name'],$o['phone'],$o['address'],$o['total'],$o['comment'],implode(' | ',$items),$o['manager_note']],';');}
+  exit;
 }
-?>
-<!doctype html>
+
+// ── DATA ────────────────────────────────────────────────────────────────
+$orders=$pdo->query('SELECT * FROM orders ORDER BY id DESC')->fetchAll(PDO::FETCH_ASSOC);
+$itemsCount=[]; $itemsPreview=[];
+$icSt=$pdo->query("SELECT order_id, COUNT(*) c, GROUP_CONCAT(product_name||' ×'||qty,', ') prev FROM order_items GROUP BY order_id");
+foreach($icSt->fetchAll(PDO::FETCH_ASSOC) as $r){ $itemsCount[$r['order_id']]=(int)$r['c']; $itemsPreview[$r['order_id']]=$r['prev']; }
+
+$STATUSES=['new'=>['Новые','new'],'processing'=>['В работе','processing'],'done'=>['Выполнено','done'],'cancelled'=>['Отменено','cancelled']];
+$byStatus=['new'=>[],'processing'=>[],'done'=>[],'cancelled'=>[]];
+foreach($orders as $o){ $s=$o['status']??'new'; if(!isset($byStatus[$s])) $s='new'; $byStatus[$s][]=$o; }
+
+$today=date('Y-m-d');
+$weekAgo=date('Y-m-d',strtotime('-7 days'));
+$todayCount=0; $weekRevenue=0;
+foreach($orders as $o){
+  $d=substr($o['created_at']??'',0,10);
+  if($d===$today) $todayCount++;
+  if($d>=$weekAgo && $o['status']!=='cancelled') $weekRevenue+=(int)$o['total'];
+}
+$totalOrders=count($orders);
+
+function time_ago_crm($dt){
+  if(!$dt) return '';
+  $diff=time()-strtotime($dt);
+  if($diff<60) return 'только что';
+  if($diff<3600) return floor($diff/60).' мин назад';
+  if($diff<86400) return floor($diff/3600).' ч назад';
+  if($diff<2592000) return floor($diff/86400).' дн назад';
+  return date('d.m.Y',strtotime($dt));
+}
+function ord_city($o){
+  $a=$o['address']??'';
+  if(!$a) return '—';
+  $parts=preg_split('/[·,]/u',$a);
+  return trim($parts[0]??$a);
+}
+function search_blob($o,$prev){ return mb_strtolower(($o['customer_name']??'').' '.($o['phone']??'').' '.($prev??'').' '.($o['address']??'')); }
+?><!doctype html>
 <html lang="ru">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CRM — LUKA OUTDOOR</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #060606;
-  --surface: #0d0d0d;
-  --surface2: #141414;
-  --border: rgba(255,255,255,.07);
-  --border2: rgba(255,255,255,.12);
-  --text: #f3f1ec;
-  --muted: rgba(243,241,236,.45);
-  --accent: #c9792b;
-  --copper: #e8943a;
-  --new: #e8943a;
-  --processing: #3a8ae8;
-  --done: #4caf50;
-  --cancelled: #666;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Manrope, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
-/* ── LAYOUT ── */
-.wrap { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-.sidebar { background: #080808; border-right: 1px solid var(--border); padding: 0; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
-.sLogo { padding: 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
-.sLogo img { height: 30px; }
-.sLogo span { font-size: 10px; letter-spacing: .2em; color: var(--muted); text-transform: uppercase; font-weight: 700; line-height: 1.4; }
-.sNav { padding: 12px 0; flex: 1; }
-.sNav a { display: flex; align-items: center; gap: 10px; padding: 11px 20px; font-size: 13px; font-weight: 600; color: var(--muted); border-left: 3px solid transparent; text-decoration: none; transition: .15s; }
-.sNav a:hover { color: var(--text); background: rgba(255,255,255,.03); }
-.sNav a.active { color: var(--copper); border-left-color: var(--copper); background: rgba(201,121,43,.08); }
-.sBottom { padding: 14px 20px; border-top: 1px solid var(--border); }
-.sBottom a { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); text-decoration: none; margin-bottom: 8px; transition: .15s; }
-.sBottom a:hover { color: var(--text); }
-.main { min-height: 100vh; overflow: hidden; }
-
-/* ── TOP BAR ── */
-.topbar { padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #080808; position: sticky; top: 0; z-index: 50; }
-.topbar h1 { font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -.3px; }
-.topbar-actions { display: flex; gap: 8px; align-items: center; }
-
-/* ── STATS ── */
-.stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; padding: 20px 28px; }
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; }
-.stat span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); margin-bottom: 8px; }
-.stat b { display: block; font-size: 26px; font-weight: 900; line-height: 1; }
-
-/* ── TOOLBAR ── */
-.toolbar { padding: 0 28px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-.searchInput { background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; color: var(--text); padding: 9px 14px; font: inherit; font-size: 13px; outline: none; width: 240px; transition: .15s; }
-.searchInput:focus { border-color: rgba(201,121,43,.5); }
-.viewToggle { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-.viewBtn { background: none; border: none; color: var(--muted); padding: 8px 14px; font: 600 12px/1 Manrope; cursor: pointer; transition: .15s; }
-.viewBtn.active { background: var(--accent); color: #0d0704; }
-.pill { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font: 600 12px/1 Manrope; color: var(--muted); cursor: pointer; transition: .15s; }
-.pill:hover, .pill.active { border-color: var(--accent); color: var(--copper); }
-
-/* ── KANBAN ── */
-.kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 0 28px 40px; align-items: start; }
-.kCol { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; min-height: 120px; }
-.kColHead { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.kColHead h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; }
-.kCount { background: rgba(255,255,255,.08); border-radius: 999px; padding: 2px 9px; font-size: 11px; font-weight: 900; }
-.kBody { padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
-.kBody.drag-over { background: rgba(201,121,43,.06); border-radius: 12px; }
-
-/* ── ORDER CARD ── */
-.oCard { background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 14px; cursor: pointer; transition: .15s; position: relative; }
-.oCard:hover { border-color: rgba(201,121,43,.35); transform: translateY(-1px); }
-.oCard.drag-src { opacity: .4; }
-.oCardTop { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-.oNum { font-size: 11px; font-weight: 900; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
-.oName { font-size: 14px; font-weight: 700; line-height: 1.2; margin-bottom: 3px; }
-.oPhone { font-size: 12px; color: var(--muted); }
-.oItems { font-size: 11px; color: var(--muted); margin: 8px 0; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.oCardBottom { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-.oPrice { font-size: 14px; font-weight: 900; color: var(--copper); }
-.oTime { font-size: 10px; color: var(--muted); }
-.cdekTag { display: inline-flex; align-items: center; gap: 4px; background: rgba(58,138,232,.15); border: 1px solid rgba(58,138,232,.3); border-radius: 6px; padding: 2px 7px; font-size: 10px; font-weight: 700; color: #6ab0ff; margin-top: 6px; }
-.trackTag { background: rgba(76,175,80,.15); border-color: rgba(76,175,80,.3); color: #7fd882; }
-
-/* ── LIST VIEW ── */
-.listView { display: none; padding: 0 28px 40px; }
-.listView.active { display: block; }
-.kanban.hidden { display: none; }
-.listTable { width: 100%; border-collapse: collapse; }
-.listTable th { padding: 10px 14px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
-.listTable td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,.04); vertical-align: middle; }
-.listTable tr:hover td { background: rgba(255,255,255,.02); cursor: pointer; }
-.statusDot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-
-/* ── DRAWER ── */
-.drawerOverlay { position: fixed; inset: 0; background: rgba(0,0,0,.7); z-index: 800; display: none; backdrop-filter: blur(4px); }
-.drawerOverlay.show { display: block; }
-.drawer { position: fixed; top: 0; right: 0; width: min(680px, 100vw); height: 100vh; background: #0a0a0a; border-left: 1px solid var(--border2); z-index: 801; transform: translateX(100%); transition: transform .3s cubic-bezier(.22,.1,.36,1); display: flex; flex-direction: column; }
-.drawer.open { transform: translateX(0); }
-.dHead { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 12px; }
-.dHead h2 { font-size: 18px; text-transform: uppercase; font-weight: 900; }
-.dClose { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: .15s; }
-.dClose:hover { color: var(--text); background: rgba(255,255,255,.06); }
-.dBody { flex: 1; overflow-y: auto; padding: 24px; }
-.dFoot { padding: 14px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-
-/* Drawer sections */
-.dSection { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 14px; }
-.dSection h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
-.dGrid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.dField { display: grid; gap: 5px; }
-.dField label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; font-weight: 600; }
-.dField span { font-size: 14px; font-weight: 600; line-height: 1.4; }
-.dField a { color: var(--copper); text-decoration: none; font-size: 14px; font-weight: 700; }
-.dField a:hover { text-decoration: underline; }
-.dInput { background: var(--surface2); border: 1px solid var(--border2); border-radius: 10px; color: var(--text); padding: 9px 12px; font: inherit; font-size: 13px; outline: none; width: 100%; transition: .15s; }
-.dInput:focus { border-color: rgba(201,121,43,.5); }
-select.dInput { cursor: pointer; }
-.dItems { display: flex; flex-direction: column; gap: 8px; }
-.dItem { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--surface2); border-radius: 10px; font-size: 13px; }
-.dItem b { font-weight: 700; color: var(--copper); }
-
-/* CDEK block */
-.cdekBlock { background: rgba(58,138,232,.06); border: 1px solid rgba(58,138,232,.2); border-radius: 16px; padding: 18px; margin-bottom: 14px; }
-.cdekBlock h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .16em; color: #6ab0ff; margin-bottom: 14px; font-weight: 700; }
-.cdekStatus { display: inline-flex; align-items: center; gap: 6px; background: rgba(58,138,232,.15); border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 700; color: #6ab0ff; margin-bottom: 12px; }
-.trackNum { font-size: 22px; font-weight: 900; color: var(--text); font-variant-numeric: tabular-nums; }
-.cdekForm { display: grid; gap: 10px; }
-.cdekFormRow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-.cdekFormRow.single { grid-template-columns: 1fr; }
-
-/* Status badges */
-.sBadge { display: inline-flex; align-items: center; gap: 5px; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
-.sBadge.new { background: rgba(232,148,58,.15); color: var(--new); }
-.sBadge.processing { background: rgba(58,138,232,.15); color: var(--processing); }
-.sBadge.done { background: rgba(76,175,80,.15); color: var(--done); }
-.sBadge.cancelled { background: rgba(100,100,100,.15); color: var(--cancelled); }
-
-/* Buttons */
-.btn { border: none; border-radius: 10px; padding: 9px 16px; font: 700 12px/1 Manrope; cursor: pointer; transition: .15s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
-.btn-primary { background: var(--accent); color: #0d0704; }
-.btn-primary:hover { background: var(--copper); }
-.btn-primary:disabled { opacity: .5; cursor: default; }
-.btn-ghost { background: rgba(255,255,255,.06); border: 1px solid var(--border2); color: var(--text); }
-.btn-ghost:hover { border-color: var(--accent); color: var(--copper); }
-.btn-blue { background: rgba(58,138,232,.2); border: 1px solid rgba(58,138,232,.4); color: #6ab0ff; }
-.btn-blue:hover { background: rgba(58,138,232,.35); }
-.btn-blue:disabled { opacity: .5; cursor: default; }
-.btn-green { background: rgba(76,175,80,.2); border: 1px solid rgba(76,175,80,.4); color: #7fd882; }
-.btn-green:hover { background: rgba(76,175,80,.35); }
-.btn-danger { background: rgba(122,27,27,.5); border: 1px solid rgba(180,40,40,.3); color: #ffaaaa; }
-.btn-danger:hover { background: rgba(160,30,30,.6); }
-.btn-sm { padding: 6px 11px !important; font-size: 11px !important; }
-
-/* Toast */
-.toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a1a; border: 1px solid var(--border2); color: var(--text); padding: 12px 18px; border-radius: 14px; font-size: 13px; font-weight: 600; z-index: 9999; transform: translateY(16px); opacity: 0; transition: .25s; pointer-events: none; display: flex; align-items: center; gap: 8px; }
-.toast.show { transform: translateY(0); opacity: 1; }
-.toast.ok::before { content: '✓'; color: #4caf50; }
-.toast.err::before { content: '⚠'; color: #e05252; }
-
-/* Loader */
-.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--copper); border-radius: 50%; animation: spin .6s linear infinite; display: inline-block; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-@media (max-width: 1100px) { .kanban { grid-template-columns: repeat(2, 1fr); } .stats { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 800px) { .wrap { grid-template-columns: 1fr; } .sidebar { display: none; } .kanban { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } }
-</style>
+<title>LUKA / CRM</title>
+<link rel="stylesheet" href="admin.css">
 </head>
 <body>
-<div class="wrap">
+<div class="adminWrap">
 
 <!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sLogo">
-    <img src="../assets/images/logo_luka_new.png" alt="LUKA" onerror="this.style.display='none'">
-    <span>LUKA<br>OUTDOOR<br>CRM</span>
-  </div>
-  <nav class="sNav">
-    <a href="/admin/crm.php" class="active">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      Заявки CRM
-    </a>
-    <a href="/admin/index.php?tab=orders">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      Старая CRM
-    </a>
-    <a href="/admin/index.php?tab=products">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
-      Товары
-    </a>
-    <a href="/admin/index.php?tab=settings">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      Настройки
-    </a>
+<div class="sidebarBackdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebarLogo"><div class="sidebarLogoMark">L</div><span>LUKA<br>OUTDOOR<br>CRM</span></div>
+  <nav class="sidebarNav">
+    <a class="active"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Заказы<?php if(count($byStatus['new'])):?><span class="sideBadge"><?=count($byStatus['new'])?></span><?php endif;?></a>
+    <a href="/admin/index.php"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> CMS / Контент</a>
   </nav>
-  <div class="sBottom">
-    <a href="/" target="_blank">↗ На сайт</a>
-    <a href="/admin/logout.php">← Выйти</a>
+  <div class="sidebarBottom">
+    <a href="?export=orders"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Экспорт CSV</a>
+    <a href="/" target="_blank"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> На сайт</a>
+    <a href="logout.php"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg> Выйти</a>
   </div>
 </aside>
 
 <!-- MAIN -->
-<div class="main">
-
-  <!-- TOP BAR -->
+<div class="adminContent">
   <div class="topbar">
-    <h1>Заявки CRM</h1>
-    <div class="topbar-actions">
-      <a href="?export=csv" class="btn btn-ghost btn-sm">↓ CSV</a>
-      <a href="/admin/index.php" class="btn btn-ghost btn-sm">← Старая админка</a>
-    </div>
-  </div>
-
-  <!-- STATS -->
-  <div class="stats">
-    <div class="stat"><span>Всего заявок</span><b><?= $stats['total'] ?></b></div>
-    <div class="stat"><span>Новые</span><b style="color:var(--new)"><?= $stats['new'] ?></b></div>
-    <div class="stat"><span>В работе</span><b style="color:var(--processing)"><?= $stats['processing'] ?></b></div>
-    <div class="stat"><span>Готово</span><b style="color:var(--done)"><?= $stats['done'] ?></b></div>
-    <div class="stat"><span>Выручка</span><b style="font-size:18px"><?= money($stats['revenue']) ?></b></div>
-    <div class="stat"><span>В СДЭК</span><b style="color:#6ab0ff"><?= $stats['cdek'] ?></b></div>
-  </div>
-
-  <!-- TOOLBAR -->
-  <div class="toolbar">
-    <input class="searchInput" id="crmSearch" placeholder="🔍 Имя, телефон, товар..." oninput="filterCards()">
+    <button class="burger" onclick="toggleSidebar()">☰</button>
+    <div class="crumb">CRM / <b>Заказы</b></div>
+    <div class="spacer"></div>
     <div class="viewToggle">
-      <button class="viewBtn active" id="btnKanban" onclick="setView('kanban')">⊞ Канбан</button>
-      <button class="viewBtn" id="btnList" onclick="setView('list')">☰ Список</button>
+      <button id="btnKanban" class="act" onclick="setView('kanban')">⊞ Канбан</button>
+      <button id="btnList" onclick="setView('list')">☰ Список</button>
     </div>
-    <button class="pill active" data-filter="all" onclick="setFilter(this,'all')">Все</button>
-    <button class="pill" data-filter="new" onclick="setFilter(this,'new')">Новые</button>
-    <button class="pill" data-filter="processing" onclick="setFilter(this,'processing')">В работе</button>
-    <button class="pill" data-filter="done" onclick="setFilter(this,'done')">Готово</button>
-    <button class="pill" data-filter="cancelled" onclick="setFilter(this,'cancelled')">Отмена</button>
+    <div class="userChip"><div class="userAvatar">A</div></div>
+  </div>
+  <div class="contentInner">
+
+  <!-- STATS STRIP -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px">
+    <div class="statCard"><span>Заказов сегодня</span><b style="color:var(--st-new)" id="statToday"><?=$todayCount?></b></div>
+    <div class="statCard"><span>Выручка за неделю</span><b style="color:var(--copper);font-size:18px"><?=money($weekRevenue)?></b></div>
+    <div class="statCard"><span>Всего заказов</span><b id="statTotal"><?=$totalOrders?></b></div>
+    <div class="statCard"><span>Новые</span><b style="color:var(--st-new)" id="statNew"><?=count($byStatus['new'])?></b></div>
+    <div class="statCard"><span>В работе</span><b style="color:var(--copper)"><?=count($byStatus['processing'])?></b></div>
   </div>
 
-  <!-- KANBAN VIEW -->
-  <div class="kanban" id="kanbanView">
-    <?php foreach ($columns as $status => $col): ?>
-    <div class="kCol" data-col="<?= $status ?>">
-      <div class="kColHead">
-        <h3 style="color:<?= $col['color'] ?>"><?= $col['label'] ?></h3>
-        <span class="kCount" style="color:<?= $col['color'] ?>"><?= count($col['orders']) ?></span>
-      </div>
-      <div class="kBody" id="col-<?= $status ?>" data-status="<?= $status ?>">
-        <?php foreach ($col['orders'] as $o): ?>
-        <div class="oCard"
-          data-id="<?= $o['id'] ?>"
-          data-status="<?= h($o['status']) ?>"
-          data-search="<?= h(mb_strtolower($o['customer_name'].' '.$o['phone'].' '.($o['items_str']??''))) ?>"
-          draggable="true"
-          onclick="openOrder(<?= $o['id'] ?>)">
-          <div class="oCardTop">
-            <div class="oNum">#<?= $o['id'] ?></div>
-            <?php if($o['cdek_track']): ?>
-              <span class="cdekTag trackTag">🚚 <?= h($o['cdek_track']) ?></span>
-            <?php elseif($o['cdek_order_uuid']): ?>
-              <span class="cdekTag">📦 СДЭК</span>
-            <?php endif; ?>
+  <!-- FILTERS BAR -->
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px">
+    <input class="searchBar" id="crmSearch" placeholder="Поиск по имени, телефону, городу..." oninput="applyFilters()" style="width:240px">
+    <select id="dateFilter" onchange="applyFilters()" style="width:auto;background:var(--bg);border:1px solid var(--line2);border-radius:9px;color:var(--text);padding:9px 32px 9px 13px">
+      <option value="all">Все даты</option>
+      <option value="today">Сегодня</option>
+      <option value="week">Неделя</option>
+      <option value="month">Месяц</option>
+    </select>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="filterPill active" data-flt="all" onclick="setFilter(this,'all')">Все</button>
+      <button class="filterPill" data-flt="new" onclick="setFilter(this,'new')">Новые</button>
+      <button class="filterPill" data-flt="processing" onclick="setFilter(this,'processing')">В работе</button>
+      <button class="filterPill" data-flt="done" onclick="setFilter(this,'done')">Выполнено</button>
+      <button class="filterPill" data-flt="cancelled" onclick="setFilter(this,'cancelled')">Отменено</button>
+    </div>
+    <button class="btn-ghost btn-sm" onclick="customerLookup()" style="margin-left:auto">👤 Поиск клиента</button>
+  </div>
+
+  <!-- KANBAN -->
+  <div class="kanban" id="kanban">
+  <?php foreach($STATUSES as $sk=>$si): ?>
+    <div class="kanCol">
+      <div class="kanColHead"><h3 class="statusBadge <?=$si[1]?>" style="border:none;background:none;padding:0"><?=$si[0]?></h3><span class="cnt" id="cnt-<?=$sk?>"><?=count($byStatus[$sk])?></span></div>
+      <div class="kanBody" id="col-<?=$sk?>" data-status="<?=$sk?>">
+        <?php foreach($byStatus[$sk] as $o):
+          $prev=$itemsPreview[$o['id']]??''; $cnt=$itemsCount[$o['id']]??0; ?>
+        <div class="crm-card" data-id="<?=$o['id']?>" data-status="<?=h($o['status'])?>" data-date="<?=substr($o['created_at']??'',0,10)?>" data-search="<?=h(search_blob($o,$prev))?>" draggable="true" onclick="openOrder(<?=$o['id']?>)">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span class="cId">#<?=$o['id']?></span>
+            <?php if(!empty($o['cdek_track'])):?><span style="font-size:10px;color:var(--st-done)">🚚 <?=h($o['cdek_track'])?></span><?php elseif(!empty($o['cdek_order_uuid'])):?><span style="font-size:10px;color:var(--st-new)">📦 СДЭК</span><?php endif;?>
           </div>
-          <div class="oName"><?= h($o['customer_name']) ?></div>
-          <div class="oPhone"><?= h($o['phone']) ?></div>
-          <?php if($o['items_str']): ?>
-          <div class="oItems"><?= h($o['items_str']) ?></div>
-          <?php endif; ?>
-          <div class="oCardBottom">
-            <div class="oPrice"><?= $o['total'] ? money($o['total']) : '—' ?></div>
-            <div class="oTime"><?= time_ago($o['created_at'] ?? '') ?></div>
+          <div class="cName"><?=h($o['customer_name'])?></div>
+          <div class="cMeta"><?=h($o['phone'])?></div>
+          <div class="cMeta" style="margin-top:3px"><?=h(ord_city($o))?> · <?=$cnt?> тов.</div>
+          <div class="cFoot">
+            <span class="cTotal"><?=$o['total']?money($o['total']):'—'?></span>
+            <span class="cAgo"><?=time_ago_crm($o['created_at']??'')?></span>
+          </div>
+          <div class="cardStatusBtns" onclick="event.stopPropagation()">
+            <?php foreach($STATUSES as $bk=>$bi): if($bk!==$sk):?><button onclick="quickStatus(<?=$o['id']?>,'<?=$bk?>')">→ <?=$bi[0]?></button><?php endif; endforeach;?>
           </div>
         </div>
         <?php endforeach; ?>
       </div>
     </div>
-    <?php endforeach; ?>
+  <?php endforeach; ?>
   </div>
 
-  <!-- LIST VIEW -->
-  <div class="listView" id="listView">
-    <table class="listTable">
-      <thead>
-        <tr>
-          <th>#</th><th>Клиент</th><th>Товары</th><th>Доставка</th><th>Сумма</th><th>Статус</th><th>СДЭК</th><th>Дата</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($orders as $o): ?>
-        <tr data-id="<?= $o['id'] ?>"
-            data-status="<?= h($o['status']) ?>"
-            data-search="<?= h(mb_strtolower($o['customer_name'].' '.$o['phone'].' '.($o['items_str']??''))) ?>"
-            onclick="openOrder(<?= $o['id'] ?>)">
-          <td><b style="color:var(--muted)">#<?= $o['id'] ?></b></td>
-          <td>
-            <div style="font-weight:700;font-size:13px"><?= h($o['customer_name']) ?></div>
-            <div style="font-size:12px;color:var(--muted)"><?= h($o['phone']) ?></div>
-          </td>
-          <td style="font-size:12px;color:var(--muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($o['items_str'] ?? '—') ?></td>
-          <td style="font-size:12px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted)"><?= h($o['address'] ?? '—') ?></td>
-          <td style="font-weight:800;color:var(--copper);white-space:nowrap"><?= $o['total'] ? money($o['total']) : '—' ?></td>
-          <td>
-            <span class="sBadge <?= h($o['status']) ?>">
-              <?= ['new'=>'Новая','processing'=>'В работе','done'=>'Готово','cancelled'=>'Отмена'][$o['status']] ?? h($o['status']) ?>
-            </span>
-          </td>
-          <td>
-            <?php if($o['cdek_track']): ?>
-              <span style="font-size:11px;font-weight:700;color:#7fd882">🚚 <?= h($o['cdek_track']) ?></span>
-            <?php elseif($o['cdek_order_uuid']): ?>
-              <span style="font-size:11px;color:#6ab0ff">📦 создан</span>
-            <?php else: ?><span style="color:var(--muted);font-size:11px">—</span><?php endif; ?>
-          </td>
-          <td style="font-size:12px;color:var(--muted);white-space:nowrap"><?= date('d.m.Y H:i', strtotime($o['created_at'] ?? 'now')) ?></td>
-        </tr>
-        <?php endforeach; ?>
+  <!-- LIST -->
+  <div id="listView" style="display:none">
+    <table class="dataTable">
+      <thead><tr><th>№</th><th>Дата</th><th>Клиент</th><th>Телефон</th><th>Город</th><th>Товары</th><th>Сумма</th><th>Статус</th><th></th></tr></thead>
+      <tbody id="listRows">
+      <?php foreach($orders as $o): $prev=$itemsPreview[$o['id']]??''; $cnt=$itemsCount[$o['id']]??0; $st=$o['status']??'new'; ?>
+      <tr class="crm-list-row" data-id="<?=$o['id']?>" data-status="<?=h($st)?>" data-date="<?=substr($o['created_at']??'',0,10)?>" data-search="<?=h(search_blob($o,$prev))?>">
+        <td style="font-weight:800;color:var(--muted)">#<?=$o['id']?></td>
+        <td style="color:var(--muted);font-size:12px;white-space:nowrap"><?=date('d.m.Y H:i',strtotime($o['created_at']??'now'))?></td>
+        <td style="font-weight:700;cursor:pointer" onclick="openOrder(<?=$o['id']?>)"><?=h($o['customer_name'])?></td>
+        <td><a href="tel:<?=h($o['phone'])?>" style="color:var(--copper)"><?=h($o['phone'])?></a></td>
+        <td style="color:var(--muted)"><?=h(ord_city($o))?></td>
+        <td style="color:var(--muted);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="<?=h($prev)?>"><?=$cnt?> тов.</td>
+        <td style="font-weight:800;color:var(--copper);white-space:nowrap"><?=$o['total']?money($o['total']):'—'?></td>
+        <td>
+          <select class="listStatusSel" onchange="quickStatus(<?=$o['id']?>,this.value,this)" style="background:var(--bg);border:1px solid var(--line2);border-radius:7px;color:var(--text);padding:5px 26px 5px 9px;font-size:12px;font-weight:700">
+            <?php foreach($STATUSES as $bk=>$bi):?><option value="<?=$bk?>" <?=$st===$bk?'selected':''?>><?=$bi[0]?></option><?php endforeach;?>
+          </select>
+        </td>
+        <td><div class="rowActions"><button class="btn-ghost btn-sm" onclick="openOrder(<?=$o['id']?>)">Открыть</button></div></td>
+      </tr>
+      <?php endforeach; ?>
       </tbody>
     </table>
+    <?php if(empty($orders)):?><div class="emptyState"><div class="ico">📭</div><p>Заказов пока нет</p></div><?php endif;?>
   </div>
 
-</div><!-- /main -->
-</div><!-- /wrap -->
+  </div><!-- /contentInner -->
+</div><!-- /adminContent -->
+</div><!-- /adminWrap -->
 
-<!-- ── DRAWER ── -->
-<div class="drawerOverlay" id="drawerOverlay" onclick="closeDrawer()"></div>
-<aside class="drawer" id="orderDrawer">
-  <div class="dHead">
-    <div style="display:flex;align-items:center;gap:12px">
-      <h2 id="dTitle">Заявка</h2>
-      <span id="dBadge" class="sBadge new">Новая</span>
-    </div>
-    <button class="dClose" onclick="closeDrawer()">✕</button>
-  </div>
-  <div class="dBody" id="dBody">
-    <div style="text-align:center;padding:60px;color:var(--muted)"><div class="spinner"></div></div>
-  </div>
-  <div class="dFoot" id="dFoot"></div>
-</aside>
+<!-- ORDER MODAL -->
+<div class="modalOverlay" id="orderModal"><div class="modalBox lg" style="max-width:640px">
+  <button class="modalClose" onclick="closeModal('orderModal')">✕</button>
+  <h2 id="orderModalTitle">Заявка</h2>
+  <div id="orderModalBody"><div class="emptyState">Загрузка...</div></div>
+</div></div>
 
-<!-- ── TOAST ── -->
+<!-- CUSTOMER LOOKUP MODAL -->
+<div class="modalOverlay" id="lookupModal"><div class="modalBox">
+  <button class="modalClose" onclick="closeModal('lookupModal')">✕</button>
+  <h2>Поиск клиента по телефону</h2>
+  <div style="display:flex;gap:8px;margin-bottom:14px"><input class="searchBar" id="lookupPhone" placeholder="+7..." style="flex:1;max-width:none"><button class="btn-primary" onclick="doLookup()">Найти</button></div>
+  <div id="lookupResult"></div>
+</div></div>
+
 <div class="toast" id="toast"></div>
 
-<?php
-// CSV Export
-if (isset($_GET['export']) && $_GET['export'] === 'csv') {
-    ob_clean();
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="luka-crm-'.date('Y-m-d').'.csv"');
-    $out = fopen('php://output', 'w');
-    fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
-    fputcsv($out, ['#','Дата','Статус','Имя','Телефон','Email','Адрес','Доставка','Оплата','Сумма','СДЭК UUID','Трек','Товары','Заметка'], ';');
-    foreach ($orders as $o) {
-        fputcsv($out, [$o['id'], $o['created_at'], $o['status'], $o['customer_name'], $o['phone'], $o['email'] ?? '', $o['address'], $o['delivery_method'], $o['payment_method'], $o['total'], $o['cdek_order_uuid'] ?? '', $o['cdek_track'] ?? '', $o['items_str'] ?? '', $o['manager_note'] ?? ''], ';');
-    }
-    fclose($out);
-    exit;
-}
-?>
-
 <script>
-const CDEK_API = '/admin/cdek_order.php';
-const STATUS_LABELS = {new:'Новая', processing:'В работе', done:'Готово', cancelled:'Отмена'};
-const STATUS_COLORS = {new:'var(--new)', processing:'var(--processing)', done:'var(--done)', cancelled:'var(--cancelled)'};
-let currentOrderId = null;
-let currentView = 'kanban';
-let currentFilter = 'all';
+const STATUS_LABELS={new:'Новые',processing:'В работе',done:'Выполнено',cancelled:'Отменено'};
+const STATUS_CLASS={new:'new',processing:'processing',done:'done',cancelled:'cancelled'};
+let curFilter='all', curView='kanban', curOrderId=null, dragCard=null;
 
-// ── TOAST ──────────────────────────────────────────────────────────────
-function toast(msg, type='ok') {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.className = 'toast show ' + type;
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+function toast(msg,type='ok'){const t=document.getElementById('toast');t.textContent=msg;t.className='toast '+type+' show';clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),2800);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmt(n){return new Intl.NumberFormat('ru-RU').format(Number(n||0))+' ₽';}
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('show');}
+document.querySelectorAll('.modalOverlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modalOverlay.show').forEach(m=>m.classList.remove('show'));});
+
+// ── VIEW / FILTERS ──────────────────────────────────────────────────
+function setView(v){curView=v;document.getElementById('kanban').style.display=v==='kanban'?'grid':'none';document.getElementById('listView').style.display=v==='list'?'block':'none';document.getElementById('btnKanban').classList.toggle('act',v==='kanban');document.getElementById('btnList').classList.toggle('act',v==='list');}
+function setFilter(el,f){curFilter=f;document.querySelectorAll('[data-flt]').forEach(p=>p.classList.remove('active'));el.classList.add('active');applyFilters();}
+function dateMatch(d){const df=document.getElementById('dateFilter').value;if(df==='all'||!d)return true;const t=new Date();const od=new Date(d);const diff=(t-od)/86400000;if(df==='today')return d===t.toISOString().slice(0,10);if(df==='week')return diff<=7;if(df==='month')return diff<=31;return true;}
+function applyFilters(){
+  const q=(document.getElementById('crmSearch').value||'').toLowerCase();
+  const test=el=>(curFilter==='all'||el.dataset.status===curFilter)&&(!q||el.dataset.search.includes(q))&&dateMatch(el.dataset.date);
+  document.querySelectorAll('.crm-card').forEach(c=>c.style.display=test(c)?'':'none');
+  document.querySelectorAll('.crm-list-row').forEach(r=>r.style.display=test(r)?'':'none');
+  ['new','processing','done','cancelled'].forEach(updateCount);
 }
+function updateCount(s){const col=document.getElementById('col-'+s);if(!col)return;const n=[...col.querySelectorAll('.crm-card')].filter(c=>c.style.display!=='none').length;document.getElementById('cnt-'+s).textContent=n;}
 
-// ── VIEW TOGGLE ─────────────────────────────────────────────────────────
-function setView(v) {
-  currentView = v;
-  document.getElementById('kanbanView').classList.toggle('hidden', v !== 'kanban');
-  document.getElementById('listView').classList.toggle('active', v === 'list');
-  document.getElementById('btnKanban').classList.toggle('active', v === 'kanban');
-  document.getElementById('btnList').classList.toggle('active', v === 'list');
-}
-
-// ── FILTER ─────────────────────────────────────────────────────────────
-function setFilter(el, f) {
-  currentFilter = f;
-  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  filterCards();
-}
-
-function filterCards() {
-  const q = document.getElementById('crmSearch').value.toLowerCase();
-  // Kanban
-  document.querySelectorAll('.oCard').forEach(c => {
-    const matchStatus = currentFilter === 'all' || c.dataset.status === currentFilter;
-    const matchQ = !q || c.dataset.search.includes(q);
-    c.style.display = matchStatus && matchQ ? '' : 'none';
+// ── DRAG & DROP ─────────────────────────────────────────────────────
+function initDnd(){
+  document.querySelectorAll('.crm-card').forEach(card=>{
+    card.addEventListener('dragstart',()=>{dragCard=card;setTimeout(()=>card.style.opacity='.35',0);});
+    card.addEventListener('dragend',()=>{card.style.opacity='';document.querySelectorAll('.kanBody').forEach(b=>b.classList.remove('dragover'));dragCard=null;});
   });
-  // List
-  document.querySelectorAll('.listTable tbody tr').forEach(r => {
-    const matchStatus = currentFilter === 'all' || r.dataset.status === currentFilter;
-    const matchQ = !q || r.dataset.search.includes(q);
-    r.style.display = matchStatus && matchQ ? '' : 'none';
+  document.querySelectorAll('.kanBody').forEach(col=>{
+    col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('dragover');});
+    col.addEventListener('dragleave',()=>col.classList.remove('dragover'));
+    col.addEventListener('drop',async e=>{e.preventDefault();col.classList.remove('dragover');if(!dragCard)return;const ns=col.dataset.status,os=dragCard.dataset.status;if(ns===os)return;col.appendChild(dragCard);dragCard.dataset.status=ns;updateCount(os);updateCount(ns);await saveStatus(dragCard.dataset.id,ns);toast('Статус → '+STATUS_LABELS[ns]);});
   });
 }
+initDnd();
 
-// ── DRAG AND DROP KANBAN ────────────────────────────────────────────────
-let dragCard = null;
-document.querySelectorAll('.oCard').forEach(card => {
-  card.addEventListener('dragstart', e => {
-    dragCard = card;
-    setTimeout(() => card.classList.add('drag-src'), 0);
-    e.dataTransfer.effectAllowed = 'move';
-  });
-  card.addEventListener('dragend', () => {
-    card.classList.remove('drag-src');
-    document.querySelectorAll('.kBody').forEach(b => b.classList.remove('drag-over'));
-    dragCard = null;
-  });
-});
-document.querySelectorAll('.kBody').forEach(col => {
-  col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('drag-over'); });
-  col.addEventListener('dragleave', () => col.classList.remove('drag-over'));
-  col.addEventListener('drop', async e => {
-    e.preventDefault();
-    col.classList.remove('drag-over');
-    if (!dragCard || dragCard.dataset.status === col.dataset.status) return;
-    const newStatus = col.dataset.status;
-    const oldStatus = dragCard.dataset.status;
-    const id = dragCard.dataset.id;
-    // Обновляем UI
-    col.appendChild(dragCard);
-    dragCard.dataset.status = newStatus;
-    // Обновляем счётчики
-    updateColCount(oldStatus);
-    updateColCount(newStatus);
-    // Обновляем бейдж
-    dragCard.querySelector('.oNum') && null; // just trigger rerender
-    // Сохраняем
-    try {
-      const fd = new FormData();
-      fd.append('action', 'update_order'); fd.append('order_id', id);
-      fd.append('status', newStatus);
-      await fetch(CDEK_API, {method:'POST', body: fd});
-      toast('Статус → '+STATUS_LABELS[newStatus]);
-    } catch(e) { toast('Ошибка сохранения', 'err'); }
-  });
-});
-function updateColCount(status) {
-  const col = document.querySelector(`[data-col="${status}"]`);
-  if (!col) return;
-  const count = col.querySelectorAll('.oCard:not([style*="display: none"])').length;
-  col.querySelector('.kCount').textContent = count;
+async function saveStatus(id,status,note){
+  const fd=new FormData();fd.append('action','update_order');fd.append('id',id);fd.append('status',status);if(note!=null)fd.append('manager_note',note);
+  const r=await fetch('/admin/crm.php',{method:'POST',body:fd});return r.json();
+}
+async function quickStatus(id,status,sel){
+  await saveStatus(id,status);toast('Статус → '+STATUS_LABELS[status]);
+  // move kanban card
+  const card=document.querySelector(`.crm-card[data-id="${id}"]`);
+  if(card){const os=card.dataset.status;document.getElementById('col-'+status).appendChild(card);card.dataset.status=status;updateCount(os);updateCount(status);
+    card.querySelector('.cardStatusBtns').innerHTML=Object.keys(STATUS_LABELS).filter(k=>k!==status).map(k=>`<button onclick="quickStatus(${id},'${k}')">→ ${STATUS_LABELS[k]}</button>`).join('');}
+  const row=document.querySelector(`.crm-list-row[data-id="${id}"]`);
+  if(row){row.dataset.status=status;const s=row.querySelector('.listStatusSel');if(s&&sel!==s)s.value=status;}
 }
 
-// ── OPEN ORDER DRAWER ───────────────────────────────────────────────────
-async function openOrder(id) {
-  currentOrderId = id;
-  document.getElementById('dTitle').textContent = 'Заявка #' + id;
-  document.getElementById('dBody').innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted)"><div class="spinner"></div></div>';
-  document.getElementById('dFoot').innerHTML = '';
-  document.getElementById('drawerOverlay').classList.add('show');
-  document.getElementById('orderDrawer').classList.add('open');
-
-  const fd = new FormData();
-  fd.append('action', 'get_order'); fd.append('order_id', id);
-  const r = await fetch(CDEK_API, {method:'POST', body: fd});
-  const o = await r.json();
-  if (o.error) { document.getElementById('dBody').innerHTML = '<p style="color:#e05;padding:20px">'+o.error+'</p>'; return; }
-
-  renderDrawer(o);
+// ── ORDER MODAL ─────────────────────────────────────────────────────
+async function openOrder(id){
+  curOrderId=id;
+  document.getElementById('orderModalTitle').textContent='Заявка #'+id;
+  document.getElementById('orderModalBody').innerHTML='<div class="emptyState">Загрузка...</div>';
+  openModal('orderModal');
+  const fd=new FormData();fd.append('action','get_order');fd.append('order_id',id);
+  const r=await fetch('/admin/cdek_order.php',{method:'POST',body:fd});const o=await r.json();
+  if(o.error){document.getElementById('orderModalBody').innerHTML='<p style="color:#f08585;padding:18px">'+esc(o.error)+'</p>';return;}
+  renderOrder(o);loadHistory(o.phone,o.id);
 }
-
-function renderDrawer(o) {
-  const badge = document.getElementById('dBadge');
-  badge.textContent = STATUS_LABELS[o.status] || o.status;
-  badge.className = 'sBadge ' + o.status;
-
-  const items = o.items || [];
-  const totalDelivery = o.delivery_cost ? '<div class="dItem"><span>Доставка</span><b>'+fmt(o.delivery_cost)+'</b></div>' : '';
-
-  document.getElementById('dBody').innerHTML = `
-    <!-- Контакты -->
-    <div class="dSection">
-      <h3>Клиент</h3>
-      <div class="dGrid2">
-        <div class="dField"><label>Имя</label><span>${esc(o.customer_name)}</span></div>
-        <div class="dField"><label>Телефон</label><a href="tel:${esc(o.phone)}">${esc(o.phone)}</a></div>
-        ${o.email ? `<div class="dField"><label>Email</label><a href="mailto:${esc(o.email)}">${esc(o.email)}</a></div>` : ''}
-        <div class="dField"><label>Источник</label><span>${esc(o.source||'—')}</span></div>
-        <div class="dField" style="grid-column:1/-1"><label>Адрес / Город</label><span>${esc(o.address||'—')}</span></div>
-        <div class="dField"><label>Доставка</label><span>${esc(o.delivery_method||'—')}</span></div>
-        <div class="dField"><label>Оплата</label><span>${esc(o.payment_method||'—')}</span></div>
-        ${o.comment ? `<div class="dField" style="grid-column:1/-1"><label>Комментарий</label><span style="white-space:pre-wrap;font-size:13px;color:var(--muted)">${esc(o.comment)}</span></div>` : ''}
+function renderOrder(o){
+  const items=o.items||[];
+  const cdek=o.cdek_track?`<a href="https://lk.cdek.ru/order-history" target="_blank" class="btn-ghost btn-sm" style="color:var(--st-done)">🚚 ${esc(o.cdek_track)} · ЛК СДЭК ↗</a>`
+    : o.cdek_order_uuid?`<a href="https://lk.cdek.ru/order-history" target="_blank" class="btn-ghost btn-sm" style="color:var(--st-new)">📦 СДЭК создан · ЛК ↗</a>`
+    : `<span style="color:var(--muted);font-size:12px">СДЭК не создан — оформите в карточке заказа CMS</span>`;
+  document.getElementById('orderModalBody').innerHTML=`
+    <div class="odBlock">
+      <h4>Клиент</h4>
+      <div class="odGrid">
+        <div class="odField"><div class="k">Имя</div><div class="v">${esc(o.customer_name)}</div></div>
+        <div class="odField"><div class="k">Телефон</div><div class="v"><a href="tel:${esc(o.phone)}" style="color:var(--copper)">${esc(o.phone)}</a></div></div>
+        ${o.email?`<div class="odField"><div class="k">Email</div><div class="v">${esc(o.email)}</div></div>`:''}
+        <div class="odField" style="grid-column:1/-1"><div class="k">Адрес / Город</div><div class="v" style="font-weight:500">${esc(o.address||'—')}</div></div>
+        <div class="odField"><div class="k">Доставка</div><div class="v" style="font-weight:500">${esc(o.delivery_method||'—')}</div></div>
+        <div class="odField"><div class="k">Оплата</div><div class="v" style="font-weight:500">${esc(o.payment_method||'—')}</div></div>
+        ${o.comment?`<div class="odField" style="grid-column:1/-1"><div class="k">Комментарий</div><div class="v" style="font-weight:400;white-space:pre-wrap">${esc(o.comment)}</div></div>`:''}
       </div>
     </div>
-
-    <!-- Товары -->
-    <div class="dSection">
-      <h3>Состав заказа</h3>
-      <div class="dItems">
-        ${items.map(i => `<div class="dItem"><span>${esc(i.product_name)} × ${i.qty}</span><b>${fmt(i.price * i.qty)}</b></div>`).join('')}
-        ${totalDelivery}
-        <div class="dItem" style="background:rgba(201,121,43,.08);border:1px solid rgba(201,121,43,.2)">
-          <span style="font-weight:800">Итого</span>
-          <b style="font-size:16px">${fmt(o.total)}</b>
-        </div>
+    <div id="histBlock"></div>
+    <div class="odBlock">
+      <h4>Состав заказа</h4>
+      ${items.map(i=>`<div class="odItem"><span>${esc(i.product_name)} <span style="color:var(--muted)">× ${i.qty}</span></span><b style="color:var(--copper)">${fmt(i.price*i.qty)}</b></div>`).join('')||'<p style="color:var(--muted)">—</p>'}
+      <div class="odItem" style="background:var(--surface2);border:1px solid var(--line);margin-top:4px"><b>Итого</b><b style="font-size:16px;color:var(--copper)">${fmt(o.total)}</b></div>
+    </div>
+    <div class="odBlock">
+      <h4>Статус и заметка</h4>
+      <div class="odGrid" style="margin-bottom:10px">
+        <div><div class="k" style="font-size:10px;color:var(--muted);margin-bottom:5px">Статус</div>
+          <select id="odStatus" style="width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--text);padding:9px 12px" onchange="saveOrderModal(true)">
+            ${Object.entries(STATUS_LABELS).map(([v,l])=>`<option value="${v}" ${o.status===v?'selected':''}>${l}</option>`).join('')}
+          </select></div>
+        <div><div class="k" style="font-size:10px;color:var(--muted);margin-bottom:5px">Создан</div><div style="padding-top:8px;font-size:13px">${o.created_at?new Date(o.created_at.replace(' ','T')).toLocaleString('ru-RU'):'—'}</div></div>
       </div>
+      <div class="k" style="font-size:10px;color:var(--muted);margin-bottom:5px">Заметка менеджера</div>
+      <textarea id="odNote" style="width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--text);padding:9px 12px;min-height:60px">${esc(o.manager_note||'')}</textarea>
     </div>
-
-    <!-- Управление -->
-    <div class="dSection">
-      <h3>Статус и заметка</h3>
-      <div class="dGrid2" style="gap:10px">
-        <div class="dField">
-          <label>Статус заявки</label>
-          <select class="dInput" id="dStatus" onchange="quickSave()">
-            ${Object.entries(STATUS_LABELS).map(([v,l]) => `<option value="${v}" ${o.status===v?'selected':''}>${l}</option>`).join('')}
-          </select>
-        </div>
-        <div class="dField">
-          <label>Дата заявки</label>
-          <span>${new Date(o.created_at).toLocaleString('ru-RU')}</span>
-        </div>
-        <div class="dField" style="grid-column:1/-1">
-          <label>Заметка менеджера</label>
-          <textarea class="dInput" id="dNote" rows="2" placeholder="Внутренняя заметка...">${esc(o.manager_note||'')}</textarea>
-        </div>
-      </div>
+    <div class="odBlock"><h4>Доставка СДЭК</h4>${cdek}</div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn-primary" onclick="saveOrderModal()">💾 Сохранить</button>
+      <button class="btn-danger" style="margin-left:auto" onclick="deleteOrder(${o.id})">Удалить</button>
     </div>
-
-    <!-- СДЭК -->
-    ${renderCdekBlock(o)}
-
-    <!-- Meta -->
-    <div style="font-size:11px;color:var(--muted);padding:4px 0 8px">
-      Заявка создана: ${new Date(o.created_at).toLocaleString('ru-RU')}
-      ${o.cdek_order_uuid ? ' · UUID: '+o.cdek_order_uuid : ''}
-    </div>
-  `;
-
-  document.getElementById('dFoot').innerHTML = `
-    <button class="btn btn-primary" onclick="saveOrder()">💾 Сохранить</button>
-    <button class="btn btn-danger btn-sm" onclick="deleteOrderCRM(${o.id})">Удалить</button>
+    <div style="font-size:11px;color:var(--muted);padding-top:10px">Источник: ${esc(o.source||'site')} · #${o.id}</div>
   `;
 }
+async function saveOrderModal(silent){
+  const status=document.getElementById('odStatus').value, note=document.getElementById('odNote').value;
+  await saveStatus(curOrderId,status,note);
+  if(!silent)toast('Заявка сохранена');
+  // sync board
+  const card=document.querySelector(`.crm-card[data-id="${curOrderId}"]`);
+  if(card&&card.dataset.status!==status){const os=card.dataset.status;document.getElementById('col-'+status).appendChild(card);card.dataset.status=status;updateCount(os);updateCount(status);}
+  const row=document.querySelector(`.crm-list-row[data-id="${curOrderId}"]`);
+  if(row){row.dataset.status=status;const s=row.querySelector('.listStatusSel');if(s)s.value=status;}
+}
+async function deleteOrder(id){
+  if(!confirm('Удалить заявку #'+id+'?'))return;
+  const fd=new FormData();fd.append('action','delete_order');fd.append('id',id);
+  const r=await fetch('/admin/crm.php',{method:'POST',body:fd});const d=await r.json();
+  if(d.ok){toast('Удалено');closeModal('orderModal');document.querySelector(`.crm-card[data-id="${id}"]`)?.remove();document.querySelector(`.crm-list-row[data-id="${id}"]`)?.remove();['new','processing','done','cancelled'].forEach(updateCount);}
+  else toast('Ошибка','err');
+}
+async function loadHistory(phone,currentId){
+  if(!phone)return;
+  const fd=new FormData();fd.append('action','client_history');fd.append('phone',phone);
+  const r=await fetch('/admin/api.php',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});const d=await r.json();
+  const others=(d.orders||[]).filter(o=>o.id!=currentId);
+  if(!others.length)return;
+  const el=document.getElementById('histBlock');if(!el)return;
+  el.innerHTML=`<div class="odBlock"><h4>История клиента (${others.length})</h4>${others.map(o=>`<div class="odItem" style="cursor:pointer" onclick="openOrder(${o.id})"><span><b style="color:var(--muted)">#${o.id}</b> ${esc(o.items_short||'—')}</span><span style="display:flex;gap:8px;align-items:center"><span class="statusBadge ${STATUS_CLASS[o.status]||''}" style="font-size:9px">${STATUS_LABELS[o.status]||o.status}</span><b style="color:var(--copper)">${fmt(o.total)}</b></span></div>`).join('')}</div>`;
+}
 
-function renderCdekBlock(o) {
-  if (o.cdek_order_uuid) {
-    // Заказ уже создан
-    return `
-    <div class="cdekBlock">
-      <h3>📦 СДЭК — Заказ создан</h3>
-      ${o.cdek_track ? `<div style="margin-bottom:12px"><label style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:4px">Трек-номер</label><div class="trackNum">${esc(o.cdek_track)}</div></div>` : ''}
-      <div class="cdekStatus">${esc(o.cdek_status||'создан')}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-blue btn-sm" onclick="cdekStatus()">↻ Обновить статус</button>
-        <button class="btn btn-green btn-sm" onclick="cdekLabel()">🖨 Печать накладной</button>
-        <button class="btn btn-danger btn-sm" onclick="cdekCancel()">✕ Отменить в СДЭК</button>
-      </div>
-    </div>`;
+// ── CUSTOMER LOOKUP ─────────────────────────────────────────────────
+function customerLookup(){document.getElementById('lookupResult').innerHTML='';document.getElementById('lookupPhone').value='';openModal('lookupModal');setTimeout(()=>document.getElementById('lookupPhone').focus(),100);}
+async function doLookup(){
+  const phone=document.getElementById('lookupPhone').value.trim();
+  if(!phone){toast('Введите телефон','err');return;}
+  const fd=new FormData();fd.append('action','client_history');fd.append('phone',phone);
+  const r=await fetch('/admin/api.php',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});const d=await r.json();
+  const res=document.getElementById('lookupResult');
+  if(!d.orders||!d.orders.length){res.innerHTML='<p style="color:var(--muted)">Заказы не найдены</p>';return;}
+  const total=d.orders.reduce((s,o)=>s+Number(o.total||0),0);
+  res.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Найдено ${d.orders.length} заказ(ов) на ${fmt(total)}</div>`+d.orders.map(o=>`<div class="odItem" style="cursor:pointer" onclick="closeModal('lookupModal');openOrder(${o.id})"><span><b style="color:var(--muted)">#${o.id}</b> ${esc(o.items_short||'—')}</span><span style="display:flex;gap:8px;align-items:center"><span class="statusBadge ${STATUS_CLASS[o.status]||''}" style="font-size:9px">${STATUS_LABELS[o.status]||o.status}</span><b style="color:var(--copper)">${fmt(o.total)}</b></span></div>`).join('');
+}
+document.getElementById('lookupPhone').addEventListener('keydown',e=>{if(e.key==='Enter')doLookup();});
+
+// ── POLLING NEW ORDERS ──────────────────────────────────────────────
+(function(){
+  let lastId=<?=!empty($orders)?max(array_column($orders,'id')):0?>;
+  function cardHtml(o){
+    return `<div class="crm-card" data-id="${o.id}" data-status="new" data-date="${(o.created_at||'').slice(0,10)}" data-search="${esc(((o.customer_name||'')+' '+(o.phone||'')+' '+(o.items_str||'')).toLowerCase())}" draggable="true" onclick="openOrder(${o.id})" style="animation:fadeInCard .3s ease;border-color:var(--copper)">
+      <div style="display:flex;justify-content:space-between"><span class="cId">#${o.id}</span></div>
+      <div class="cName">${esc(o.customer_name)}</div><div class="cMeta">${esc(o.phone)}</div>
+      <div class="cMeta" style="margin-top:3px">${o.items_count||0} тов.</div>
+      <div class="cFoot"><span class="cTotal">${o.total?fmt(o.total):'—'}</span><span class="cAgo">только что</span></div>
+      <div class="cardStatusBtns" onclick="event.stopPropagation()">${Object.keys(STATUS_LABELS).filter(k=>k!=='new').map(k=>`<button onclick="quickStatus(${o.id},'${k}')">→ ${STATUS_LABELS[k]}</button>`).join('')}</div></div>`;
   }
-
-  // Форма создания заказа
-  return `
-  <div class="cdekBlock">
-    <h3>📦 СДЭК — Создать заказ</h3>
-    <div class="cdekForm">
-      <div class="cdekFormRow">
-        <div class="dField">
-          <label>Тип доставки</label>
-          <select class="dInput" id="cdekTariff">
-            <option value="136">До ПВЗ (136)</option>
-            <option value="137">Курьер до двери (137)</option>
-          </select>
-        </div>
-        <div class="dField">
-          <label>Код ПВЗ СДЭК</label>
-          <input class="dInput" id="cdekPvzCode" placeholder="MSK001" value="${esc(o.cdek_pvz_code||'')}">
-        </div>
-        <div class="dField">
-          <label>Код города СДЭК</label>
-          <input class="dInput" id="cdekCityCode" placeholder="270" type="number">
-        </div>
-      </div>
-      <div class="cdekFormRow">
-        <div class="dField">
-          <label>Вес (г)</label>
-          <input class="dInput" id="cdekWeight" type="number" value="12000">
-        </div>
-        <div class="dField">
-          <label>Длина (см)</label>
-          <input class="dInput" id="cdekLength" type="number" value="60">
-        </div>
-        <div class="dField">
-          <label>Ширина × Высота</label>
-          <input class="dInput" id="cdekWidth" type="number" value="60" placeholder="Ш">
-        </div>
-      </div>
-      <button class="btn btn-blue" onclick="cdekCreate()" id="cdekCreateBtn">
-        📦 Создать заказ в СДЭК
-      </button>
-      <p style="font-size:11px;color:var(--muted);margin-top:4px">
-        Укажите код ПВЗ <b>или</b> код города. Коды городов: Москва 270, СПб 1, Тольятти 431.
-      </p>
-    </div>
-  </div>`;
-}
-
-function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmt(n) { return new Intl.NumberFormat('ru-RU').format(Number(n||0)) + ' ₽'; }
-
-function closeDrawer() {
-  document.getElementById('drawerOverlay').classList.remove('show');
-  document.getElementById('orderDrawer').classList.remove('open');
-  currentOrderId = null;
-}
-
-async function quickSave() { await saveOrder(true); }
-
-async function saveOrder(silent=false) {
-  const fd = new FormData();
-  fd.append('action', 'update_order');
-  fd.append('order_id', currentOrderId);
-  fd.append('status', document.getElementById('dStatus').value);
-  fd.append('manager_note', document.getElementById('dNote').value);
-  const r = await fetch(CDEK_API, {method:'POST', body: fd});
-  const d = await r.json();
-  if (d.ok) {
-    if (!silent) toast('Заявка сохранена');
-    // Обновляем карточку в канбане
-    const card = document.querySelector(`.oCard[data-id="${currentOrderId}"]`);
-    const newStatus = document.getElementById('dStatus').value;
-    if (card && card.dataset.status !== newStatus) {
-      const oldStatus = card.dataset.status;
-      card.dataset.status = newStatus;
-      const newCol = document.getElementById('col-' + newStatus);
-      if (newCol) { newCol.appendChild(card); updateColCount(oldStatus); updateColCount(newStatus); }
-    }
-    // Обновляем badge в drawer
-    const badge = document.getElementById('dBadge');
-    if (badge) { badge.textContent = STATUS_LABELS[newStatus]; badge.className = 'sBadge ' + newStatus; }
-  } else {
-    toast('Ошибка сохранения', 'err');
+  async function poll(){
+    try{const fd=new FormData();fd.append('action','pending_orders');fd.append('last_id',lastId);
+      const r=await fetch('/admin/crm.php',{method:'POST',body:fd});const d=await r.json();
+      (d.orders||[]).forEach(o=>{if(+o.id<=lastId)return;lastId=+o.id;if(document.querySelector(`.crm-card[data-id="${o.id}"]`))return;
+        document.getElementById('col-new').insertAdjacentHTML('afterbegin',cardHtml(o));updateCount('new');
+        document.getElementById('statToday').textContent=+document.getElementById('statToday').textContent+1;
+        document.getElementById('statTotal').textContent=+document.getElementById('statTotal').textContent+1;
+        document.getElementById('statNew').textContent=+document.getElementById('statNew').textContent+1;
+        toast('Новая заявка #'+o.id+' — '+o.customer_name);
+        initDnd();
+      });
+    }catch(e){}
   }
-}
-
-async function deleteOrderCRM(id) {
-  if (!confirm('Удалить заявку #'+id+'?')) return;
-  const fd = new FormData();
-  fd.append('action', 'delete_order'); fd.append('id', id);
-  const r = await fetch('/admin/index.php', {method:'POST', body: fd, headers:{'X-Requested-With':'XMLHttpRequest'}});
-  const d = await r.json();
-  if (d.ok) {
-    toast('Заявка удалена');
-    closeDrawer();
-    document.querySelector(`.oCard[data-id="${id}"]`)?.remove();
-    document.querySelector(`.listTable tr[data-id="${id}"]`)?.remove();
-  } else toast('Ошибка', 'err');
-}
-
-// ── СДЭК ───────────────────────────────────────────────────────────────
-async function cdekCreate() {
-  const btn = document.getElementById('cdekCreateBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Создаём...';
-  const fd = new FormData();
-  fd.append('action', 'create');
-  fd.append('order_id', currentOrderId);
-  fd.append('tariff', document.getElementById('cdekTariff').value);
-  fd.append('pvz_code', document.getElementById('cdekPvzCode').value);
-  fd.append('city_code', document.getElementById('cdekCityCode').value);
-  fd.append('weight', document.getElementById('cdekWeight').value);
-  fd.append('length', document.getElementById('cdekLength').value);
-  fd.append('width', document.getElementById('cdekWidth').value);
-  fd.append('height', '40');
-  try {
-    const r = await fetch(CDEK_API, {method:'POST', body: fd});
-    const d = await r.json();
-    if (d.ok) {
-      toast('✓ Заказ создан в СДЭК! UUID: '+d.uuid);
-      await openOrder(currentOrderId); // перерендерим
-    } else {
-      toast(d.error || 'Ошибка СДЭК', 'err');
-      btn.disabled = false; btn.innerHTML = '📦 Создать заказ в СДЭК';
-    }
-  } catch(e) {
-    toast('Сетевая ошибка', 'err');
-    btn.disabled = false; btn.innerHTML = '📦 Создать заказ в СДЭК';
-  }
-}
-
-async function cdekStatus() {
-  const fd = new FormData();
-  fd.append('action', 'status'); fd.append('order_id', currentOrderId);
-  const r = await fetch(CDEK_API, {method:'POST', body: fd});
-  const d = await r.json();
-  if (d.ok) {
-    toast(d.track ? '🚚 Трек: '+d.track+' · '+d.status : '✓ '+d.status);
-    await openOrder(currentOrderId);
-  } else toast(d.error || 'Ошибка', 'err');
-}
-
-async function cdekLabel() {
-  const btn = event.target;
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Готовим...';
-  const fd = new FormData();
-  fd.append('action', 'label'); fd.append('order_id', currentOrderId);
-  const r = await fetch(CDEK_API, {method:'POST', body: fd});
-  const d = await r.json();
-  btn.disabled = false; btn.innerHTML = '🖨 Печать накладной';
-  if (d.ok && d.url) {
-    window.open(d.url, '_blank');
-    toast('✓ Накладная открыта в новой вкладке');
-  } else toast(d.error || 'Ошибка', 'err');
-}
-
-async function cdekCancel() {
-  if (!confirm('Отменить заказ в СДЭК?')) return;
-  const fd = new FormData();
-  fd.append('action', 'cancel'); fd.append('order_id', currentOrderId);
-  const r = await fetch(CDEK_API, {method:'POST', body: fd});
-  const d = await r.json();
-  if (d.ok) { toast('Заказ отменён в СДЭК'); await openOrder(currentOrderId); }
-  else toast(d.error || 'Ошибка', 'err');
-}
-
-// Закрытие по Esc
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+  setInterval(poll,10000);setTimeout(poll,4000);
+})();
 </script>
 </body>
 </html>
