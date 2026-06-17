@@ -129,27 +129,27 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
 }
 .cityCatAll:hover { background: rgba(201,121,43,.16); border-color: rgba(201,121,43,.5); }
 
-.citySeoGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 10px;
+.citySeoList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 14px;
 }
 .citySeoLink {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid rgba(243,241,236,.07);
-  border-radius: var(--radius-md);
+  gap: 5px;
+  padding: 7px 14px;
+  border: 1px solid rgba(243,241,236,.09);
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  color: var(--muted);
   text-decoration: none;
   background: rgba(255,255,255,.02);
-  transition: border-color 200ms ease;
+  transition: border-color 200ms ease, color 200ms ease, background 200ms ease;
+  white-space: nowrap;
 }
-.citySeoLink:hover { border-color: rgba(201,121,43,.3); }
-.citySeoLink .arrow { margin-left: auto; color: var(--copper2); font-size: 18px; flex-shrink: 0; }
-.citySeoLink strong { display: block; font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
-.citySeoLink small { font-size: 12px; color: var(--muted); }
+.citySeoLink:hover { border-color: rgba(201,121,43,.4); color: var(--copper2); background: rgba(201,121,43,.06); }
 
 @media(max-width:980px) {
   .cityPage { width: calc(100vw - 48px); padding: 90px 0 80px; }
@@ -269,14 +269,10 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
   if(!empty($allSeoItems)): ?>
   <div class="citySection" style="margin-top:48px;padding-top:32px;border-top:1px solid rgba(243,241,236,.08)">
     <p class="eyebrow">КУПИТЬ <?=h(mb_strtoupper($cityNameIn))?></p>
-    <div class="citySeoGrid">
+    <div class="citySeoList">
       <?php foreach($allSeoItems as $cat): ?>
       <a class="citySeoLink" href="/catalog.php?cat=<?=h($cat['slug'])?>">
-        <div>
-          <strong><?=h($cat['name'])?> с доставкой <?=h($cityNameIn)?></strong>
-          <small>Купить <?=h(mb_strtolower($cat['name']))?> <?=h($cityNameIn)?> — доставка СДЭК</small>
-        </div>
-        <span class="arrow">→</span>
+        <?=h($cat['name'])?> <?=h($cityNameIn)?>
       </a>
       <?php endforeach; ?>
     </div>
