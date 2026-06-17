@@ -347,7 +347,7 @@ function product_media_list($product_id){
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LUKA / ADMIN</title>
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('adminTheme')||'light')</script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('adminTheme')||'dark')</script>
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>

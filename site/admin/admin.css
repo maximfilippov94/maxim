@@ -336,3 +336,54 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* ── TAB SYSTEM ── */
 .tabContent { display: none; }
 .tabContent.active { display: block; }
+
+/* ── LIGHT THEME ─────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:#f2f3f5;
+  --surface:#ffffff;
+  --surface2:#f7f8fa;
+  --panel:#ffffff;
+  --panel2:#f7f8fa;
+  --line:#e3e5e8;
+  --line2:#d0d3d8;
+  --table-border:#eff0f3;
+  --table-hover:rgba(79,127,255,.035);
+  --copper:#c9792b;
+  --copper-soft:rgba(201,121,43,.10);
+  --accent:#4f7fff;
+  --text:#1f2128;
+  --muted:#9ea4b0;
+  --st-new:#3a8ae8;
+  --st-proc:#c9792b;
+  --st-done:#22a06b;
+  --st-cancel:#d93025;
+}
+[data-theme="light"] .sidebar { background:#1e222c; border-color:#2a2f3a; }
+[data-theme="light"] .sidebarNav a { color:rgba(255,255,255,.55); }
+[data-theme="light"] .sidebarNav a:hover { color:#fff; background:rgba(255,255,255,.08); }
+[data-theme="light"] .sidebarNav a.active { color:#7da4ff; background:rgba(79,127,255,.14); border-color:#4f7fff; }
+[data-theme="light"] .sidebarLogo span { color:rgba(255,255,255,.7); }
+[data-theme="light"] .sidebarBottom a { color:rgba(255,255,255,.4); }
+[data-theme="light"] .loginBox { box-shadow:0 8px 32px rgba(0,0,0,.12); }
+
+/* ── THEME CARDS (settings) ──────────────────────────── */
+.themeCards { display:flex; gap:12px; }
+.themeCard {
+  flex:1; max-width:160px; border:2px solid var(--line); border-radius:12px;
+  overflow:hidden; cursor:pointer; transition:border-color .15s;
+}
+.themeCard:hover { border-color:var(--copper); }
+.themeCard.active-theme { border-color:var(--copper); }
+.themeCard-preview {
+  height:64px; display:flex; gap:0; overflow:hidden;
+}
+.themeCard-preview.tp-dark { background:#0b0b0b; }
+.themeCard-preview.tp-light { background:#f2f3f5; }
+.tc-sidebar { width:28%; background:#1e222c; }
+.themeCard-preview.tp-light .tc-content,
+.themeCard-preview.tp-dark .tc-content { flex:1; }
+.themeCard-preview.tp-light .tc-content { background:#f2f3f5; }
+.themeCard-preview.tp-dark .tc-content { background:#0b0b0b; }
+.themeCard-name { padding:8px 10px 2px; font-size:13px; font-weight:700; color:var(--text); }
+.themeCard-desc { padding:0 10px 10px; font-size:11px; color:var(--muted); }
+
