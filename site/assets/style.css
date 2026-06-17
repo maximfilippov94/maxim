@@ -1891,8 +1891,8 @@ button:focus-visible { border-radius: var(--radius-sm); }
   .editorialGrid img:first-child,
   .productLifestyle img { height: auto; border-radius: var(--radius-lg); }
 
-  .productPage { padding-top: 128px; }
-  .breadcrumbs { font-size: 14px; margin-top: 22px; }
+  .productPage { padding-top: 72px; }
+  .breadcrumbs { font-size: 14px; margin-top: 16px; }
   .productHero { display: block; margin-top: 28px; }
   .mainProductImage { height: auto; aspect-ratio: 1 / 1.05; border-radius: var(--radius-xl); }
   .thumbs { gap: 8px; overflow-x: auto; }

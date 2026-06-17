@@ -17,7 +17,7 @@ $desc  = 'Доставляем костровые чаши и outdoor снаря
 <link rel="canonical" href="https://lukaoutdoor.com/cities.php">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=6.1.0">
+<link rel="stylesheet" href="/assets/style.css?v=6.2.0">
 <style>
 .citiesPage { width: min(var(--max), calc(100vw - 120px)); margin: 0 auto; padding: 120px 0 100px; }
 .citiesHeader { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(243,241,236,.08); }
@@ -143,6 +143,6 @@ $desc  = 'Доставляем костровые чаши и outdoor снаря
 
 <?php render_footer($pdo); ?>
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="/assets/script.js?v=6.1.0"></script>
+<script src="/assets/script.js?v=6.2.0"></script>
 </body>
 </html>
