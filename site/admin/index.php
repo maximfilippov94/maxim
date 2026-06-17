@@ -1359,7 +1359,7 @@ $totalMargin = $totalRevenue > 0 ? round($totalProfit/$totalRevenue*100) : 0;
       <input type="hidden" name="id" id="ps_id">
       <input type="hidden" name="page_id" id="ps_page_id">
       <input type="hidden" name="old_ps_image" id="ps_old_image">
-      <label>Тип<select name="ps_type" id="ps_type">
+      <label>Тип<select name="ps_type" id="ps_type" onchange="updateSectionFields()">
         <option value="hero_simple">Заголовок страницы</option>
         <option value="text">Текст</option>
         <option value="text_image">Текст + фото</option>
@@ -1369,13 +1369,13 @@ $totalMargin = $totalRevenue > 0 ? round($totalProfit/$totalRevenue*100) : 0;
         <option value="products_grid">Сетка товаров</option>
         <option value="quote">Цитата</option>
       </select></label>
-      <label>Eyebrow<input name="ps_eyebrow" id="ps_eyebrow"></label>
-      <label class="wide">Заголовок<input name="ps_title" id="ps_title" required></label>
-      <label class="wide">Текст<textarea name="ps_text" id="ps_text"></textarea></label>
-      <label>CTA текст<input name="ps_cta_text" id="ps_cta_text"></label>
-      <label>CTA ссылка<input name="ps_cta_link" id="ps_cta_link"></label>
-      <label class="wide">Пункты через |<input name="ps_extra" id="ps_extra"></label>
-      <label>Фото<input type="file" name="ps_image" accept="image/*"></label>
+      <label data-types="hero_simple lead_form">Eyebrow<input name="ps_eyebrow" id="ps_eyebrow"></label>
+      <label class="wide" data-types="hero_simple text text_image cards contacts_block lead_form products_grid">Заголовок<input name="ps_title" id="ps_title"></label>
+      <label class="wide" data-types="text text_image lead_form quote">Текст<textarea name="ps_text" id="ps_text"></textarea></label>
+      <label data-types="text_image lead_form">CTA текст<input name="ps_cta_text" id="ps_cta_text"></label>
+      <label data-types="text_image">CTA ссылка<input name="ps_cta_link" id="ps_cta_link"></label>
+      <label class="wide" id="ps_extra_wrap" data-types="contacts_block cards products_grid quote"><span id="ps_extra_label">Доп. данные</span><textarea name="ps_extra" id="ps_extra" rows="4"></textarea></label>
+      <label data-types="text_image">Фото<input type="file" name="ps_image" accept="image/*"></label>
       <label>Порядок<input name="ps_sort" id="ps_sort" type="number" value="10"></label>
       <label class="checkRow wide"><input type="checkbox" name="ps_active" id="ps_active" checked> Активен</label>
       <div class="formActions">
@@ -1424,7 +1424,7 @@ async function ajaxForm(formId){
 }
 
 // ── TABS ─────────────────────────────────────────────────────────────────
-document.querySelectorAll('.sidebarNav a').forEach(a=>{
+document.querySelectorAll('.sidebarNav a[data-tab]').forEach(a=>{
   a.addEventListener('click', e=>{
     e.preventDefault();
     const tab = a.dataset.tab;
@@ -1435,6 +1435,24 @@ document.querySelectorAll('.sidebarNav a').forEach(a=>{
     history.replaceState(null,'','?tab='+tab);
   });
 });
+
+// ── SECTION FIELD VISIBILITY ─────────────────────────────────────────────
+const sectionExtraLabels = {
+  contacts_block: 'Контакты (Название|Значение, по одному на строку)',
+  cards:          'Карточки (Заголовок::Текст, по одной на строку)',
+  products_grid:  'Слаги товаров (через запятую или перенос строки)',
+  quote:          'Автор / подпись',
+};
+function updateSectionFields(){
+  const type = document.getElementById('ps_type').value;
+  document.querySelectorAll('#sectionForm [data-types]').forEach(el=>{
+    const types = el.dataset.types.split(' ');
+    el.style.display = types.includes(type) ? '' : 'none';
+  });
+  // Update extra label
+  const extraLabel = document.getElementById('ps_extra_label');
+  if(extraLabel) extraLabel.textContent = sectionExtraLabels[type] || 'Доп. данные';
+}
 
 // ── MODALS ───────────────────────────────────────────────────────────────
 function openModal(id){ document.getElementById(id).classList.add('show'); }
@@ -1713,6 +1731,7 @@ function openSectionModal(ps,pageId){
   document.getElementById('ps_page_id').value=pageId;
   document.getElementById('ps_old_image').value=ps?.image||'';
   document.getElementById('ps_type').value=ps?.type||'text';
+  updateSectionFields();
   document.getElementById('ps_eyebrow').value=ps?.eyebrow||'';
   document.getElementById('ps_title').value=ps?.title||'';
   document.getElementById('ps_text').value=ps?.text||'';

@@ -332,3 +332,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 }
 .sidebarBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110}
 .sidebarBackdrop.show{display:block}
+
+/* ── TAB SYSTEM ── */
+.tabContent { display: none; }
+.tabContent.active { display: block; }
