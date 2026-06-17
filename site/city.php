@@ -272,8 +272,8 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
     <div class="citySeoList">
       <?php foreach($allSeoItems as $cat): ?>
       <a class="citySeoLink" href="/catalog.php?cat=<?=h($cat['slug'])?>">
-        <?=h($cat['name'])?> <?=h($cityNameIn)?>
-      </a>
+        Купить <?=h(mb_strtolower($cat['name']))?> <?=h($cityNameIn)?>
+</a>
       <?php endforeach; ?>
     </div>
   </div>
