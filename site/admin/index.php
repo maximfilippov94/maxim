@@ -1266,37 +1266,34 @@ $totalMargin = $totalRevenue > 0 ? round($totalProfit/$totalRevenue*100) : 0;
 </div>
 
 <!-- Page Section Modal -->
+<!-- ══ BLOCK PICKER MODAL ══ -->
+<div class="modalOverlay" id="blockPickerModal">
+  <div class="modalBox" style="width:min(700px,calc(100vw - 32px));padding:28px">
+    <button class="modalClose" onclick="closeModal('blockPickerModal')">✕</button>
+    <h2 style="margin:0 0 20px;font-size:18px">Выберите тип блока</h2>
+    <div id="blockPickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px"></div>
+  </div>
+</div>
+
+<!-- ══ SECTION EDITOR MODAL ══ -->
 <div class="modalOverlay" id="sectionModal">
-  <div class="modalBox" style="width:min(640px,calc(100vw - 32px))">
+  <div class="modalBox" style="width:min(680px,calc(100vw - 32px));max-height:90vh;overflow-y:auto;padding:28px">
     <button class="modalClose" onclick="closeModal('sectionModal')">✕</button>
-    <h2 id="sectionModalTitle">Блок страницы</h2>
-    <form id="sectionForm" enctype="multipart/form-data" class="formGrid">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+      <span id="sectionModalIcon" style="font-size:24px"></span>
+      <h2 id="sectionModalTitle" style="margin:0;font-size:18px">Блок страницы</h2>
+    </div>
+    <form id="sectionForm" enctype="multipart/form-data">
       <input type="hidden" name="action" value="save_page_section">
       <input type="hidden" name="id" id="ps_id">
       <input type="hidden" name="page_id" id="ps_page_id">
       <input type="hidden" name="old_ps_image" id="ps_old_image">
-      <label>Тип<select name="ps_type" id="ps_type">
-        <option value="hero_simple">Заголовок страницы</option>
-        <option value="text">Текст</option>
-        <option value="text_image">Текст + фото</option>
-        <option value="cards">Карточки</option>
-        <option value="contacts_block">Контакты</option>
-        <option value="lead_form">Форма заявки</option>
-        <option value="products_grid">Сетка товаров</option>
-        <option value="quote">Цитата</option>
-      </select></label>
-      <label>Eyebrow<input name="ps_eyebrow" id="ps_eyebrow"></label>
-      <label class="wide">Заголовок<input name="ps_title" id="ps_title" required></label>
-      <label class="wide">Текст<textarea name="ps_text" id="ps_text"></textarea></label>
-      <label>CTA текст<input name="ps_cta_text" id="ps_cta_text"></label>
-      <label>CTA ссылка<input name="ps_cta_link" id="ps_cta_link"></label>
-      <label class="wide">Пункты через |<input name="ps_extra" id="ps_extra"></label>
-      <label>Фото<input type="file" name="ps_image" accept="image/*"></label>
-      <label>Порядок<input name="ps_sort" id="ps_sort" type="number" value="10"></label>
-      <label class="checkRow wide"><input type="checkbox" name="ps_active" id="ps_active" checked> Активен</label>
-      <div class="formActions">
-        <button type="button" class="btn-primary" onclick="saveSection()">Сохранить</button>
+      <input type="hidden" name="ps_type" id="ps_type">
+      <!-- Dynamic fields rendered by BlockRegistry -->
+      <div id="sectionDynamicFields" style="display:grid;gap:14px"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
         <button type="button" class="btn-ghost" onclick="closeModal('sectionModal')">Отмена</button>
+        <button type="button" class="btn-primary" onclick="saveSection()">Сохранить блок</button>
       </div>
     </form>
   </div>
@@ -1622,31 +1619,230 @@ async function deletePage(id,btn){
   else toast('Ошибка','err');
 }
 
-// Page sections
-function openSectionModal(ps,pageId){
-  document.getElementById('sectionModalTitle').textContent=ps?'Редактировать блок':'Добавить блок';
-  document.getElementById('ps_id').value=ps?.id||'';
-  document.getElementById('ps_page_id').value=pageId;
-  document.getElementById('ps_old_image').value=ps?.image||'';
-  document.getElementById('ps_type').value=ps?.type||'text';
-  document.getElementById('ps_eyebrow').value=ps?.eyebrow||'';
-  document.getElementById('ps_title').value=ps?.title||'';
-  document.getElementById('ps_text').value=ps?.text||'';
-  document.getElementById('ps_cta_text').value=ps?.cta_text||'';
-  document.getElementById('ps_cta_link').value=ps?.cta_link||'';
-  document.getElementById('ps_extra').value=ps?.extra||'';
-  document.getElementById('ps_sort').value=ps?.sort_order||10;
-  document.getElementById('ps_active').checked=!ps||ps.is_active==1;
+// ── BLOCK REGISTRY ───────────────────────────────────────────────────────
+const BlockRegistry = {
+  hero_simple: {
+    label:'Заголовок страницы', icon:'📄',
+    fields:[
+      {key:'ps_eyebrow',label:'Надпись над заголовком',type:'text',name:'ps_eyebrow'},
+      {key:'ps_title',label:'Заголовок (H1)',type:'text',name:'ps_title',required:true},
+      {key:'ps_subtitle',label:'Подзаголовок',type:'text',name:'ps_subtitle'},
+    ]
+  },
+  text: {
+    label:'Текст', icon:'📝',
+    fields:[
+      {key:'ps_eyebrow',label:'Eyebrow',type:'text',name:'ps_eyebrow'},
+      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
+      {key:'ps_text',label:'Текст (Markdown)',type:'textarea',name:'ps_text'},
+    ]
+  },
+  text_image: {
+    label:'Текст + фото', icon:'🖼️',
+    fields:[
+      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
+      {key:'ps_text',label:'Текст',type:'textarea',name:'ps_text'},
+      {key:'ps_image',label:'Фото',type:'image',name:'ps_image'},
+      {key:'ps_cta_text',label:'Кнопка (текст)',type:'text',name:'ps_cta_text'},
+      {key:'ps_cta_link',label:'Кнопка (ссылка)',type:'text',name:'ps_cta_link'},
+    ]
+  },
+  cards: {
+    label:'Карточки', icon:'🃏',
+    fields:[
+      {key:'ps_eyebrow',label:'Eyebrow',type:'text',name:'ps_eyebrow'},
+      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
+      {key:'ps_extra',label:'Карточки',type:'repeater',name:'ps_extra',
+        schema:[{key:'title',label:'Заголовок'},{key:'text',label:'Текст'}]},
+    ]
+  },
+  contacts_block: {
+    label:'Контакты', icon:'📞',
+    fields:[
+      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
+      {key:'ps_extra',label:'Контакты',type:'repeater',name:'ps_extra',
+        schema:[{key:'label',label:'Подпись'},{key:'value',label:'Значение (телефон, @ник, email...)'}]},
+    ]
+  },
+  lead_form: {
+    label:'Форма заявки', icon:'📬',
+    fields:[
+      {key:'ps_eyebrow',label:'Eyebrow',type:'text',name:'ps_eyebrow'},
+      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
+      {key:'ps_text',label:'Подзаголовок / описание',type:'textarea',name:'ps_text'},
+      {key:'ps_cta_text',label:'Текст кнопки',type:'text',name:'ps_cta_text',placeholder:'Отправить заявку'},
+    ]
+  },
+  products_grid: {
+    label:'Сетка товаров', icon:'🛍️',
+    fields:[
+      {key:'ps_title',label:'Заголовок секции',type:'text',name:'ps_title'},
+      {key:'ps_extra',label:'Slug товаров (через |)',type:'text',name:'ps_extra',placeholder:'bowl-pro|bowl-mini|stand-x'},
+    ]
+  },
+  quote: {
+    label:'Цитата / манифест', icon:'💬',
+    fields:[
+      {key:'ps_text',label:'Текст цитаты',type:'textarea',name:'ps_text',required:true},
+      {key:'ps_subtitle',label:'Автор / источник',type:'text',name:'ps_subtitle'},
+    ]
+  },
+};
+
+const BLOCK_COMMON_FIELDS = [
+  {key:'ps_sort',label:'Порядок сортировки',type:'number',name:'ps_sort',value:'10'},
+  {key:'ps_active',label:'Активен',type:'checkbox',name:'ps_active',checked:true},
+];
+
+function renderBlockPicker(pageId){
+  const grid = document.getElementById('blockPickerGrid');
+  grid.innerHTML = Object.entries(BlockRegistry).map(([type,def])=>`
+    <button type="button" onclick="openSectionEditor(null,${pageId},'${type}')" style="
+      display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;
+      border:1px solid var(--line);border-radius:8px;background:var(--panel2);
+      cursor:pointer;transition:.15s;font-family:inherit;color:var(--text)
+    " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--line)'">
+      <span style="font-size:28px">${def.icon}</span>
+      <span style="font-size:12px;font-weight:700;text-align:center">${def.label}</span>
+    </button>
+  `).join('');
+  openModal('blockPickerModal');
+}
+
+function openSectionModal(ps, pageId){
+  if(!ps){
+    renderBlockPicker(pageId);
+    return;
+  }
+  openSectionEditor(ps, pageId, ps.type);
+}
+
+function openSectionEditor(ps, pageId, type){
+  closeModal('blockPickerModal');
+  const def = BlockRegistry[type] || BlockRegistry['text'];
+  document.getElementById('sectionModalTitle').textContent = (ps ? 'Редактировать: ' : 'Добавить: ') + def.label;
+  document.getElementById('sectionModalIcon').textContent = def.icon;
+  document.getElementById('ps_id').value = ps?.id || '';
+  document.getElementById('ps_page_id').value = pageId;
+  document.getElementById('ps_old_image').value = ps?.image || '';
+  document.getElementById('ps_type').value = type;
+
+  const container = document.getElementById('sectionDynamicFields');
+  const allFields = [...def.fields, ...BLOCK_COMMON_FIELDS];
+  container.innerHTML = allFields.map(f => renderBlockField(f, ps)).join('');
   openModal('sectionModal');
 }
+
+function renderBlockField(f, ps){
+  const val = ps ? (ps[f.key?.replace('ps_','')] ?? ps[f.key] ?? f.value ?? '') : (f.value ?? '');
+  const labelStyle = 'display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em';
+  const inputStyle = 'padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s';
+
+  if(f.type === 'text' || f.type === 'number'){
+    return `<label style="${labelStyle}">${f.label}
+      <input name="${f.name}" value="${escHtml(String(val))}" type="${f.type}" style="${inputStyle};width:100%;box-sizing:border-box"
+        ${f.required?'required':''} ${f.placeholder?`placeholder="${f.placeholder}"`:''}>
+    </label>`;
+  }
+  if(f.type === 'textarea'){
+    return `<label style="${labelStyle}">${f.label}
+      <textarea name="${f.name}" rows="4" style="${inputStyle};width:100%;box-sizing:border-box;resize:vertical" ${f.required?'required':''}>${escHtml(String(val))}</textarea>
+    </label>`;
+  }
+  if(f.type === 'image'){
+    const preview = ps?.image ? `<img src="../${ps.image}" style="max-height:80px;border-radius:4px;margin-top:4px">` : '';
+    return `<label style="${labelStyle}">${f.label}
+      ${preview}
+      <input name="${f.name}" type="file" accept="image/*" style="font-size:13px;color:var(--muted)">
+    </label>`;
+  }
+  if(f.type === 'checkbox'){
+    const checked = ps ? ps.is_active == 1 : (f.checked !== false);
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer">
+      <input type="checkbox" name="${f.name}" id="${f.name}_check" ${checked?'checked':''} style="width:16px;height:16px">
+      ${f.label}
+    </label>`;
+  }
+  if(f.type === 'repeater'){
+    const rows = parseExtra(String(val), f.schema);
+    const rowsHtml = rows.map((row,i) => renderRepeaterRow(f, row, i)).join('');
+    return `<div>
+      <div style="${labelStyle};margin-bottom:10px">${f.label}</div>
+      <div id="repeater_${f.name}" style="display:flex;flex-direction:column;gap:8px">${rowsHtml}</div>
+      <button type="button" onclick="addRepeaterRow('${f.name}',${JSON.stringify(f.schema).replace(/"/g,'&quot;')})" style="
+        margin-top:8px;padding:7px 14px;border:1px dashed var(--line);border-radius:6px;
+        background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;width:100%
+      ">+ Добавить строку</button>
+      <input type="hidden" name="${f.name}" id="repeater_hidden_${f.name}">
+    </div>`;
+  }
+  return '';
+}
+
+function renderRepeaterRow(f, rowData, idx){
+  const inputs = f.schema.map(col=>`
+    <label style="display:flex;flex-direction:column;gap:4px;flex:1;font-size:11px;color:var(--muted);font-weight:600">
+      ${col.label}
+      <input value="${escHtml(rowData[col.key]||'')}" data-col="${col.key}"
+        style="padding:7px 10px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--text);font-size:13px;outline:none">
+    </label>
+  `).join('');
+  return `<div class="repeater-row" style="display:flex;gap:8px;align-items:end;background:var(--panel2);padding:10px;border-radius:6px;border:1px solid var(--line)">
+    ${inputs}
+    <button type="button" onclick="this.closest('.repeater-row').remove()" style="flex-shrink:0;width:28px;height:28px;border:none;background:rgba(220,50,50,.15);color:#e05252;border-radius:5px;cursor:pointer;font-size:14px">✕</button>
+  </div>`;
+}
+
+function addRepeaterRow(fieldName, schema){
+  const container = document.getElementById('repeater_' + fieldName);
+  const idx = container.querySelectorAll('.repeater-row').length;
+  const f = {schema, name: fieldName};
+  const emptyRow = {};
+  schema.forEach(c => emptyRow[c.key] = '');
+  container.insertAdjacentHTML('beforeend', renderRepeaterRow(f, emptyRow, idx));
+}
+
+function parseExtra(extra, schema){
+  if(!extra || !extra.trim()) return [Object.fromEntries(schema.map(c=>[c.key,'']))];
+  return extra.split('|').map(part => {
+    const row = {};
+    const subparts = part.split('::');
+    schema.forEach((col,i) => row[col.key] = (subparts[i]||'').trim());
+    return row;
+  });
+}
+
+function serializeRepeaters(){
+  document.querySelectorAll('[id^="repeater_hidden_"]').forEach(hidden => {
+    const name = hidden.id.replace('repeater_hidden_','');
+    const container = document.getElementById('repeater_' + name);
+    if(!container) return;
+    const rows = [...container.querySelectorAll('.repeater-row')].map(row => {
+      return [...row.querySelectorAll('[data-col]')].map(inp => inp.value.trim()).join('::');
+    }).filter(r => r.replace(/::/g,'').trim());
+    hidden.value = rows.join('|');
+  });
+}
+
+function escHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 async function saveSection(){
-  const form=document.getElementById('sectionForm');
-  const fd=new FormData(form);
-  fd.set('ps_active',document.getElementById('ps_active').checked?'1':'0');
-  const r=await fetch(API,{method:'POST',body:fd,headers:AJAX_HEADERS});
-  const d=await r.json();
-  if(!d.ok){toast(d.error||'Ошибка','err');return;}
-  toast('Блок сохранён'); closeModal('sectionModal'); setTimeout(()=>location.reload(), 800);
+  serializeRepeaters();
+  const form = document.getElementById('sectionForm');
+  const fd = new FormData(form);
+  // Handle checkbox
+  const activeCheck = document.getElementById('ps_active_check');
+  fd.set('ps_active', activeCheck?.checked ? '1' : '0');
+  // Handle image hidden field
+  fd.set('old_ps_image', document.getElementById('ps_old_image').value);
+  const r = await fetch(API, {method:'POST', body:fd, headers:AJAX_HEADERS});
+  const d = await r.json();
+  if(!d.ok){ toast(d.error||'Ошибка','err'); return; }
+  toast('Блок сохранён');
+  closeModal('sectionModal');
+  setTimeout(()=>location.reload(), 800);
 }
 async function deleteSection(id,pageId,btn){
   if(!confirm('Удалить блок?'))return;

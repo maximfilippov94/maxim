@@ -461,7 +461,7 @@ input[type=checkbox] { accent-color: var(--c-accent); }
 .sectionCard { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: 6px; padding: 10px 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; transition: border-color .12s; }
 .sectionCard:hover { border-color: var(--c-accent); }
 .sectionCard .typePill { font-size: 9px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; color: var(--c-accent); background: rgba(79,127,255,.1); border-radius: 3px; padding: 1px 6px; flex-shrink: 0; }
-.sectionCard .sectionTitle { flex: 1; font-size: 12px; font-weight: 500; color: var(--c-text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sectionCard .sectionTitle, .sectionCard .sTitle { flex: 1; font-size: 12px; font-weight: 500; color: var(--c-text); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sectionCard .sectionActions { display: flex; gap: 4px; flex-shrink: 0; }
 
 /* ── pbBlockEditor inside drawer ────────────────────────────────────── */
