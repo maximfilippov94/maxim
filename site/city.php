@@ -14,6 +14,7 @@ if(!$city){ http_response_code(404); echo 'Город не найден'; exit; 
 
 $products = $pdo->query("SELECT p.*, c.name category_name, c.slug category_slug FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.is_active=1 ORDER BY p.sort_order,p.id LIMIT 8")->fetchAll(PDO::FETCH_ASSOC);
 $categories = $pdo->query("SELECT * FROM categories WHERE is_active=1 AND (parent_id IS NULL OR parent_id=0) ORDER BY sort_order,id")->fetchAll(PDO::FETCH_ASSOC);
+$subcategories = $pdo->query("SELECT * FROM categories WHERE is_active=1 AND parent_id IS NOT NULL AND parent_id>0 ORDER BY sort_order,id")->fetchAll(PDO::FETCH_ASSOC);
 
 $cityName   = $city['name'];
 $cityNameIn = $city['name_in'] ?? $cityName;
@@ -263,15 +264,17 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
   </div>
   <?php endif; ?>
 
-  <?php if(!empty($categories)): ?>
+  <?php
+  $allSeoItems = array_merge($categories, $subcategories);
+  if(!empty($allSeoItems)): ?>
   <div class="citySection" style="margin-top:48px;padding-top:32px;border-top:1px solid rgba(243,241,236,.08)">
     <p class="eyebrow">КУПИТЬ <?=h(mb_strtoupper($cityNameIn))?></p>
     <div class="citySeoGrid">
-      <?php foreach($categories as $cat): ?>
+      <?php foreach($allSeoItems as $cat): ?>
       <a class="citySeoLink" href="/catalog.php?cat=<?=h($cat['slug'])?>">
         <div>
           <strong><?=h($cat['name'])?> с доставкой <?=h($cityNameIn)?></strong>
-          <small>Купить <?=h(mb_strtolower($cat['name']))?> — доставка СДЭК</small>
+          <small>Купить <?=h(mb_strtolower($cat['name']))?> <?=h($cityNameIn)?> — доставка СДЭК</small>
         </div>
         <span class="arrow">→</span>
       </a>
