@@ -698,54 +698,138 @@ $crm_stats=['revenue'=>array_sum(array_column(array_filter($orders,fn($o)=>$o['s
   <div style="text-align:center;padding:40px;color:var(--muted)">Страниц пока нет</div>
   <?php endif; ?>
   </div>
-  <?php if(isset($_GET['pid'])&&$_GET['pid']): 
+  <?php if(isset($_GET['pid'])&&$_GET['pid']):
     $pid=(int)$_GET['pid'];
     $st=$pdo->prepare('SELECT * FROM pages WHERE id=?');$st->execute([$pid]);$editPage=$st->fetch(PDO::FETCH_ASSOC);
     if($editPage):
       $st2=$pdo->prepare('SELECT * FROM page_sections WHERE page_id=? ORDER BY sort_order,id');$st2->execute([$pid]);$pageSections=$st2->fetchAll(PDO::FETCH_ASSOC);
   ?>
-  <div style="margin-top:28px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-      <a href="?tab=pages" class="btn-ghost btn-sm">← Назад</a>
-      <h2 style="margin:0;font-size:22px;text-transform:uppercase"><?=h($editPage['title'])?></h2>
-      <a href="/page.php?slug=<?=h($editPage['slug'])?>" target="_blank" class="btn-ghost btn-sm">На сайте ↗</a>
+  <script>
+    window.PE_SECTIONS = <?=json_encode($pageSections,JSON_UNESCAPED_UNICODE)?>;
+    window.PE_PAGE_ID = <?=$pid?>;
+    window.PE_PAGE_SLUG = "<?=h($editPage['slug'])?>";
+    window.PE_PAGE_TITLE = <?=json_encode($editPage['title'],JSON_UNESCAPED_UNICODE)?>;
+    window.PE_PAGE_IS_ACTIVE = <?=$editPage['is_active']?'true':'false'?>;
+    window.PE_PAGE_DATA = <?=json_encode($editPage,JSON_UNESCAPED_UNICODE)?>;
+  </script>
+
+  <!-- ══════════ PAGE EDITOR SHELL ══════════ -->
+  <div class="pe-editor" id="peEditor">
+
+    <!-- TOP BAR -->
+    <div class="pe-topbar">
+      <a href="?tab=pages" class="pe-back-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Все страницы
+      </a>
+      <span class="pe-topbar-title" id="pePageTitle"><?=h($editPage['title'])?></span>
+      <div class="pe-topbar-actions">
+        <button class="pe-undo-btn" id="peUndo" title="Отмена (Ctrl+Z)" disabled>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 7a5 5 0 1 0 1.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3 3v4h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="pe-undo-btn" id="peRedo" title="Повтор (Ctrl+Y)" disabled>
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M12 7A5 5 0 1 1 10.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M12 3v4H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <label class="pe-toggle-wrap" title="Активность страницы">
+          <input type="checkbox" id="peIsActive" <?=$editPage['is_active']?'checked':''?>>
+          <span class="pe-toggle"></span>
+          <span class="pe-toggle-label" id="peActiveLabel"><?=$editPage['is_active']?'Опубликовано':'Черновик'?></span>
+        </label>
+        <a href="/page.php?slug=<?=h($editPage['slug'])?>" target="_blank" class="pe-site-link">На сайте ↗</a>
+        <span class="pe-autosave" id="peAutosave"></span>
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start">
-      <div>
-        <div id="pageSections">
-        <?php $typeLabels=['hero_simple'=>'Заголовок','text'=>'Текст','text_image'=>'Текст+фото','cards'=>'Карточки','contacts_block'=>'Контакты','lead_form'=>'Форма','products_grid'=>'Товары','quote'=>'Цитата']; ?>
-        <?php foreach($pageSections as $ps): ?>
-        <div class="sectionCard" data-id="<?=$ps['id']?>">
-          <span class="typePill"><?=$typeLabels[$ps['type']]??$ps['type']?></span>
-          <span class="sTitle"><?=h($ps['title']?:'—')?></span>
-          <button class="btn-ghost btn-sm" onclick='openSectionModal(<?=json_encode($ps,JSON_UNESCAPED_UNICODE)?>,<?=$pid?>)'>✏</button>
-          <button class="btn-danger btn-sm" onclick="deleteSection(<?=$ps['id']?>,<?=$pid?>,this)">✕</button>
-        </div>
-        <?php endforeach; ?>
-        </div>
-        <button class="btn-primary" style="width:100%;margin-top:12px;justify-content:center" onclick="openSectionModal(null,<?=$pid?>)">+ Добавить блок</button>
-      </div>
-      <div style="position:sticky;top:20px">
-        <div class="panel">
-          <h3>Настройки страницы</h3>
-          <form id="editPageForm" class="formGrid" style="grid-template-columns:1fr">
-            <input type="hidden" name="action" value="save_page">
-            <input type="hidden" name="id" value="<?=$editPage['id']?>">
-            <label>Название<input name="title" value="<?=h($editPage['title'])?>"></label>
-            <label>URL slug<input name="slug" value="<?=h($editPage['slug'])?>"></label>
-            <label>SEO Title<input name="seo_title" value="<?=h($editPage['seo_title'])?>"></label>
-            <label>SEO Description<textarea name="seo_description"><?=h($editPage['seo_description'])?></textarea></label>
-            <label class="checkRow"><input type="checkbox" name="is_active" <?=$editPage['is_active']?'checked':''?>> Активна</label>
-            <label class="checkRow"><input type="checkbox" name="show_in_nav" <?=$editPage['show_in_nav']?'checked':''?>> В навигации</label>
-            <label>Название в меню<input name="nav_label" value="<?=h($editPage['nav_label'])?>"></label>
-            <div class="formActions">
-              <button type="button" class="btn-primary" onclick="ajaxForm('editPageForm')">Сохранить</button>
+
+    <!-- PAGE SETTINGS STRIP (collapsed by default) -->
+    <div class="pe-settings-strip" id="peSettingsStrip">
+      <button class="pe-settings-toggle" id="peSettingsToggle" onclick="peToggleSettings()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 1v1.5M7 11.5V13M1 7h1.5M11.5 7H13M2.93 2.93l1.06 1.06M10.01 10.01l1.06 1.06M2.93 11.07l1.06-1.06M10.01 3.99l1.06-1.06" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        Настройки страницы
+        <svg class="pe-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 4.5l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="pe-settings-body" id="peSettingsBody" style="display:none">
+        <form id="editPageForm" class="pe-settings-form">
+          <input type="hidden" name="action" value="save_page">
+          <input type="hidden" name="id" value="<?=$editPage['id']?>">
+          <div class="pe-settings-row">
+            <label class="pe-field-label">Название<input class="pe-input" name="title" value="<?=h($editPage['title'])?>"></label>
+            <label class="pe-field-label">URL slug<input class="pe-input" name="slug" value="<?=h($editPage['slug'])?>"></label>
+            <label class="pe-field-label">SEO Title<input class="pe-input" name="seo_title" value="<?=h($editPage['seo_title'])?>"></label>
+            <label class="pe-field-label">SEO Description<textarea class="pe-input pe-textarea" name="seo_description"><?=h($editPage['seo_description'])?></textarea></label>
+            <label class="pe-field-label">Название в меню<input class="pe-input" name="nav_label" value="<?=h($editPage['nav_label'])?>"></label>
+            <div class="pe-settings-checks">
+              <label class="pe-check-label"><input type="checkbox" name="is_active" <?=$editPage['is_active']?'checked':''?>> Активна</label>
+              <label class="pe-check-label"><input type="checkbox" name="show_in_nav" <?=$editPage['show_in_nav']?'checked':''?>> В навигации</label>
             </div>
-          </form>
+            <button type="button" class="btn-primary pe-settings-save" onclick="ajaxForm('editPageForm');peShowAutosave('Настройки сохранены')">Сохранить настройки</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 3-COLUMN EDITOR -->
+    <div class="pe-columns">
+
+      <!-- LEFT: section list -->
+      <div class="pe-left" id="peLeft">
+        <div class="pe-left-header">Блоки</div>
+        <div class="pe-section-list" id="peSectionList"></div>
+        <button class="pe-add-block-btn" id="peAddBlockBtn" onclick="peOpenBlockPicker()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Добавить блок
+        </button>
+      </div>
+
+      <!-- CENTER: preview -->
+      <div class="pe-center" id="peCenter">
+        <div class="pe-preview-list" id="pePreviewList"></div>
+        <div class="pe-preview-empty" id="pePreviewEmpty" style="display:none">
+          <div class="pe-empty-icon">
+            <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="8" y="12" width="32" height="24" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 18h32" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="23" width="10" height="2" rx="1" fill="currentColor" opacity=".4"/><rect x="14" y="27" width="20" height="1.5" rx=".75" fill="currentColor" opacity=".25"/><rect x="14" y="30" width="14" height="1.5" rx=".75" fill="currentColor" opacity=".25"/></svg>
+          </div>
+          <div class="pe-empty-text">Нет блоков. Нажмите «Добавить блок».</div>
+          <button class="btn-primary" onclick="peOpenBlockPicker()">+ Добавить первый блок</button>
         </div>
       </div>
+
+      <!-- RIGHT: edit panel -->
+      <div class="pe-right" id="peRight">
+        <div class="pe-right-empty" id="peRightEmpty">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="24" rx="3" stroke="currentColor" stroke-width="1.5" opacity=".3"/><path d="M10 11h12M10 15h8M10 19h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".3"/></svg>
+          <span>Выберите блок для редактирования</span>
+        </div>
+        <div class="pe-right-panel" id="peRightPanel" style="display:none">
+          <div class="pe-right-header">
+            <span class="pe-right-type-badge" id="peRightTypeBadge"></span>
+            <span class="pe-right-title" id="peRightTitle"></span>
+            <button class="pe-right-close" onclick="peDeselectBlock()" title="Закрыть">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+          <div class="pe-right-fields" id="peRightFields"></div>
+          <div class="pe-right-footer">
+            <button class="btn-primary pe-save-btn" id="peSaveBlock" onclick="peSaveSelectedBlock()">Сохранить</button>
+            <button class="pe-visibility-btn" id="peVisibilityBtn" onclick="peToggleVisibility()"></button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /pe-columns -->
+  </div><!-- /pe-editor -->
+
+  <!-- BLOCK PICKER OVERLAY -->
+  <div class="pe-picker-overlay" id="pePickerOverlay" onclick="if(event.target===this)peCloseBlockPicker()">
+    <div class="pe-picker-modal">
+      <div class="pe-picker-header">
+        <span>Выберите тип блока</span>
+        <button class="pe-picker-close" onclick="peCloseBlockPicker()">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="pe-picker-body" id="pePickerBody"></div>
     </div>
   </div>
+
   <?php endif; endif; ?>
 </div>
 
@@ -1266,34 +1350,37 @@ $totalMargin = $totalRevenue > 0 ? round($totalProfit/$totalRevenue*100) : 0;
 </div>
 
 <!-- Page Section Modal -->
-<!-- ══ BLOCK PICKER MODAL ══ -->
-<div class="modalOverlay" id="blockPickerModal">
-  <div class="modalBox" style="width:min(700px,calc(100vw - 32px));padding:28px">
-    <button class="modalClose" onclick="closeModal('blockPickerModal')">✕</button>
-    <h2 style="margin:0 0 20px;font-size:18px">Выберите тип блока</h2>
-    <div id="blockPickerGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px"></div>
-  </div>
-</div>
-
-<!-- ══ SECTION EDITOR MODAL ══ -->
 <div class="modalOverlay" id="sectionModal">
-  <div class="modalBox" style="width:min(680px,calc(100vw - 32px));max-height:90vh;overflow-y:auto;padding:28px">
+  <div class="modalBox" style="width:min(640px,calc(100vw - 32px))">
     <button class="modalClose" onclick="closeModal('sectionModal')">✕</button>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-      <span id="sectionModalIcon" style="font-size:24px"></span>
-      <h2 id="sectionModalTitle" style="margin:0;font-size:18px">Блок страницы</h2>
-    </div>
-    <form id="sectionForm" enctype="multipart/form-data">
+    <h2 id="sectionModalTitle">Блок страницы</h2>
+    <form id="sectionForm" enctype="multipart/form-data" class="formGrid">
       <input type="hidden" name="action" value="save_page_section">
       <input type="hidden" name="id" id="ps_id">
       <input type="hidden" name="page_id" id="ps_page_id">
       <input type="hidden" name="old_ps_image" id="ps_old_image">
-      <input type="hidden" name="ps_type" id="ps_type">
-      <!-- Dynamic fields rendered by BlockRegistry -->
-      <div id="sectionDynamicFields" style="display:grid;gap:14px"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:22px;padding-top:18px;border-top:1px solid var(--line)">
+      <label>Тип<select name="ps_type" id="ps_type">
+        <option value="hero_simple">Заголовок страницы</option>
+        <option value="text">Текст</option>
+        <option value="text_image">Текст + фото</option>
+        <option value="cards">Карточки</option>
+        <option value="contacts_block">Контакты</option>
+        <option value="lead_form">Форма заявки</option>
+        <option value="products_grid">Сетка товаров</option>
+        <option value="quote">Цитата</option>
+      </select></label>
+      <label>Eyebrow<input name="ps_eyebrow" id="ps_eyebrow"></label>
+      <label class="wide">Заголовок<input name="ps_title" id="ps_title" required></label>
+      <label class="wide">Текст<textarea name="ps_text" id="ps_text"></textarea></label>
+      <label>CTA текст<input name="ps_cta_text" id="ps_cta_text"></label>
+      <label>CTA ссылка<input name="ps_cta_link" id="ps_cta_link"></label>
+      <label class="wide">Пункты через |<input name="ps_extra" id="ps_extra"></label>
+      <label>Фото<input type="file" name="ps_image" accept="image/*"></label>
+      <label>Порядок<input name="ps_sort" id="ps_sort" type="number" value="10"></label>
+      <label class="checkRow wide"><input type="checkbox" name="ps_active" id="ps_active" checked> Активен</label>
+      <div class="formActions">
+        <button type="button" class="btn-primary" onclick="saveSection()">Сохранить</button>
         <button type="button" class="btn-ghost" onclick="closeModal('sectionModal')">Отмена</button>
-        <button type="button" class="btn-primary" onclick="saveSection()">Сохранить блок</button>
       </div>
     </form>
   </div>
@@ -1619,230 +1706,31 @@ async function deletePage(id,btn){
   else toast('Ошибка','err');
 }
 
-// ── BLOCK REGISTRY ───────────────────────────────────────────────────────
-const BlockRegistry = {
-  hero_simple: {
-    label:'Заголовок страницы', icon:'📄',
-    fields:[
-      {key:'ps_eyebrow',label:'Надпись над заголовком',type:'text',name:'ps_eyebrow'},
-      {key:'ps_title',label:'Заголовок (H1)',type:'text',name:'ps_title',required:true},
-      {key:'ps_subtitle',label:'Подзаголовок',type:'text',name:'ps_subtitle'},
-    ]
-  },
-  text: {
-    label:'Текст', icon:'📝',
-    fields:[
-      {key:'ps_eyebrow',label:'Eyebrow',type:'text',name:'ps_eyebrow'},
-      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
-      {key:'ps_text',label:'Текст (Markdown)',type:'textarea',name:'ps_text'},
-    ]
-  },
-  text_image: {
-    label:'Текст + фото', icon:'🖼️',
-    fields:[
-      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
-      {key:'ps_text',label:'Текст',type:'textarea',name:'ps_text'},
-      {key:'ps_image',label:'Фото',type:'image',name:'ps_image'},
-      {key:'ps_cta_text',label:'Кнопка (текст)',type:'text',name:'ps_cta_text'},
-      {key:'ps_cta_link',label:'Кнопка (ссылка)',type:'text',name:'ps_cta_link'},
-    ]
-  },
-  cards: {
-    label:'Карточки', icon:'🃏',
-    fields:[
-      {key:'ps_eyebrow',label:'Eyebrow',type:'text',name:'ps_eyebrow'},
-      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
-      {key:'ps_extra',label:'Карточки',type:'repeater',name:'ps_extra',
-        schema:[{key:'title',label:'Заголовок'},{key:'text',label:'Текст'}]},
-    ]
-  },
-  contacts_block: {
-    label:'Контакты', icon:'📞',
-    fields:[
-      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
-      {key:'ps_extra',label:'Контакты',type:'repeater',name:'ps_extra',
-        schema:[{key:'label',label:'Подпись'},{key:'value',label:'Значение (телефон, @ник, email...)'}]},
-    ]
-  },
-  lead_form: {
-    label:'Форма заявки', icon:'📬',
-    fields:[
-      {key:'ps_eyebrow',label:'Eyebrow',type:'text',name:'ps_eyebrow'},
-      {key:'ps_title',label:'Заголовок',type:'text',name:'ps_title'},
-      {key:'ps_text',label:'Подзаголовок / описание',type:'textarea',name:'ps_text'},
-      {key:'ps_cta_text',label:'Текст кнопки',type:'text',name:'ps_cta_text',placeholder:'Отправить заявку'},
-    ]
-  },
-  products_grid: {
-    label:'Сетка товаров', icon:'🛍️',
-    fields:[
-      {key:'ps_title',label:'Заголовок секции',type:'text',name:'ps_title'},
-      {key:'ps_extra',label:'Slug товаров (через |)',type:'text',name:'ps_extra',placeholder:'bowl-pro|bowl-mini|stand-x'},
-    ]
-  },
-  quote: {
-    label:'Цитата / манифест', icon:'💬',
-    fields:[
-      {key:'ps_text',label:'Текст цитаты',type:'textarea',name:'ps_text',required:true},
-      {key:'ps_subtitle',label:'Автор / источник',type:'text',name:'ps_subtitle'},
-    ]
-  },
-};
-
-const BLOCK_COMMON_FIELDS = [
-  {key:'ps_sort',label:'Порядок сортировки',type:'number',name:'ps_sort',value:'10'},
-  {key:'ps_active',label:'Активен',type:'checkbox',name:'ps_active',checked:true},
-];
-
-function renderBlockPicker(pageId){
-  const grid = document.getElementById('blockPickerGrid');
-  grid.innerHTML = Object.entries(BlockRegistry).map(([type,def])=>`
-    <button type="button" onclick="openSectionEditor(null,${pageId},'${type}')" style="
-      display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 10px;
-      border:1px solid var(--line);border-radius:8px;background:var(--panel2);
-      cursor:pointer;transition:.15s;font-family:inherit;color:var(--text)
-    " onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--line)'">
-      <span style="font-size:28px">${def.icon}</span>
-      <span style="font-size:12px;font-weight:700;text-align:center">${def.label}</span>
-    </button>
-  `).join('');
-  openModal('blockPickerModal');
-}
-
-function openSectionModal(ps, pageId){
-  if(!ps){
-    renderBlockPicker(pageId);
-    return;
-  }
-  openSectionEditor(ps, pageId, ps.type);
-}
-
-function openSectionEditor(ps, pageId, type){
-  closeModal('blockPickerModal');
-  const def = BlockRegistry[type] || BlockRegistry['text'];
-  document.getElementById('sectionModalTitle').textContent = (ps ? 'Редактировать: ' : 'Добавить: ') + def.label;
-  document.getElementById('sectionModalIcon').textContent = def.icon;
-  document.getElementById('ps_id').value = ps?.id || '';
-  document.getElementById('ps_page_id').value = pageId;
-  document.getElementById('ps_old_image').value = ps?.image || '';
-  document.getElementById('ps_type').value = type;
-
-  const container = document.getElementById('sectionDynamicFields');
-  const allFields = [...def.fields, ...BLOCK_COMMON_FIELDS];
-  container.innerHTML = allFields.map(f => renderBlockField(f, ps)).join('');
+// Page sections
+function openSectionModal(ps,pageId){
+  document.getElementById('sectionModalTitle').textContent=ps?'Редактировать блок':'Добавить блок';
+  document.getElementById('ps_id').value=ps?.id||'';
+  document.getElementById('ps_page_id').value=pageId;
+  document.getElementById('ps_old_image').value=ps?.image||'';
+  document.getElementById('ps_type').value=ps?.type||'text';
+  document.getElementById('ps_eyebrow').value=ps?.eyebrow||'';
+  document.getElementById('ps_title').value=ps?.title||'';
+  document.getElementById('ps_text').value=ps?.text||'';
+  document.getElementById('ps_cta_text').value=ps?.cta_text||'';
+  document.getElementById('ps_cta_link').value=ps?.cta_link||'';
+  document.getElementById('ps_extra').value=ps?.extra||'';
+  document.getElementById('ps_sort').value=ps?.sort_order||10;
+  document.getElementById('ps_active').checked=!ps||ps.is_active==1;
   openModal('sectionModal');
 }
-
-function renderBlockField(f, ps){
-  const val = ps ? (ps[f.key?.replace('ps_','')] ?? ps[f.key] ?? f.value ?? '') : (f.value ?? '');
-  const labelStyle = 'display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em';
-  const inputStyle = 'padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s';
-
-  if(f.type === 'text' || f.type === 'number'){
-    return `<label style="${labelStyle}">${f.label}
-      <input name="${f.name}" value="${escHtml(String(val))}" type="${f.type}" style="${inputStyle};width:100%;box-sizing:border-box"
-        ${f.required?'required':''} ${f.placeholder?`placeholder="${f.placeholder}"`:''}>
-    </label>`;
-  }
-  if(f.type === 'textarea'){
-    return `<label style="${labelStyle}">${f.label}
-      <textarea name="${f.name}" rows="4" style="${inputStyle};width:100%;box-sizing:border-box;resize:vertical" ${f.required?'required':''}>${escHtml(String(val))}</textarea>
-    </label>`;
-  }
-  if(f.type === 'image'){
-    const preview = ps?.image ? `<img src="../${ps.image}" style="max-height:80px;border-radius:4px;margin-top:4px">` : '';
-    return `<label style="${labelStyle}">${f.label}
-      ${preview}
-      <input name="${f.name}" type="file" accept="image/*" style="font-size:13px;color:var(--muted)">
-    </label>`;
-  }
-  if(f.type === 'checkbox'){
-    const checked = ps ? ps.is_active == 1 : (f.checked !== false);
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer">
-      <input type="checkbox" name="${f.name}" id="${f.name}_check" ${checked?'checked':''} style="width:16px;height:16px">
-      ${f.label}
-    </label>`;
-  }
-  if(f.type === 'repeater'){
-    const rows = parseExtra(String(val), f.schema);
-    const rowsHtml = rows.map((row,i) => renderRepeaterRow(f, row, i)).join('');
-    return `<div>
-      <div style="${labelStyle};margin-bottom:10px">${f.label}</div>
-      <div id="repeater_${f.name}" style="display:flex;flex-direction:column;gap:8px">${rowsHtml}</div>
-      <button type="button" onclick="addRepeaterRow('${f.name}',${JSON.stringify(f.schema).replace(/"/g,'&quot;')})" style="
-        margin-top:8px;padding:7px 14px;border:1px dashed var(--line);border-radius:6px;
-        background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;width:100%
-      ">+ Добавить строку</button>
-      <input type="hidden" name="${f.name}" id="repeater_hidden_${f.name}">
-    </div>`;
-  }
-  return '';
-}
-
-function renderRepeaterRow(f, rowData, idx){
-  const inputs = f.schema.map(col=>`
-    <label style="display:flex;flex-direction:column;gap:4px;flex:1;font-size:11px;color:var(--muted);font-weight:600">
-      ${col.label}
-      <input value="${escHtml(rowData[col.key]||'')}" data-col="${col.key}"
-        style="padding:7px 10px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--text);font-size:13px;outline:none">
-    </label>
-  `).join('');
-  return `<div class="repeater-row" style="display:flex;gap:8px;align-items:end;background:var(--panel2);padding:10px;border-radius:6px;border:1px solid var(--line)">
-    ${inputs}
-    <button type="button" onclick="this.closest('.repeater-row').remove()" style="flex-shrink:0;width:28px;height:28px;border:none;background:rgba(220,50,50,.15);color:#e05252;border-radius:5px;cursor:pointer;font-size:14px">✕</button>
-  </div>`;
-}
-
-function addRepeaterRow(fieldName, schema){
-  const container = document.getElementById('repeater_' + fieldName);
-  const idx = container.querySelectorAll('.repeater-row').length;
-  const f = {schema, name: fieldName};
-  const emptyRow = {};
-  schema.forEach(c => emptyRow[c.key] = '');
-  container.insertAdjacentHTML('beforeend', renderRepeaterRow(f, emptyRow, idx));
-}
-
-function parseExtra(extra, schema){
-  if(!extra || !extra.trim()) return [Object.fromEntries(schema.map(c=>[c.key,'']))];
-  return extra.split('|').map(part => {
-    const row = {};
-    const subparts = part.split('::');
-    schema.forEach((col,i) => row[col.key] = (subparts[i]||'').trim());
-    return row;
-  });
-}
-
-function serializeRepeaters(){
-  document.querySelectorAll('[id^="repeater_hidden_"]').forEach(hidden => {
-    const name = hidden.id.replace('repeater_hidden_','');
-    const container = document.getElementById('repeater_' + name);
-    if(!container) return;
-    const rows = [...container.querySelectorAll('.repeater-row')].map(row => {
-      return [...row.querySelectorAll('[data-col]')].map(inp => inp.value.trim()).join('::');
-    }).filter(r => r.replace(/::/g,'').trim());
-    hidden.value = rows.join('|');
-  });
-}
-
-function escHtml(s){
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
 async function saveSection(){
-  serializeRepeaters();
-  const form = document.getElementById('sectionForm');
-  const fd = new FormData(form);
-  // Handle checkbox
-  const activeCheck = document.getElementById('ps_active_check');
-  fd.set('ps_active', activeCheck?.checked ? '1' : '0');
-  // Handle image hidden field
-  fd.set('old_ps_image', document.getElementById('ps_old_image').value);
-  const r = await fetch(API, {method:'POST', body:fd, headers:AJAX_HEADERS});
-  const d = await r.json();
-  if(!d.ok){ toast(d.error||'Ошибка','err'); return; }
-  toast('Блок сохранён');
-  closeModal('sectionModal');
-  setTimeout(()=>location.reload(), 800);
+  const form=document.getElementById('sectionForm');
+  const fd=new FormData(form);
+  fd.set('ps_active',document.getElementById('ps_active').checked?'1':'0');
+  const r=await fetch(API,{method:'POST',body:fd,headers:AJAX_HEADERS});
+  const d=await r.json();
+  if(!d.ok){toast(d.error||'Ошибка','err');return;}
+  toast('Блок сохранён'); closeModal('sectionModal'); setTimeout(()=>location.reload(), 800);
 }
 async function deleteSection(id,pageId,btn){
   if(!confirm('Удалить блок?'))return;
@@ -2780,9 +2668,1627 @@ document.addEventListener('DOMContentLoaded', () => {
   setInterval(pollOrders, 10000);
   setTimeout(pollOrders, 3000);
 })();
+
+/* ══════════════════════════════════════════
+   PAGE EDITOR ENGINE
+══════════════════════════════════════════ */
+(function(){
+  if (!window.PE_PAGE_ID) return; // only init on page edit view
+
+  // ── State ──
+  var peSections = JSON.parse(JSON.stringify(window.PE_SECTIONS || []));
+  var peSelectedId = null;
+  var peHistory = [JSON.parse(JSON.stringify(peSections))];
+  var peHistoryIdx = 0;
+  var peAutosaveTs = null;
+  var peAutosaveTimer = null;
+
+  // ── Type meta ──
+  var PE_TYPES = {
+    hero_simple:    { label: 'Заголовок',   group: 'Герой',    icon: 'H' },
+    text:           { label: 'Текст',        group: 'Текст',    icon: 'T' },
+    text_image:     { label: 'Текст + фото', group: 'Текст',    icon: 'TI' },
+    quote:          { label: 'Цитата',       group: 'Текст',    icon: '"' },
+    cards:          { label: 'Карточки',     group: 'Текст',    icon: '▦' },
+    products_grid:  { label: 'Товары',       group: 'Каталог',  icon: '⊞' },
+    lead_form:      { label: 'Форма',        group: 'Форма',    icon: '✉' },
+    contacts_block: { label: 'Контакты',     group: 'Инфо',     icon: '@' },
+  };
+
+  var PE_GROUPS = ['Герой','Текст','Каталог','Форма','Инфо'];
+
+  // ── Helpers ──
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function byId(id){ return document.getElementById(id); }
+
+  function peSection(id){
+    return peSections.find(function(s){ return s.id == id; });
+  }
+
+  function peShowAutosave(msg){
+    var el = byId('peAutosave');
+    if(!el) return;
+    peAutosaveTs = Date.now();
+    el.textContent = msg || 'Сохранено только что';
+    el.className = 'pe-autosave pe-saved';
+    clearTimeout(peAutosaveTimer);
+    peAutosaveTimer = setTimeout(function(){ peTickAutosave(); }, 60000);
+  }
+
+  function peTickAutosave(){
+    var el = byId('peAutosave');
+    if(!el || !peAutosaveTs) return;
+    var mins = Math.floor((Date.now()-peAutosaveTs)/60000);
+    if(mins < 1){ el.textContent = 'Сохранено только что'; }
+    else { el.textContent = 'Сохранено ' + mins + ' мин назад'; el.className = 'pe-autosave'; }
+    peAutosaveTimer = setTimeout(peTickAutosave, 30000);
+  }
+
+  // ── History ──
+  function pePushHistory(){
+    peHistory = peHistory.slice(0, peHistoryIdx+1);
+    peHistory.push(JSON.parse(JSON.stringify(peSections)));
+    if(peHistory.length > 31) peHistory.shift();
+    peHistoryIdx = peHistory.length-1;
+    peUpdateUndoRedo();
+  }
+
+  function peUpdateUndoRedo(){
+    var u = byId('peUndo'), r = byId('peRedo');
+    if(u) u.disabled = peHistoryIdx <= 0;
+    if(r) r.disabled = peHistoryIdx >= peHistory.length-1;
+  }
+
+  function peUndo(){
+    if(peHistoryIdx <= 0) return;
+    peHistoryIdx--;
+    peSections = JSON.parse(JSON.stringify(peHistory[peHistoryIdx]));
+    peRender(); peUpdateUndoRedo();
+  }
+
+  function peRedo(){
+    if(peHistoryIdx >= peHistory.length-1) return;
+    peHistoryIdx++;
+    peSections = JSON.parse(JSON.stringify(peHistory[peHistoryIdx]));
+    peRender(); peUpdateUndoRedo();
+  }
+
+  // ── Render left panel ──
+  function peRenderLeft(){
+    var list = byId('peSectionList');
+    if(!list) return;
+    list.innerHTML = '';
+    peSections.forEach(function(s){
+      var meta = PE_TYPES[s.type] || {label: s.type, icon: '?'};
+      var hidden = s.is_active == 0 || s.is_active === false || s.is_active === '0';
+      var card = document.createElement('div');
+      card.className = 'pe-scard' + (s.id == peSelectedId ? ' active' : '') + (hidden ? ' hidden-block' : '');
+      card.dataset.id = s.id;
+      card.draggable = true;
+      card.innerHTML =
+        '<span class="pe-drag-handle" title="Перетащить">&#8942;</span>' +
+        '<span class="pe-scard-icon">' + esc(meta.icon) + '</span>' +
+        '<span class="pe-scard-info">' +
+          '<span class="pe-scard-type">' + esc(meta.label) + '</span>' +
+          '<span class="pe-scard-name">' + esc(s.title || '—') + '</span>' +
+        '</span>' +
+        '<span class="pe-scard-actions">' +
+          '<button class="pe-scard-btn" data-act="vis" title="' + (hidden?'Показать':'Скрыть') + '">' +
+            (hidden ?
+              '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1 1l11 11M5.5 5.6A2 2 0 0 0 7.4 7.5M2 3.5C3.2 2.4 4.7 1.8 6.5 1.8c2.7 0 4.8 1.7 6 4.2-.5 1-1.3 1.9-2.2 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4 10.2C4.8 10.7 5.6 11 6.5 11c2.7 0 4.8-1.7 6-4.2-.3-.6-.7-1.2-1.2-1.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' :
+              '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><ellipse cx="6.5" cy="6.5" rx="2" ry="2" stroke="currentColor" stroke-width="1.3"/><path d="M.5 6.5C1.7 4 3.8 2.3 6.5 2.3S11.3 4 12.5 6.5C11.3 9 9.2 10.7 6.5 10.7S1.7 9 .5 6.5z" stroke="currentColor" stroke-width="1.3"/></svg>'
+            ) +
+          '</button>' +
+          '<button class="pe-scard-btn" data-act="dup" title="Дублировать">' +
+            '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><rect x="4" y="4" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M9 4V2.5A1.5 1.5 0 0 0 7.5 1H2.5A1.5 1.5 0 0 0 1 2.5v5A1.5 1.5 0 0 0 2.5 9H4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' +
+          '</button>' +
+          '<button class="pe-scard-btn danger" data-act="del" title="Удалить">' +
+            '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>' +
+          '</button>' +
+        '</span>';
+
+      card.addEventListener('click', function(e){
+        var act = e.target.closest('[data-act]');
+        if(act){
+          e.stopPropagation();
+          var a = act.dataset.act;
+          if(a==='del') peDeleteSection(s.id);
+          else if(a==='vis') peToggleSectionVisibility(s.id);
+          else if(a==='dup') peDuplicateSection(s.id);
+        } else {
+          peSelectBlock(s.id);
+        }
+      });
+
+      // Drag-and-drop
+      card.addEventListener('dragstart', function(e){
+        card.classList.add('dragging');
+        e.dataTransfer.setData('text/plain', String(s.id));
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', function(){
+        card.classList.remove('dragging');
+        list.querySelectorAll('.pe-scard').forEach(function(c){ c.classList.remove('drag-over'); });
+      });
+      card.addEventListener('dragover', function(e){
+        e.preventDefault();
+        list.querySelectorAll('.pe-scard').forEach(function(c){ c.classList.remove('drag-over'); });
+        card.classList.add('drag-over');
+      });
+      card.addEventListener('drop', function(e){
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        var fromId = parseInt(e.dataTransfer.getData('text/plain'));
+        var toId = s.id;
+        if(fromId === toId) return;
+        var fromIdx = peSections.findIndex(function(x){ return x.id == fromId; });
+        var toIdx   = peSections.findIndex(function(x){ return x.id == toId; });
+        if(fromIdx < 0 || toIdx < 0) return;
+        var moved = peSections.splice(fromIdx, 1)[0];
+        peSections.splice(toIdx, 0, moved);
+        pePushHistory();
+        peRender();
+        peSaveSortOrder();
+      });
+
+      list.appendChild(card);
+    });
+  }
+
+  // ── Render center preview ──
+  function pePreviewHTML(s){
+    var type = s.type;
+    var title = esc(s.title || '');
+    var body = '';
+    if(type === 'hero_simple'){
+      body = '<div class="pe-sk-eyebrow"></div>' +
+             '<div class="pe-sk-h1 w80"></div>' +
+             '<div class="pe-sk-h1 w60"></div>' +
+             '<div class="pe-sk-line w75"></div>' +
+             '<div class="pe-sk-btn"></div>';
+    } else if(type === 'text'){
+      body = title ? '<div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:6px;opacity:.7">'+title+'</div>' : '';
+      body += '<div class="pe-sk-line w100"></div><div class="pe-sk-line w75"></div><div class="pe-sk-line w50"></div>';
+    } else if(type === 'text_image'){
+      body = '<div class="pe-sk-textimg">' +
+               '<div><div class="pe-sk-h1 w80"></div><div class="pe-sk-line w100"></div><div class="pe-sk-line w75"></div></div>' +
+               '<div class="pe-sk-img" style="height:70px"></div>' +
+             '</div>';
+    } else if(type === 'cards'){
+      body = title ? '<div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;opacity:.7">'+title+'</div>' : '';
+      body += '<div class="pe-sk-cards"><div class="pe-sk-card-item"></div><div class="pe-sk-card-item"></div><div class="pe-sk-card-item"></div></div>';
+    } else if(type === 'quote'){
+      body = '<div class="pe-sk-quote-mark">"</div>' +
+             '<div class="pe-sk-line w100"></div><div class="pe-sk-line w75"></div>' +
+             '<div style="margin-top:8px"><div class="pe-sk-line w50"></div></div>';
+    } else if(type === 'contacts_block'){
+      body = title ? '<div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;opacity:.7">'+title+'</div>' : '';
+      body += '<div class="pe-sk-contacts">' +
+                '<div class="pe-sk-contact-row"><div class="pe-sk-contact-icon"></div><div class="pe-sk-line w75" style="margin:0;flex:1"></div></div>' +
+                '<div class="pe-sk-contact-row"><div class="pe-sk-contact-icon"></div><div class="pe-sk-line w50" style="margin:0;flex:1"></div></div>' +
+                '<div class="pe-sk-contact-row"><div class="pe-sk-contact-icon"></div><div class="pe-sk-line w75" style="margin:0;flex:1"></div></div>' +
+              '</div>';
+    } else if(type === 'lead_form'){
+      body = title ? '<div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;opacity:.7">'+title+'</div>' : '';
+      body += '<div class="pe-sk-form"><div class="pe-sk-form-field"></div><div class="pe-sk-form-field"></div><div class="pe-sk-btn" style="width:100%"></div></div>';
+    } else if(type === 'products_grid'){
+      body = title ? '<div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:8px;opacity:.7">'+title+'</div>' : '';
+      body += '<div class="pe-sk-grid"><div class="pe-sk-product"></div><div class="pe-sk-product"></div><div class="pe-sk-product"></div></div>';
+    } else {
+      body = '<div class="pe-sk-line w100"></div><div class="pe-sk-line w75"></div>';
+    }
+    return body;
+  }
+
+  function peRenderCenter(){
+    var list = byId('pePreviewList');
+    var empty = byId('pePreviewEmpty');
+    if(!list) return;
+    if(peSections.length === 0){
+      list.innerHTML = '';
+      if(empty){ empty.style.display='flex'; list.style.display='none'; }
+      return;
+    }
+    if(empty){ empty.style.display='none'; list.style.display='flex'; }
+    list.innerHTML = '';
+    peSections.forEach(function(s){
+      var meta = PE_TYPES[s.type] || {label: s.type};
+      var hidden = s.is_active == 0 || s.is_active === false || s.is_active === '0';
+      var card = document.createElement('div');
+      card.className = 'pe-preview-card' + (s.id == peSelectedId ? ' active' : '') + (hidden ? ' hidden-block' : '');
+      card.dataset.id = s.id;
+      card.innerHTML =
+        '<div class="pe-preview-header">' +
+          '<div class="pe-preview-type-dot"></div>' +
+          '<span>' + esc(meta.label) + '</span>' +
+          (s.title ? '<span style="color:var(--text);font-weight:500">— ' + esc(s.title) + '</span>' : '') +
+          (hidden ? '<span style="margin-left:auto;font-size:10px;opacity:.5">скрыт</span>' : '') +
+        '</div>' +
+        '<div class="pe-preview-body">' + pePreviewHTML(s) + '</div>';
+      card.addEventListener('click', function(){ peSelectBlock(s.id); });
+      list.appendChild(card);
+    });
+  }
+
+  function peRender(){
+    peRenderLeft();
+    peRenderCenter();
+    peRenderRightIfNeeded();
+  }
+
+  // ── Select / deselect block ──
+  function peSelectBlock(id){
+    peSelectedId = id;
+    peRender();
+    var s = peSection(id);
+    if(!s) return;
+    var empty = byId('peRightEmpty');
+    var panel = byId('peRightPanel');
+    if(empty) empty.style.display = 'none';
+    if(panel) panel.style.display = 'flex';
+    var badge = byId('peRightTypeBadge');
+    var titleEl = byId('peRightTitle');
+    var meta = PE_TYPES[s.type] || {label: s.type};
+    if(badge) badge.textContent = meta.label;
+    if(titleEl) titleEl.textContent = s.title || '—';
+    var fields = byId('peRightFields');
+    if(fields) fields.innerHTML = peFieldsHTML(s);
+    peUpdateVisibilityBtn(s);
+    // scroll selected into view in left panel
+    var scard = document.querySelector('.pe-scard[data-id="'+id+'"]');
+    if(scard) scard.scrollIntoView({block:'nearest'});
+    var pcard = document.querySelector('.pe-preview-card[data-id="'+id+'"]');
+    if(pcard) pcard.scrollIntoView({behavior:'smooth', block:'nearest'});
+  }
+
+  window.peDeselectBlock = function(){
+    peSelectedId = null;
+    var empty = byId('peRightEmpty');
+    var panel = byId('peRightPanel');
+    if(empty) empty.style.display = 'flex';
+    if(panel) panel.style.display = 'none';
+    peRender();
+  };
+
+  function peRenderRightIfNeeded(){
+    if(!peSelectedId) return;
+    var s = peSection(peSelectedId);
+    if(!s){ peDeselectBlock(); return; }
+    // re-update badge/title
+    var meta = PE_TYPES[s.type] || {label: s.type};
+    var badge = byId('peRightTypeBadge');
+    var titleEl = byId('peRightTitle');
+    if(badge) badge.textContent = meta.label;
+    if(titleEl) titleEl.textContent = s.title || '—';
+    peUpdateVisibilityBtn(s);
+  }
+
+  function peUpdateVisibilityBtn(s){
+    var btn = byId('peVisibilityBtn');
+    if(!btn) return;
+    var hidden = s.is_active == 0 || s.is_active === false || s.is_active === '0';
+    btn.textContent = hidden ? 'Показать' : 'Скрыть';
+  }
+
+  // ── Field HTML per block type ──
+  function peFieldsHTML(s){
+    var type = s.type;
+    var extra = s.extra || '';
+    var html = '<input type="hidden" id="pefSectionId" value="'+esc(s.id)+'">' +
+               '<input type="hidden" id="pefType" value="'+esc(type)+'">';
+
+    function field(id, label, val, req){
+      return '<label class="pe-field-label'+(req?' pe-field-required':'')+'">' +
+               label +
+               '<input class="pe-input" id="'+id+'" value="'+esc(val || '')+'">' +
+             '</label>';
+    }
+    function textarea(id, label, val){
+      return '<label class="pe-field-label">' + label +
+               '<textarea class="pe-input pe-textarea" id="'+id+'">'+esc(val || '')+'</textarea>' +
+             '</label>';
+    }
+    function sortOrder(val){
+      return field('pefSortOrder','Порядок (число)', val || 0, false);
+    }
+
+    if(type === 'hero_simple'){
+      html += field('pefEyebrow','Надзаголовок', s.eyebrow || peExtraField(extra,'eyebrow')) +
+              field('pefTitle','Заголовок *', s.title, true) +
+              textarea('pefText','Текст', s.text || peExtraField(extra,'text')) +
+              field('pefCtaText','Кнопка (текст)', peExtraField(extra,'cta_text')) +
+              field('pefCtaLink','Кнопка (ссылка)', peExtraField(extra,'cta_link')) +
+              sortOrder(s.sort_order);
+    } else if(type === 'text'){
+      html += field('pefEyebrow','Надзаголовок', peExtraField(extra,'eyebrow')) +
+              field('pefTitle','Заголовок', s.title) +
+              textarea('pefText','Текст', s.text || peExtraField(extra,'text')) +
+              field('pefCtaText','Кнопка (текст)', peExtraField(extra,'cta_text')) +
+              field('pefCtaLink','Кнопка (ссылка)', peExtraField(extra,'cta_link')) +
+              sortOrder(s.sort_order);
+    } else if(type === 'text_image'){
+      html += field('pefEyebrow','Надзаголовок', peExtraField(extra,'eyebrow')) +
+              field('pefTitle','Заголовок', s.title) +
+              textarea('pefText','Текст', s.text || peExtraField(extra,'text')) +
+              field('pefImageUrl','URL изображения', peExtraField(extra,'image_url')) +
+              field('pefCtaText','Кнопка (текст)', peExtraField(extra,'cta_text')) +
+              field('pefCtaLink','Кнопка (ссылка)', peExtraField(extra,'cta_link')) +
+              sortOrder(s.sort_order);
+    } else if(type === 'cards'){
+      html += field('pefTitle','Заголовок раздела', s.title) +
+              field('pefSubtitle','Подзаголовок', peExtraField(extra,'subtitle')) +
+              sortOrder(s.sort_order) +
+              '<div class="pe-field-label">Карточки' +
+                '<div class="pe-repeater" id="pefCardsRepeater">' + peCardsRepeaterHTML(extra) + '</div>' +
+                '<button type="button" class="pe-repeater-add" onclick="peAddCard()">+ Добавить карточку</button>' +
+              '</div>';
+    } else if(type === 'contacts_block'){
+      var rows = extra ? extra : 'Телефон:|Telegram:|WhatsApp:|Email:';
+      html += field('pefTitle','Заголовок', s.title) +
+              field('pefSubtitle','Подзаголовок', peExtraField(extra,'subtitle')) +
+              sortOrder(s.sort_order) +
+              '<div class="pe-field-label">Контакты' +
+                '<div class="pe-repeater" id="pefContactsRepeater">' + peContactsRepeaterHTML(rows) + '</div>' +
+                '<button type="button" class="pe-repeater-add" onclick="peAddContact()">+ Добавить контакт</button>' +
+              '</div>';
+    } else if(type === 'lead_form'){
+      html += field('pefEyebrow','Надзаголовок', peExtraField(extra,'eyebrow')) +
+              field('pefTitle','Заголовок формы', s.title) +
+              sortOrder(s.sort_order);
+    } else if(type === 'products_grid'){
+      html += field('pefTitle','Заголовок', s.title) +
+              field('pefEyebrow','Надзаголовок', peExtraField(extra,'eyebrow')) +
+              field('pefProductIds','ID товаров (через запятую)', peExtraField(extra,'product_ids')) +
+              sortOrder(s.sort_order);
+    } else if(type === 'quote'){
+      html += textarea('pefTitle','Текст цитаты *', s.title) +
+              field('pefText','Автор / подпись', s.text || peExtraField(extra,'text')) +
+              sortOrder(s.sort_order);
+    } else {
+      html += field('pefTitle','Заголовок', s.title) +
+              textarea('pefText','Текст', s.text) +
+              sortOrder(s.sort_order);
+    }
+    return html;
+  }
+
+  function peExtraField(extra, key){
+    // extra might be key:value pipe-separated OR JSON object
+    if(!extra) return '';
+    if(extra.charAt(0) === '{'){
+      try{ var o = JSON.parse(extra); return o[key] || ''; } catch(e){}
+    }
+    // Try key:value format (not the repeater format)
+    var lines = extra.split('|');
+    for(var i=0;i<lines.length;i++){
+      var idx = lines[i].indexOf(':');
+      if(idx > -1){
+        var k = lines[i].substring(0,idx).trim().toLowerCase().replace(/ /g,'_');
+        if(k === key) return lines[i].substring(idx+1);
+      }
+    }
+    return '';
+  }
+
+  function peCardsRepeaterHTML(extra){
+    if(!extra) return '';
+    var rows = extra.split('|').filter(function(r){ return r.trim(); });
+    return rows.map(function(r){
+      var idx = r.indexOf(':');
+      var t = idx > -1 ? r.substring(0,idx) : r;
+      var d = idx > -1 ? r.substring(idx+1) : '';
+      return peCardRowHTML(t, d);
+    }).join('');
+  }
+
+  function peCardRowHTML(t, d){
+    return '<div class="pe-repeater-row" draggable="true">' +
+             '<span class="pe-repeater-drag">&#8942;</span>' +
+             '<div class="pe-repeater-inputs">' +
+               '<input class="pe-input pe-card-title" placeholder="Название карточки" value="'+esc(t)+'">' +
+               '<input class="pe-input pe-card-text" placeholder="Текст карточки" value="'+esc(d)+'">' +
+             '</div>' +
+             '<button type="button" class="pe-repeater-del" onclick="this.closest(\'.pe-repeater-row\').remove()">✕</button>' +
+           '</div>';
+  }
+
+  function peContactsRepeaterHTML(extra){
+    if(!extra) return '';
+    var rows = extra.split('|').filter(function(r){ return r.trim(); });
+    return rows.map(function(r){
+      var idx = r.indexOf(':');
+      var label = idx > -1 ? r.substring(0,idx) : r;
+      var val   = idx > -1 ? r.substring(idx+1) : '';
+      return peContactRowHTML(label, val);
+    }).join('');
+  }
+
+  function peContactRowHTML(label, val){
+    return '<div class="pe-repeater-row" draggable="true">' +
+             '<span class="pe-repeater-drag">&#8942;</span>' +
+             '<div class="pe-repeater-inputs">' +
+               '<input class="pe-input pe-contact-label" placeholder="Тип (Телефон, Email…)" value="'+esc(label)+'">' +
+               '<input class="pe-input pe-contact-val" placeholder="Значение" value="'+esc(val)+'">' +
+             '</div>' +
+             '<button type="button" class="pe-repeater-del" onclick="this.closest(\'.pe-repeater-row\').remove()">✕</button>' +
+           '</div>';
+  }
+
+  window.peAddCard = function(){
+    var rep = byId('pefCardsRepeater');
+    if(rep){ rep.insertAdjacentHTML('beforeend', peCardRowHTML('','')); }
+  };
+  window.peAddContact = function(){
+    var rep = byId('pefContactsRepeater');
+    if(rep){ rep.insertAdjacentHTML('beforeend', peContactRowHTML('','')); }
+  };
+
+  // ── Save selected block ──
+  window.peSaveSelectedBlock = function(){
+    if(!peSelectedId) return;
+    var s = peSection(peSelectedId);
+    if(!s) return;
+    var type = s.type;
+    var fd = new FormData();
+    fd.append('action','save_page_section');
+    fd.append('id', s.id);
+    fd.append('page_id', window.PE_PAGE_ID);
+    fd.append('type', type);
+    fd.append('sort_order', gv('pefSortOrder') || s.sort_order || 0);
+
+    var extra = {};
+    var title = '', text = '';
+
+    if(type === 'hero_simple'){
+      extra.eyebrow   = gv('pefEyebrow');
+      extra.text      = gv('pefText');
+      extra.cta_text  = gv('pefCtaText');
+      extra.cta_link  = gv('pefCtaLink');
+      title           = gv('pefTitle');
+    } else if(type === 'text'){
+      extra.eyebrow   = gv('pefEyebrow');
+      extra.text      = gv('pefText');
+      extra.cta_text  = gv('pefCtaText');
+      extra.cta_link  = gv('pefCtaLink');
+      title           = gv('pefTitle');
+    } else if(type === 'text_image'){
+      extra.eyebrow   = gv('pefEyebrow');
+      extra.text      = gv('pefText');
+      extra.image_url = gv('pefImageUrl');
+      extra.cta_text  = gv('pefCtaText');
+      extra.cta_link  = gv('pefCtaLink');
+      title           = gv('pefTitle');
+    } else if(type === 'cards'){
+      title = gv('pefTitle');
+      extra.subtitle = gv('pefSubtitle');
+      // collect card rows
+      var cardRows = [];
+      var rep = byId('pefCardsRepeater');
+      if(rep){
+        rep.querySelectorAll('.pe-repeater-row').forEach(function(row){
+          var t2 = (row.querySelector('.pe-card-title')||{}).value || '';
+          var d2 = (row.querySelector('.pe-card-text')||{}).value || '';
+          cardRows.push(t2 + ':' + d2);
+        });
+      }
+      fd.append('extra', cardRows.join('|'));
+    } else if(type === 'contacts_block'){
+      title = gv('pefTitle');
+      extra.subtitle = gv('pefSubtitle');
+      var contactRows = [];
+      var rep2 = byId('pefContactsRepeater');
+      if(rep2){
+        rep2.querySelectorAll('.pe-repeater-row').forEach(function(row){
+          var lbl = (row.querySelector('.pe-contact-label')||{}).value || '';
+          var val = (row.querySelector('.pe-contact-val')||{}).value || '';
+          contactRows.push(lbl + ':' + val);
+        });
+      }
+      fd.append('extra', contactRows.join('|'));
+    } else if(type === 'lead_form'){
+      extra.eyebrow = gv('pefEyebrow');
+      title = gv('pefTitle');
+    } else if(type === 'products_grid'){
+      title = gv('pefTitle');
+      extra.eyebrow    = gv('pefEyebrow');
+      extra.product_ids = gv('pefProductIds');
+    } else if(type === 'quote'){
+      title = gv('pefTitle');
+      text  = gv('pefText');
+    } else {
+      title = gv('pefTitle');
+      text  = gv('pefText');
+    }
+
+    fd.append('title', title);
+    fd.append('text', text);
+
+    // serialize extra if not already set as pipe string
+    if(!fd.has('extra') || fd.get('extra') === ''){
+      var extraStr = Object.keys(extra).map(function(k){ return k+':'+extra[k]; }).join('|');
+      fd.set('extra', extraStr);
+    } else if(Object.keys(extra).length){
+      // merge subtitle into pipe string if present
+      var existingExtra = fd.get('extra');
+      Object.keys(extra).forEach(function(k){
+        if(extra[k]) existingExtra += '|' + k + ':' + extra[k];
+      });
+      fd.set('extra', existingExtra);
+    }
+
+    var btn = byId('peSaveBlock');
+    if(btn){ btn.disabled = true; btn.textContent = 'Сохранение…'; }
+
+    fetch('/admin/index.php', {method:'POST', body:fd})
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data.ok || data.id){
+          // update local state
+          if(data.id) s.id = data.id;
+          s.title = title;
+          s.text  = text;
+          s.sort_order = fd.get('sort_order');
+          s.extra = fd.get('extra');
+          if(type==='hero_simple'||type==='text'||type==='text_image'){
+            s.eyebrow = extra.eyebrow;
+          }
+          pePushHistory();
+          peRender();
+          peShowAutosave();
+        }
+        if(btn){ btn.disabled = false; btn.textContent = 'Сохранить'; }
+      })
+      .catch(function(){
+        if(btn){ btn.disabled = false; btn.textContent = 'Сохранить'; }
+      });
+  };
+
+  function gv(id){
+    var el = byId(id);
+    return el ? el.value : '';
+  }
+
+  // ── Visibility toggle ──
+  window.peToggleVisibility = function(){
+    if(!peSelectedId) return;
+    var s = peSection(peSelectedId);
+    if(!s) return;
+    var nowHidden = s.is_active == 0 || s.is_active === false || s.is_active === '0';
+    var newActive = nowHidden ? 1 : 0;
+    s.is_active = newActive;
+    pePushHistory();
+    peRender();
+    // persist
+    var fd = new FormData();
+    fd.append('action','save_page_section');
+    fd.append('id', s.id);
+    fd.append('page_id', window.PE_PAGE_ID);
+    fd.append('type', s.type);
+    fd.append('title', s.title || '');
+    fd.append('text', s.text || '');
+    fd.append('extra', s.extra || '');
+    fd.append('sort_order', s.sort_order || 0);
+    fd.append('is_active', newActive);
+    fetch('/admin/index.php', {method:'POST', body:fd}).then(function(){ peShowAutosave(); });
+  };
+
+  // ── Toggle section visibility from left panel ──
+  function peToggleSectionVisibility(id){
+    var s = peSection(id);
+    if(!s) return;
+    var nowHidden = s.is_active == 0 || s.is_active === false || s.is_active === '0';
+    s.is_active = nowHidden ? 1 : 0;
+    pePushHistory();
+    peRender();
+    var fd = new FormData();
+    fd.append('action','save_page_section');
+    fd.append('id', s.id);
+    fd.append('page_id', window.PE_PAGE_ID);
+    fd.append('type', s.type);
+    fd.append('title', s.title || '');
+    fd.append('text', s.text || '');
+    fd.append('extra', s.extra || '');
+    fd.append('sort_order', s.sort_order || 0);
+    fd.append('is_active', s.is_active);
+    fetch('/admin/index.php', {method:'POST', body:fd}).then(function(){ peShowAutosave(); });
+  }
+
+  // ── Duplicate section ──
+  function peDuplicateSection(id){
+    var s = peSection(id);
+    if(!s) return;
+    var fd = new FormData();
+    fd.append('action','save_page_section');
+    fd.append('page_id', window.PE_PAGE_ID);
+    fd.append('type', s.type);
+    fd.append('title', (s.title||'') + ' (копия)');
+    fd.append('text', s.text||'');
+    fd.append('extra', s.extra||'');
+    fd.append('sort_order', (parseInt(s.sort_order)||0) + 1);
+    fd.append('is_active', 1);
+    fetch('/admin/index.php', {method:'POST', body:fd})
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data.id){
+          var newS = JSON.parse(JSON.stringify(s));
+          newS.id = data.id;
+          newS.title = (s.title||'') + ' (копия)';
+          var idx = peSections.findIndex(function(x){ return x.id==id; });
+          peSections.splice(idx+1, 0, newS);
+          pePushHistory();
+          peRender();
+          peShowAutosave();
+        }
+      });
+  }
+
+  // ── Delete section ──
+  function peDeleteSection(id){
+    if(!confirm('Удалить блок?')) return;
+    var fd = new FormData();
+    fd.append('action','delete_page_section');
+    fd.append('id', id);
+    fetch('/admin/index.php', {method:'POST', body:fd})
+      .then(function(){
+        peSections = peSections.filter(function(s){ return s.id != id; });
+        if(peSelectedId == id) peDeselectBlock();
+        pePushHistory();
+        peRender();
+        peShowAutosave();
+      });
+  }
+
+  // ── Save sort order ──
+  function peSaveSortOrder(){
+    peSections.forEach(function(s, i){
+      var fd = new FormData();
+      fd.append('action','save_page_section');
+      fd.append('id', s.id);
+      fd.append('page_id', window.PE_PAGE_ID);
+      fd.append('type', s.type);
+      fd.append('title', s.title||'');
+      fd.append('text', s.text||'');
+      fd.append('extra', s.extra||'');
+      fd.append('sort_order', i);
+      fd.append('is_active', s.is_active!=null?s.is_active:1);
+      fetch('/admin/index.php', {method:'POST', body:fd});
+    });
+    peShowAutosave();
+  }
+
+  // ── Block Picker ──
+  window.peOpenBlockPicker = function(){
+    var overlay = byId('pePickerOverlay');
+    var body = byId('pePickerBody');
+    if(!overlay || !body) return;
+
+    var grouped = {};
+    PE_GROUPS.forEach(function(g){ grouped[g] = []; });
+    Object.keys(PE_TYPES).forEach(function(key){
+      var meta = PE_TYPES[key];
+      if(!grouped[meta.group]) grouped[meta.group] = [];
+      grouped[meta.group].push(key);
+    });
+
+    body.innerHTML = PE_GROUPS.map(function(g){
+      if(!grouped[g] || !grouped[g].length) return '';
+      return '<div class="pe-picker-category">' +
+               '<div class="pe-picker-cat-label">' + esc(g) + '</div>' +
+               '<div class="pe-picker-grid">' +
+                 grouped[g].map(function(type){
+                   var meta = PE_TYPES[type];
+                   return '<div class="pe-picker-item" onclick="pePickBlock(\''+type+'\')">' +
+                            '<div class="pe-picker-preview">' + pePickerPreviewHTML(type) + '</div>' +
+                            '<div class="pe-picker-name">' + esc(meta.label) + '</div>' +
+                          '</div>';
+                 }).join('') +
+               '</div>' +
+             '</div>';
+    }).join('');
+
+    overlay.classList.add('open');
+  };
+
+  window.peCloseBlockPicker = function(){
+    var overlay = byId('pePickerOverlay');
+    if(overlay) overlay.classList.remove('open');
+  };
+
+  function pePickerPreviewHTML(type){
+    if(type==='hero_simple'){
+      return '<div style="width:100%"><div style="width:60%;height:5px;background:var(--accent);border-radius:3px;opacity:.5;margin-bottom:4px"></div>' +
+             '<div style="width:90%;height:7px;background:var(--text);border-radius:3px;opacity:.5;margin-bottom:3px"></div>' +
+             '<div style="width:70%;height:5px;background:var(--muted);border-radius:3px;opacity:.3"></div></div>';
+    } else if(type==='text'){
+      return '<div style="width:100%"><div style="width:80%;height:5px;background:var(--text);border-radius:2px;opacity:.4;margin-bottom:3px"></div>' +
+             '<div style="width:100%;height:4px;background:var(--muted);border-radius:2px;opacity:.2;margin-bottom:2px"></div>' +
+             '<div style="width:75%;height:4px;background:var(--muted);border-radius:2px;opacity:.2"></div></div>';
+    } else if(type==='text_image'){
+      return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;width:100%">' +
+             '<div><div style="height:5px;background:var(--text);border-radius:2px;opacity:.4;margin-bottom:2px"></div>' +
+             '<div style="height:4px;background:var(--muted);border-radius:2px;opacity:.2"></div></div>' +
+             '<div style="height:40px;background:var(--line);border-radius:4px"></div></div>';
+    } else if(type==='cards'){
+      return '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;width:100%">' +
+             '<div style="height:32px;background:var(--line);border-radius:3px"></div>' +
+             '<div style="height:32px;background:var(--line);border-radius:3px"></div>' +
+             '<div style="height:32px;background:var(--line);border-radius:3px"></div></div>';
+    } else if(type==='quote'){
+      return '<div style="width:100%"><div style="font-size:18px;color:var(--accent);opacity:.4;line-height:1">"</div>' +
+             '<div style="height:4px;background:var(--muted);border-radius:2px;opacity:.3;margin-top:2px"></div></div>';
+    } else if(type==='contacts_block'){
+      return '<div style="width:100%;display:flex;flex-direction:column;gap:3px">' +
+             ['','',''].map(function(){ return '<div style="display:flex;align-items:center;gap:4px"><div style="width:10px;height:10px;background:var(--accent);border-radius:2px;opacity:.3"></div><div style="flex:1;height:4px;background:var(--muted);border-radius:2px;opacity:.2"></div></div>'; }).join('') +
+             '</div>';
+    } else if(type==='lead_form'){
+      return '<div style="width:100%;display:flex;flex-direction:column;gap:4px">' +
+             '<div style="height:14px;background:var(--line);border-radius:3px"></div>' +
+             '<div style="height:14px;background:var(--line);border-radius:3px"></div>' +
+             '<div style="height:14px;background:var(--accent);border-radius:3px;opacity:.4"></div></div>';
+    } else if(type==='products_grid'){
+      return '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;width:100%">' +
+             '<div style="height:36px;background:var(--line);border-radius:3px"></div>' +
+             '<div style="height:36px;background:var(--line);border-radius:3px"></div>' +
+             '<div style="height:36px;background:var(--line);border-radius:3px"></div></div>';
+    }
+    return '<div style="width:60px;height:30px;background:var(--line);border-radius:4px"></div>';
+  }
+
+  window.pePickBlock = function(type){
+    peCloseBlockPicker();
+    var defaultExtra = '';
+    if(type === 'contacts_block'){
+      defaultExtra = 'Телефон:|Telegram:|WhatsApp:|Email:';
+    }
+    var fd = new FormData();
+    fd.append('action','save_page_section');
+    fd.append('page_id', window.PE_PAGE_ID);
+    fd.append('type', type);
+    fd.append('title', '');
+    fd.append('text', '');
+    fd.append('extra', defaultExtra);
+    fd.append('sort_order', peSections.length);
+    fd.append('is_active', 1);
+    fetch('/admin/index.php', {method:'POST', body:fd})
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data.id){
+          var meta = PE_TYPES[type] || {label: type};
+          var newS = {id:data.id, page_id:window.PE_PAGE_ID, type:type, title:'', text:'', extra:defaultExtra, sort_order:peSections.length, is_active:1};
+          peSections.push(newS);
+          pePushHistory();
+          peRender();
+          peSelectBlock(data.id);
+          peShowAutosave();
+        }
+      });
+  };
+
+  // ── Page active toggle ──
+  var peActiveChk = byId('peIsActive');
+  if(peActiveChk){
+    peActiveChk.addEventListener('change', function(){
+      var lbl = byId('peActiveLabel');
+      if(lbl) lbl.textContent = this.checked ? 'Опубликовано' : 'Черновик';
+      var fd = new FormData();
+      fd.append('action','save_page');
+      fd.append('id', window.PE_PAGE_ID);
+      fd.append('is_active', this.checked?1:0);
+      // copy other fields from settings form
+      var f = document.getElementById('editPageForm');
+      if(f){
+        ['title','slug','seo_title','seo_description','nav_label','show_in_nav'].forEach(function(n){
+          var el = f.elements[n];
+          if(!el) return;
+          if(el.type==='checkbox') fd.append(n, el.checked?1:0);
+          else fd.append(n, el.value);
+        });
+      }
+      fetch('/admin/index.php', {method:'POST', body:fd}).then(function(){ peShowAutosave('Статус сохранён'); });
+    });
+  }
+
+  // ── Settings strip ──
+  window.peToggleSettings = function(){
+    var body = byId('peSettingsBody');
+    var strip = byId('peSettingsStrip');
+    if(!body) return;
+    var open = body.style.display !== 'none';
+    body.style.display = open ? 'none' : 'block';
+    if(strip) strip.classList.toggle('open', !open);
+  };
+
+  // ── Keyboard shortcuts ──
+  document.addEventListener('keydown', function(e){
+    if(!document.getElementById('peEditor')) return;
+    if((e.ctrlKey||e.metaKey) && e.key==='z' && !e.shiftKey){ e.preventDefault(); peUndo(); }
+    if((e.ctrlKey||e.metaKey) && (e.key==='y'||(e.key==='z'&&e.shiftKey))){ e.preventDefault(); peRedo(); }
+  });
+  var undoBtn = byId('peUndo'), redoBtn = byId('peRedo');
+  if(undoBtn) undoBtn.addEventListener('click', peUndo);
+  if(redoBtn) redoBtn.addEventListener('click', peRedo);
+
+  // ── Init ──
+  peRender();
+  peUpdateUndoRedo();
+
+  // backward-compat stub so existing openSectionModal references don't crash
+  if(typeof window.openSectionModal === 'undefined'){
+    window.openSectionModal = function(){ };
+  }
+
+})();
 </script>
 <style>
 @keyframes ringAnim{from{transform:rotate(-15deg)}to{transform:rotate(15deg)}}
+</style>
+<style>
+/* ══════════════════════════════════════════
+   PAGE EDITOR  (pe-* prefix)
+══════════════════════════════════════════ */
+
+/* When editor is active, hide the normal tab wrapper overflow so editor can be full-width */
+.pe-editor {
+  margin: -24px -24px 0;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 56px);
+  background: var(--bg, #0f1117);
+  font-size: 13px;
+}
+
+/* ── TOP BAR ── */
+.pe-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--panel, #1a1d27);
+  border-bottom: 1px solid var(--line, #2a2d3a);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.pe-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted, #6b7280);
+  text-decoration: none;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line, #2a2d3a);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.pe-back-btn:hover { color: var(--text, #e2e8f0); border-color: var(--accent, #6366f1); }
+.pe-topbar-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text, #e2e8f0);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pe-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.pe-undo-btn {
+  background: none;
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 6px;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.pe-undo-btn:hover:not(:disabled) { color: var(--text, #e2e8f0); border-color: var(--accent, #6366f1); }
+.pe-undo-btn:disabled { opacity: .3; cursor: default; }
+
+/* Toggle switch */
+.pe-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.pe-toggle-wrap input { display: none; }
+.pe-toggle {
+  width: 36px;
+  height: 20px;
+  background: var(--line, #2a2d3a);
+  border-radius: 10px;
+  position: relative;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.pe-toggle::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  transition: transform .2s;
+}
+.pe-toggle-wrap input:checked ~ .pe-toggle { background: var(--accent, #6366f1); }
+.pe-toggle-wrap input:checked ~ .pe-toggle::after { transform: translateX(16px); }
+.pe-toggle-label { font-size: 12px; color: var(--muted, #6b7280); min-width: 80px; }
+.pe-toggle-wrap input:checked ~ .pe-toggle ~ .pe-toggle-label { color: var(--accent, #6366f1); }
+
+.pe-site-link {
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+  text-decoration: none;
+  padding: 5px 10px;
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 6px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.pe-site-link:hover { color: var(--text, #e2e8f0); border-color: var(--accent, #6366f1); }
+
+.pe-autosave {
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  min-width: 120px;
+  text-align: right;
+  transition: color .3s;
+}
+.pe-autosave.pe-saved { color: #22c55e; }
+
+/* ── SETTINGS STRIP ── */
+.pe-settings-strip {
+  background: var(--panel, #1a1d27);
+  border-bottom: 1px solid var(--line, #2a2d3a);
+  flex-shrink: 0;
+}
+.pe-settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  padding: 10px 20px;
+  font-size: 12px;
+  width: 100%;
+  text-align: left;
+  transition: color .15s;
+}
+.pe-settings-toggle:hover { color: var(--text, #e2e8f0); }
+.pe-chevron { transition: transform .2s; }
+.pe-settings-strip.open .pe-chevron { transform: rotate(180deg); }
+.pe-settings-body { padding: 0 20px 16px; }
+.pe-settings-form {}
+.pe-settings-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.pe-settings-row .pe-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  min-width: 140px;
+  flex: 1;
+}
+.pe-settings-checks {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding-bottom: 4px;
+}
+.pe-check-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text, #e2e8f0);
+  cursor: pointer;
+}
+.pe-settings-save { white-space: nowrap; flex-shrink: 0; }
+.pe-input {
+  background: var(--bg, #0f1117);
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 6px;
+  color: var(--text, #e2e8f0);
+  font-size: 12px;
+  padding: 6px 10px;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color .15s;
+  font-family: inherit;
+}
+.pe-input:focus { outline: none; border-color: var(--accent, #6366f1); }
+.pe-textarea { min-height: 60px; resize: vertical; }
+
+/* ── 3 COLUMNS ── */
+.pe-columns {
+  display: grid;
+  grid-template-columns: 220px 1fr 320px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── LEFT PANEL ── */
+.pe-left {
+  background: var(--panel, #1a1d27);
+  border-right: 1px solid var(--line, #2a2d3a);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pe-left-header {
+  padding: 12px 16px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted, #6b7280);
+  flex-shrink: 0;
+}
+.pe-section-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px;
+}
+.pe-section-list::-webkit-scrollbar { width: 4px; }
+.pe-section-list::-webkit-scrollbar-track { background: transparent; }
+.pe-section-list::-webkit-scrollbar-thumb { background: var(--line, #2a2d3a); border-radius: 2px; }
+
+/* Left section card */
+.pe-scard {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background .12s;
+  border: 1px solid transparent;
+  margin-bottom: 2px;
+  position: relative;
+}
+.pe-scard:hover { background: rgba(99,102,241,.08); }
+.pe-scard.active {
+  background: rgba(99,102,241,.15);
+  border-color: var(--accent, #6366f1);
+}
+.pe-scard.hidden-block { opacity: .45; }
+.pe-drag-handle {
+  color: var(--muted, #6b7280);
+  cursor: grab;
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+}
+.pe-drag-handle:active { cursor: grabbing; }
+.pe-scard-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: rgba(99,102,241,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--accent, #6366f1);
+}
+.pe-scard-info {
+  flex: 1;
+  min-width: 0;
+}
+.pe-scard-type {
+  font-size: 10px;
+  color: var(--muted, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.pe-scard-name {
+  font-size: 12px;
+  color: var(--text, #e2e8f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pe-scard-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.pe-scard:hover .pe-scard-actions { opacity: 1; }
+.pe-scard-btn {
+  background: none;
+  border: none;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s;
+  padding: 0;
+}
+.pe-scard-btn:hover { background: var(--line, #2a2d3a); color: var(--text, #e2e8f0); }
+.pe-scard-btn.danger:hover { background: rgba(239,68,68,.2); color: #ef4444; }
+
+.pe-add-block-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px;
+  padding: 8px;
+  background: none;
+  border: 1px dashed var(--line, #2a2d3a);
+  border-radius: 8px;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all .15s;
+  flex-shrink: 0;
+}
+.pe-add-block-btn:hover {
+  border-color: var(--accent, #6366f1);
+  color: var(--accent, #6366f1);
+  background: rgba(99,102,241,.06);
+}
+
+/* ── CENTER PREVIEW ── */
+.pe-center {
+  overflow-y: auto;
+  padding: 20px;
+  background: var(--bg, #0f1117);
+}
+.pe-center::-webkit-scrollbar { width: 6px; }
+.pe-center::-webkit-scrollbar-track { background: transparent; }
+.pe-center::-webkit-scrollbar-thumb { background: var(--line, #2a2d3a); border-radius: 3px; }
+
+.pe-preview-list { display: flex; flex-direction: column; gap: 12px; }
+
+/* Preview card */
+.pe-preview-card {
+  background: var(--panel, #1a1d27);
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+  position: relative;
+}
+.pe-preview-card:hover { border-color: rgba(99,102,241,.4); }
+.pe-preview-card.active {
+  border-color: var(--accent, #6366f1);
+  box-shadow: 0 0 0 2px rgba(99,102,241,.2);
+}
+.pe-preview-card.hidden-block { opacity: .45; }
+.pe-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line, #2a2d3a);
+  font-size: 11px;
+  color: var(--muted, #6b7280);
+  background: rgba(0,0,0,.2);
+}
+.pe-preview-type-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent, #6366f1);
+  flex-shrink: 0;
+}
+.pe-preview-body { padding: 16px 20px; min-height: 60px; }
+
+/* Skeleton elements */
+.pe-sk-eyebrow {
+  width: 60px;
+  height: 6px;
+  background: var(--accent, #6366f1);
+  border-radius: 3px;
+  opacity: .5;
+  margin-bottom: 8px;
+}
+.pe-sk-h1 {
+  height: 10px;
+  background: var(--text, #e2e8f0);
+  border-radius: 4px;
+  opacity: .6;
+  margin-bottom: 6px;
+}
+.pe-sk-h1.w80 { width: 80%; }
+.pe-sk-h1.w60 { width: 60%; }
+.pe-sk-line {
+  height: 6px;
+  background: var(--muted, #6b7280);
+  border-radius: 3px;
+  opacity: .25;
+  margin-bottom: 4px;
+}
+.pe-sk-line.w100 { width: 100%; }
+.pe-sk-line.w75 { width: 75%; }
+.pe-sk-line.w50 { width: 50%; }
+.pe-sk-btn {
+  display: inline-block;
+  width: 72px;
+  height: 22px;
+  background: var(--accent, #6366f1);
+  border-radius: 5px;
+  opacity: .5;
+  margin-top: 8px;
+}
+.pe-sk-img {
+  width: 100%;
+  height: 60px;
+  background: var(--line, #2a2d3a);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+.pe-sk-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pe-sk-card-item {
+  height: 48px;
+  background: var(--line, #2a2d3a);
+  border-radius: 6px;
+}
+.pe-sk-quote-mark {
+  font-size: 28px;
+  color: var(--accent, #6366f1);
+  opacity: .3;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.pe-sk-contacts { display: flex; flex-direction: column; gap: 5px; }
+.pe-sk-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pe-sk-contact-icon {
+  width: 16px;
+  height: 16px;
+  background: var(--accent, #6366f1);
+  border-radius: 4px;
+  opacity: .3;
+  flex-shrink: 0;
+}
+.pe-sk-form { display: flex; flex-direction: column; gap: 6px; }
+.pe-sk-form-field {
+  height: 22px;
+  background: var(--line, #2a2d3a);
+  border-radius: 5px;
+}
+.pe-sk-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.pe-sk-product {
+  height: 64px;
+  background: var(--line, #2a2d3a);
+  border-radius: 6px;
+}
+.pe-sk-textimg { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: center; }
+
+/* Empty state */
+.pe-preview-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--muted, #6b7280);
+}
+.pe-empty-icon { opacity: .3; }
+.pe-empty-text { font-size: 13px; }
+
+/* ── RIGHT PANEL ── */
+.pe-right {
+  background: var(--panel, #1a1d27);
+  border-left: 1px solid var(--line, #2a2d3a);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pe-right-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted, #6b7280);
+  font-size: 12px;
+  text-align: center;
+  padding: 20px;
+}
+.pe-right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pe-right-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line, #2a2d3a);
+  flex-shrink: 0;
+}
+.pe-right-type-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  background: rgba(99,102,241,.15);
+  color: var(--accent, #6366f1);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.pe-right-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text, #e2e8f0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pe-right-close {
+  background: none;
+  border: none;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  transition: all .12s;
+}
+.pe-right-close:hover { background: var(--line, #2a2d3a); color: var(--text, #e2e8f0); }
+
+.pe-right-fields {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pe-right-fields::-webkit-scrollbar { width: 4px; }
+.pe-right-fields::-webkit-scrollbar-track { background: transparent; }
+.pe-right-fields::-webkit-scrollbar-thumb { background: var(--line, #2a2d3a); border-radius: 2px; }
+
+.pe-field-group { display: flex; flex-direction: column; gap: 5px; }
+.pe-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted, #6b7280);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pe-field-required::after { content: ' *'; color: #ef4444; }
+
+.pe-right-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--line, #2a2d3a);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.pe-save-btn { flex: 1; justify-content: center; }
+.pe-visibility-btn {
+  background: none;
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 8px;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  padding: 0 12px;
+  font-size: 11px;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.pe-visibility-btn:hover { border-color: var(--accent, #6366f1); color: var(--accent, #6366f1); }
+
+/* Repeating rows (contacts, cards) */
+.pe-repeater { display: flex; flex-direction: column; gap: 6px; }
+.pe-repeater-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg, #0f1117);
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 7px;
+  padding: 6px 8px;
+}
+.pe-repeater-drag {
+  color: var(--muted, #6b7280);
+  cursor: grab;
+  font-size: 14px;
+  flex-shrink: 0;
+  padding: 2px;
+}
+.pe-repeater-inputs { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.pe-repeater-inputs .pe-input { background: transparent; border-color: transparent; padding: 3px 6px; font-size: 12px; }
+.pe-repeater-inputs .pe-input:focus { border-color: var(--accent, #6366f1); background: var(--panel, #1a1d27); }
+.pe-repeater-del {
+  background: none;
+  border: none;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.pe-repeater-del:hover { background: rgba(239,68,68,.15); color: #ef4444; }
+.pe-repeater-add {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px dashed var(--line, #2a2d3a);
+  border-radius: 6px;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 5px 10px;
+  width: 100%;
+  transition: all .15s;
+  margin-top: 2px;
+}
+.pe-repeater-add:hover { border-color: var(--accent, #6366f1); color: var(--accent, #6366f1); }
+
+/* ── BLOCK PICKER ── */
+.pe-picker-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.pe-picker-overlay.open { display: flex; }
+.pe-picker-modal {
+  background: var(--panel, #1a1d27);
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 14px;
+  width: 680px;
+  max-width: 96vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.pe-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line, #2a2d3a);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text, #e2e8f0);
+  flex-shrink: 0;
+}
+.pe-picker-close {
+  background: none;
+  border: none;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .12s;
+}
+.pe-picker-close:hover { background: var(--line, #2a2d3a); color: var(--text, #e2e8f0); }
+.pe-picker-body { overflow-y: auto; padding: 20px; }
+.pe-picker-category { margin-bottom: 20px; }
+.pe-picker-cat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted, #6b7280);
+  margin-bottom: 10px;
+}
+.pe-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+.pe-picker-item {
+  background: var(--bg, #0f1117);
+  border: 1px solid var(--line, #2a2d3a);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+}
+.pe-picker-item:hover {
+  border-color: var(--accent, #6366f1);
+  background: rgba(99,102,241,.08);
+  transform: translateY(-1px);
+}
+.pe-picker-preview {
+  width: 100%;
+  height: 56px;
+  background: var(--panel, #1a1d27);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-sizing: border-box;
+}
+.pe-picker-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text, #e2e8f0);
+}
+.pe-picker-desc {
+  font-size: 10px;
+  color: var(--muted, #6b7280);
+  margin-top: 2px;
+}
+
+/* Drag-over highlight in section list */
+.pe-scard.drag-over { background: rgba(99,102,241,.25); border-color: var(--accent, #6366f1); }
+.pe-scard.dragging { opacity: .4; }
 </style>
 </body>
 </html>
