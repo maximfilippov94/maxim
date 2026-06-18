@@ -804,9 +804,18 @@ $crm_stats=['revenue'=>array_sum(array_column(array_filter($orders,fn($o)=>$o['s
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="24" height="24" rx="3" stroke="currentColor" stroke-width="1.5" opacity=".3"/><path d="M10 11h12M10 15h8M10 19h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity=".3"/></svg>
           <span>Выберите блок для редактирования</span>
         </div>
-        <div class="pe-right-panel" id="peRightPanel" style="display:none">
+          <div class="pe-right-panel" id="peRightPanel" style="display:none">
           <div class="pe-right-header">
-            <span class="pe-right-type-badge" id="peRightTypeBadge"></span>
+            <select id="peRightTypeSelect" class="pe-type-select" onchange="peChangeBlockType(this.value)" title="Тип блока">
+              <option value="hero_simple">Заголовок</option>
+              <option value="text">Текст</option>
+              <option value="text_image">Текст + фото</option>
+              <option value="cards">Карточки</option>
+              <option value="contacts_block">Контакты</option>
+              <option value="lead_form">Форма</option>
+              <option value="products_grid">Товары</option>
+              <option value="quote">Цитата</option>
+            </select>
             <span class="pe-right-title" id="peRightTitle"></span>
             <button class="pe-right-close" onclick="peDeselectBlock()" title="Закрыть">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -2951,11 +2960,10 @@ document.addEventListener('DOMContentLoaded', () => {
     var panel = byId('peRightPanel');
     if(empty) empty.style.display = 'none';
     if(panel) panel.style.display = 'flex';
-    var badge = byId('peRightTypeBadge');
     var titleEl = byId('peRightTitle');
-    var meta = PE_TYPES[s.type] || {label: s.type};
-    if(badge) badge.textContent = meta.label;
     if(titleEl) titleEl.textContent = s.title || '—';
+    var typeSelect = byId('peRightTypeSelect');
+    if(typeSelect) typeSelect.value = s.type || 'text';
     var fields = byId('peRightFields');
     if(fields) fields.innerHTML = peFieldsHTML(s);
     peUpdateVisibilityBtn(s);
@@ -2973,6 +2981,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if(empty) empty.style.display = 'flex';
     if(panel) panel.style.display = 'none';
     peRender();
+  };
+
+  window.peChangeBlockType = function(newType){
+    if(!peSelectedId) return;
+    var s = peSection(peSelectedId);
+    if(!s) return;
+    s.type = newType;
+    // reset extra so repeaters start fresh
+    s.extra = '';
+    var fields = byId('peRightFields');
+    if(fields) fields.innerHTML = peFieldsHTML(s);
+    peRenderLeft();
+    peRenderCenter();
   };
 
   function peRenderRightIfNeeded(){
@@ -3153,7 +3174,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!peSelectedId) return;
     var s = peSection(peSelectedId);
     if(!s) return;
-    var type = s.type;
+    var typeSelect = byId('peRightTypeSelect');
+    var type = (typeSelect ? typeSelect.value : null) || s.type;
+    s.type = type; // sync local state
     var fd = new FormData();
     fd.append('action','save_page_section');
     fd.append('id', s.id);
@@ -3753,10 +3776,10 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 .pe-settings-save { white-space: nowrap; flex-shrink: 0; }
 .pe-input {
-  background: var(--bg, #0f1117);
-  border: 1px solid var(--line, #2a2d3a);
+  background: #16160f;
+  border: 1px solid #2e2e26;
   border-radius: 6px;
-  color: var(--text, #e2e8f0);
+  color: #f3f1ec;
   font-size: 12px;
   padding: 6px 10px;
   width: 100%;
@@ -3764,8 +3787,9 @@ document.addEventListener('DOMContentLoaded', () => {
   transition: border-color .15s;
   font-family: inherit;
 }
-.pe-input:focus { outline: none; border-color: var(--accent, #6366f1); }
-.pe-textarea { min-height: 60px; resize: vertical; }
+.pe-input:focus { outline: none; border-color: #c9792b; }
+.pe-textarea { min-height: 80px; resize: vertical; }
+.pe-field-label { color: #8a877e; }
 
 /* ── 3 COLUMNS ── */
 .pe-columns {
@@ -4097,16 +4121,22 @@ document.addEventListener('DOMContentLoaded', () => {
   border-bottom: 1px solid var(--line, #2a2d3a);
   flex-shrink: 0;
 }
-.pe-right-type-badge {
-  font-size: 10px;
+.pe-right-type-badge { display: none; }
+.pe-type-select {
+  background: #16160f;
+  border: 1px solid #2e2e26;
+  border-radius: 6px;
+  color: #c9792b;
+  font-size: 11px;
   font-weight: 700;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: inherit;
   text-transform: uppercase;
-  letter-spacing: .06em;
-  background: rgba(99,102,241,.15);
-  color: var(--accent, #6366f1);
-  border-radius: 4px;
-  padding: 2px 7px;
+  letter-spacing: .04em;
+  flex-shrink: 0;
 }
+.pe-type-select:focus { outline: none; border-color: #c9792b; }
 .pe-right-title {
   flex: 1;
   font-size: 13px;
@@ -4196,8 +4226,8 @@ document.addEventListener('DOMContentLoaded', () => {
   padding: 2px;
 }
 .pe-repeater-inputs { flex: 1; display: flex; flex-direction: column; gap: 4px; }
-.pe-repeater-inputs .pe-input { background: transparent; border-color: transparent; padding: 3px 6px; font-size: 12px; }
-.pe-repeater-inputs .pe-input:focus { border-color: var(--accent, #6366f1); background: var(--panel, #1a1d27); }
+.pe-repeater-inputs .pe-input { background: #0f0f0d; border-color: #22221c; padding: 5px 8px; font-size: 12px; color: #f3f1ec; }
+.pe-repeater-inputs .pe-input:focus { border-color: #c9792b; background: #16160f; }
 .pe-repeater-del {
   background: none;
   border: none;
