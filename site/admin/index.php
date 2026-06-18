@@ -296,6 +296,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
       echo json_encode($out);exit;
     }
     if($a==='delete_page_section'){$pdo->prepare('DELETE FROM page_sections WHERE id=?')->execute([(int)$_POST['id']]);echo json_encode($out);exit;}
+    if($a==='get_page_sections'){
+      $pid=(int)($_POST['page_id']??0);
+      $st=$pdo->prepare('SELECT * FROM page_sections WHERE page_id=? ORDER BY sort_order,id');
+      $st->execute([$pid]);
+      echo json_encode(['ok'=>true,'sections'=>$st->fetchAll(PDO::FETCH_ASSOC)]);exit;
+    }
     if($a==='save_settings'){foreach(['site_title','site_description','phone','telegram','whatsapp','instagram','youtube','og_image','yandex_api_key','cdek_client_id','cdek_client_secret'] as $k){$pdo->prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value')->execute([$k,trim($_POST[$k]??'')]);}echo json_encode($out);exit;}
     echo json_encode(['ok'=>false,'error'=>'unknown: '.$a]);exit;
   }
@@ -3042,7 +3048,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 '<button type="button" class="pe-repeater-add" onclick="peAddCard()">+ Добавить карточку</button>' +
               '</div>';
     } else if(type === 'contacts_block'){
-      var rows = extra ? extra : 'Телефон:|Telegram:|WhatsApp:|Email:';
+      var rows = extra ? extra : 'Телефон::|Telegram::|WhatsApp::|Email::';
       html += field('pefTitle','Заголовок', s.title) +
               field('pefSubtitle','Подзаголовок', peExtraField(extra,'subtitle')) +
               sortOrder(s.sort_order) +
@@ -3077,13 +3083,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if(extra.charAt(0) === '{'){
       try{ var o = JSON.parse(extra); return o[key] || ''; } catch(e){}
     }
-    // Try key:value format (not the repeater format)
+    // Try key::value format
     var lines = extra.split('|');
     for(var i=0;i<lines.length;i++){
-      var idx = lines[i].indexOf(':');
+      var idx = lines[i].indexOf('::');
       if(idx > -1){
         var k = lines[i].substring(0,idx).trim().toLowerCase().replace(/ /g,'_');
-        if(k === key) return lines[i].substring(idx+1);
+        if(k === key) return lines[i].substring(idx+2);
       }
     }
     return '';
@@ -3093,9 +3099,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!extra) return '';
     var rows = extra.split('|').filter(function(r){ return r.trim(); });
     return rows.map(function(r){
-      var idx = r.indexOf(':');
+      var idx = r.indexOf('::');
       var t = idx > -1 ? r.substring(0,idx) : r;
-      var d = idx > -1 ? r.substring(idx+1) : '';
+      var d = idx > -1 ? r.substring(idx+2) : '';
       return peCardRowHTML(t, d);
     }).join('');
   }
@@ -3115,9 +3121,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!extra) return '';
     var rows = extra.split('|').filter(function(r){ return r.trim(); });
     return rows.map(function(r){
-      var idx = r.indexOf(':');
+      var idx = r.indexOf('::');
       var label = idx > -1 ? r.substring(0,idx) : r;
-      var val   = idx > -1 ? r.substring(idx+1) : '';
+      var val   = idx > -1 ? r.substring(idx+2) : '';
       return peContactRowHTML(label, val);
     }).join('');
   }
@@ -3152,8 +3158,8 @@ document.addEventListener('DOMContentLoaded', () => {
     fd.append('action','save_page_section');
     fd.append('id', s.id);
     fd.append('page_id', window.PE_PAGE_ID);
-    fd.append('type', type);
-    fd.append('sort_order', gv('pefSortOrder') || s.sort_order || 0);
+    fd.append('ps_type', type);
+    fd.append('ps_sort', gv('pefSortOrder') || s.sort_order || 0);
 
     var extra = {};
     var title = '', text = '';
@@ -3187,10 +3193,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rep.querySelectorAll('.pe-repeater-row').forEach(function(row){
           var t2 = (row.querySelector('.pe-card-title')||{}).value || '';
           var d2 = (row.querySelector('.pe-card-text')||{}).value || '';
-          cardRows.push(t2 + ':' + d2);
+          cardRows.push(t2 + '::' + d2);
         });
       }
-      fd.append('extra', cardRows.join('|'));
+      fd.append('ps_extra', cardRows.join('|'));
     } else if(type === 'contacts_block'){
       title = gv('pefTitle');
       extra.subtitle = gv('pefSubtitle');
@@ -3200,10 +3206,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rep2.querySelectorAll('.pe-repeater-row').forEach(function(row){
           var lbl = (row.querySelector('.pe-contact-label')||{}).value || '';
           var val = (row.querySelector('.pe-contact-val')||{}).value || '';
-          contactRows.push(lbl + ':' + val);
+          contactRows.push(lbl + '::' + val);
         });
       }
-      fd.append('extra', contactRows.join('|'));
+      fd.append('ps_extra', contactRows.join('|'));
     } else if(type === 'lead_form'){
       extra.eyebrow = gv('pefEyebrow');
       title = gv('pefTitle');
@@ -3219,41 +3225,43 @@ document.addEventListener('DOMContentLoaded', () => {
       text  = gv('pefText');
     }
 
-    fd.append('title', title);
-    fd.append('text', text);
+    fd.append('ps_title', title);
+    fd.append('ps_text', text);
 
     // serialize extra if not already set as pipe string
-    if(!fd.has('extra') || fd.get('extra') === ''){
-      var extraStr = Object.keys(extra).map(function(k){ return k+':'+extra[k]; }).join('|');
-      fd.set('extra', extraStr);
+    if(!fd.has('ps_extra') || fd.get('ps_extra') === ''){
+      var extraStr = Object.keys(extra).map(function(k){ return k+'::'+extra[k]; }).join('|');
+      fd.set('ps_extra', extraStr);
     } else if(Object.keys(extra).length){
       // merge subtitle into pipe string if present
-      var existingExtra = fd.get('extra');
+      var existingExtra = fd.get('ps_extra');
       Object.keys(extra).forEach(function(k){
-        if(extra[k]) existingExtra += '|' + k + ':' + extra[k];
+        if(extra[k]) existingExtra += '|' + k + '::' + extra[k];
       });
-      fd.set('extra', existingExtra);
+      fd.set('ps_extra', existingExtra);
     }
 
     var btn = byId('peSaveBlock');
     if(btn){ btn.disabled = true; btn.textContent = 'Сохранение…'; }
 
-    fetch('/admin/index.php', {method:'POST', body:fd})
+    var savedId = peSelectedId;
+    fetch('/admin/index.php', {method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'}})
       .then(function(r){ return r.json(); })
       .then(function(data){
         if(data.ok || data.id){
-          // update local state
+          // update local state optimistically
           if(data.id) s.id = data.id;
           s.title = title;
           s.text  = text;
-          s.sort_order = fd.get('sort_order');
-          s.extra = fd.get('extra');
+          s.sort_order = fd.get('ps_sort');
+          s.extra = fd.get('ps_extra');
           if(type==='hero_simple'||type==='text'||type==='text_image'){
             s.eyebrow = extra.eyebrow;
           }
           pePushHistory();
-          peRender();
           peShowAutosave();
+          // reload sections from server, then re-select
+          peReloadSections(savedId);
         }
         if(btn){ btn.disabled = false; btn.textContent = 'Сохранить'; }
       })
@@ -3265,6 +3273,25 @@ document.addEventListener('DOMContentLoaded', () => {
   function gv(id){
     var el = byId(id);
     return el ? el.value : '';
+  }
+
+  // ── Reload sections from server without page refresh ──
+  function peReloadSections(reSelectId){
+    var fd = new FormData();
+    fd.append('action', 'get_page_sections');
+    fd.append('page_id', window.PE_PAGE_ID);
+    fetch('/admin/index.php', {method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'}})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        if(d.sections){
+          peSections = d.sections;
+          peRenderLeft();
+          peRenderCenter();
+          if(reSelectId){
+            peSelectBlock(reSelectId);
+          }
+        }
+      });
   }
 
   // ── Visibility toggle ──
@@ -3282,12 +3309,12 @@ document.addEventListener('DOMContentLoaded', () => {
     fd.append('action','save_page_section');
     fd.append('id', s.id);
     fd.append('page_id', window.PE_PAGE_ID);
-    fd.append('type', s.type);
-    fd.append('title', s.title || '');
-    fd.append('text', s.text || '');
-    fd.append('extra', s.extra || '');
-    fd.append('sort_order', s.sort_order || 0);
-    fd.append('is_active', newActive);
+    fd.append('ps_type', s.type);
+    fd.append('ps_title', s.title || '');
+    fd.append('ps_text', s.text || '');
+    fd.append('ps_extra', s.extra || '');
+    fd.append('ps_sort', s.sort_order || 0);
+    fd.append('ps_active', newActive);
     fetch('/admin/index.php', {method:'POST', body:fd}).then(function(){ peShowAutosave(); });
   };
 
@@ -3303,12 +3330,12 @@ document.addEventListener('DOMContentLoaded', () => {
     fd.append('action','save_page_section');
     fd.append('id', s.id);
     fd.append('page_id', window.PE_PAGE_ID);
-    fd.append('type', s.type);
-    fd.append('title', s.title || '');
-    fd.append('text', s.text || '');
-    fd.append('extra', s.extra || '');
-    fd.append('sort_order', s.sort_order || 0);
-    fd.append('is_active', s.is_active);
+    fd.append('ps_type', s.type);
+    fd.append('ps_title', s.title || '');
+    fd.append('ps_text', s.text || '');
+    fd.append('ps_extra', s.extra || '');
+    fd.append('ps_sort', s.sort_order || 0);
+    fd.append('ps_active', s.is_active);
     fetch('/admin/index.php', {method:'POST', body:fd}).then(function(){ peShowAutosave(); });
   }
 
@@ -3319,12 +3346,12 @@ document.addEventListener('DOMContentLoaded', () => {
     var fd = new FormData();
     fd.append('action','save_page_section');
     fd.append('page_id', window.PE_PAGE_ID);
-    fd.append('type', s.type);
-    fd.append('title', (s.title||'') + ' (копия)');
-    fd.append('text', s.text||'');
-    fd.append('extra', s.extra||'');
-    fd.append('sort_order', (parseInt(s.sort_order)||0) + 1);
-    fd.append('is_active', 1);
+    fd.append('ps_type', s.type);
+    fd.append('ps_title', (s.title||'') + ' (копия)');
+    fd.append('ps_text', s.text||'');
+    fd.append('ps_extra', s.extra||'');
+    fd.append('ps_sort', (parseInt(s.sort_order)||0) + 1);
+    fd.append('ps_active', 1);
     fetch('/admin/index.php', {method:'POST', body:fd})
       .then(function(r){ return r.json(); })
       .then(function(data){
@@ -3364,12 +3391,12 @@ document.addEventListener('DOMContentLoaded', () => {
       fd.append('action','save_page_section');
       fd.append('id', s.id);
       fd.append('page_id', window.PE_PAGE_ID);
-      fd.append('type', s.type);
-      fd.append('title', s.title||'');
-      fd.append('text', s.text||'');
-      fd.append('extra', s.extra||'');
-      fd.append('sort_order', i);
-      fd.append('is_active', s.is_active!=null?s.is_active:1);
+      fd.append('ps_type', s.type);
+      fd.append('ps_title', s.title||'');
+      fd.append('ps_text', s.text||'');
+      fd.append('ps_extra', s.extra||'');
+      fd.append('ps_sort', i);
+      fd.append('ps_active', s.is_active!=null?s.is_active:1);
       fetch('/admin/index.php', {method:'POST', body:fd});
     });
     peShowAutosave();
@@ -3457,17 +3484,17 @@ document.addEventListener('DOMContentLoaded', () => {
     peCloseBlockPicker();
     var defaultExtra = '';
     if(type === 'contacts_block'){
-      defaultExtra = 'Телефон:|Telegram:|WhatsApp:|Email:';
+      defaultExtra = 'Телефон::|Telegram::|WhatsApp::|Email::';
     }
     var fd = new FormData();
     fd.append('action','save_page_section');
     fd.append('page_id', window.PE_PAGE_ID);
-    fd.append('type', type);
-    fd.append('title', '');
-    fd.append('text', '');
-    fd.append('extra', defaultExtra);
-    fd.append('sort_order', peSections.length);
-    fd.append('is_active', 1);
+    fd.append('ps_type', type);
+    fd.append('ps_title', '');
+    fd.append('ps_text', '');
+    fd.append('ps_extra', defaultExtra);
+    fd.append('ps_sort', peSections.length);
+    fd.append('ps_active', 1);
     fetch('/admin/index.php', {method:'POST', body:fd})
       .then(function(r){ return r.json(); })
       .then(function(data){
