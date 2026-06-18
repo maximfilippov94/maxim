@@ -163,7 +163,7 @@ $pageDesc  = $page['seo_description'] ?: '';
   <?php if($stext): ?><p style="color:var(--muted);font-size:16px;margin:0 0 4px"><?=$stext?></p><?php endif; ?>
   <div class="pageCardsBlock">
     <?php foreach($sitems as $item):
-      $parts = explode(':', $item, 2);
+      $parts = explode('::', $item, 2);
     ?>
     <div class="pageCard">
       <h3><?=h(trim($parts[0]))?></h3>
@@ -180,7 +180,7 @@ $pageDesc  = $page['seo_description'] ?: '';
   <?php if($ssub): ?><p style="color:var(--muted);font-size:15px;margin:0 0 8px"><?=$ssub?></p><?php endif; ?>
   <div class="contactsGrid">
     <?php foreach($sitems as $item):
-      $parts = explode(':', $item, 2);
+      $parts = explode('::', $item, 2);
       $label = trim($parts[0]);
       $value = trim($parts[1] ?? '');
       $href = '#';
