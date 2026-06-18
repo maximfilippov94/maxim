@@ -114,7 +114,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
   if($a==='save_page_section'){
     $id=(int)($_POST['id']??0); $pid=(int)$_POST['page_id'];
     $img=upload_file('ps_image') ?: ($_POST['old_ps_image']??'');
-    $data=[trim($_POST['ps_type']??'text'),trim($_POST['ps_eyebrow']??''),trim($_POST['ps_title']??''),trim($_POST['ps_subtitle']??''),trim($_POST['ps_text']??''),$img,trim($_POST['ps_cta_text']??''),trim($_POST['ps_cta_link']??''),trim($_POST['ps_extra']??''),(int)($_POST['ps_sort']??10),isset($_POST['ps_active'])?1:0,$pid];
+    $data=[trim($_POST['ps_type']??'text'),trim($_POST['ps_eyebrow']??''),trim($_POST['ps_title']??''),trim($_POST['ps_subtitle']??''),trim($_POST['ps_text']??''),$img,trim($_POST['ps_cta_text']??''),trim($_POST['ps_cta_link']??''),trim($_POST['ps_extra']??''),(int)($_POST['ps_sort']??10),(int)(($_POST['ps_active']??1)?1:0),$pid];
     if($id){$data[]=$id;$pdo->prepare('UPDATE page_sections SET type=?,eyebrow=?,title=?,subtitle=?,text=?,image=?,cta_text=?,cta_link=?,extra=?,sort_order=?,is_active=?,page_id=? WHERE id=?')->execute($data);}
     else{$pdo->prepare('INSERT INTO page_sections(type,eyebrow,title,subtitle,text,image,cta_text,cta_link,extra,sort_order,is_active,page_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')->execute($data); $id=(int)$pdo->lastInsertId();}
     if(!empty($_SERVER['HTTP_X_REQUESTED_WITH'])){header('Content-Type: application/json');echo json_encode(['ok'=>true,'id'=>$id]);exit;}
@@ -315,6 +315,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 try {
   $pdo->exec("CREATE TABLE IF NOT EXISTS pages (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL DEFAULT '', slug TEXT NOT NULL, seo_title TEXT DEFAULT '', seo_description TEXT DEFAULT '', is_active INTEGER DEFAULT 1, show_in_nav INTEGER DEFAULT 0, nav_label TEXT DEFAULT '', sort_order INTEGER DEFAULT 10, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
   $pdo->exec("CREATE TABLE IF NOT EXISTS page_sections (id INTEGER PRIMARY KEY AUTOINCREMENT, page_id INTEGER NOT NULL, type TEXT NOT NULL DEFAULT 'text', eyebrow TEXT DEFAULT '', title TEXT DEFAULT '', subtitle TEXT DEFAULT '', text TEXT DEFAULT '', image TEXT DEFAULT '', cta_text TEXT DEFAULT '', cta_link TEXT DEFAULT '', extra TEXT DEFAULT '', sort_order INTEGER DEFAULT 10, is_active INTEGER DEFAULT 1)");
+} catch(Exception $e){}
+// Фикс: обновляем старые записи с одинарным разделителем на двойной ::
+try {
+  $rows = $pdo->query("SELECT id, extra FROM page_sections WHERE extra LIKE '%:%' AND extra NOT LIKE '%::%'")->fetchAll(PDO::FETCH_ASSOC);
+  foreach($rows as $row){
+    $fixed = preg_replace('/([^|:]):([^:])/', '$1::$2', $row['extra']);
+    if($fixed !== $row['extra']) $pdo->prepare("UPDATE page_sections SET extra=? WHERE id=?")->execute([$fixed, $row['id']]);
+  }
 } catch(Exception $e){}
 // Создаём nav_items если нет
 try {
@@ -3254,6 +3262,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     fd.append('ps_title', title);
     fd.append('ps_text', text);
+    fd.append('ps_active', s.is_active != null ? s.is_active : 1);
 
     // serialize extra if not already set as pipe string
     if(!fd.has('ps_extra') || fd.get('ps_extra') === ''){
