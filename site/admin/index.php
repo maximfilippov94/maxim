@@ -116,10 +116,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $img=upload_file('ps_image') ?: ($_POST['old_ps_image']??'');
     $data=[trim($_POST['ps_type']??'text'),trim($_POST['ps_eyebrow']??''),trim($_POST['ps_title']??''),trim($_POST['ps_subtitle']??''),trim($_POST['ps_text']??''),$img,trim($_POST['ps_cta_text']??''),trim($_POST['ps_cta_link']??''),trim($_POST['ps_extra']??''),(int)($_POST['ps_sort']??10),isset($_POST['ps_active'])?1:0,$pid];
     if($id){$data[]=$id;$pdo->prepare('UPDATE page_sections SET type=?,eyebrow=?,title=?,subtitle=?,text=?,image=?,cta_text=?,cta_link=?,extra=?,sort_order=?,is_active=?,page_id=? WHERE id=?')->execute($data);}
-    else{$pdo->prepare('INSERT INTO page_sections(type,eyebrow,title,subtitle,text,image,cta_text,cta_link,extra,sort_order,is_active,page_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')->execute($data);}
+    else{$pdo->prepare('INSERT INTO page_sections(type,eyebrow,title,subtitle,text,image,cta_text,cta_link,extra,sort_order,is_active,page_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)')->execute($data); $id=(int)$pdo->lastInsertId();}
+    if(!empty($_SERVER['HTTP_X_REQUESTED_WITH'])){header('Content-Type: application/json');echo json_encode(['ok'=>true,'id'=>$id]);exit;}
     header('Location:/admin?tab=pages&pid='.$pid); exit;
   }
-  if($a==='delete_page_section'){$pid=(int)$_POST['page_id'];$pdo->prepare('DELETE FROM page_sections WHERE id=?')->execute([(int)$_POST['id']]);header('Location:/admin?tab=pages&pid='.$pid);exit;}
+  if($a==='delete_page_section'){$pid=(int)$_POST['page_id'];$pdo->prepare('DELETE FROM page_sections WHERE id=?')->execute([(int)$_POST['id']]);
+    if(!empty($_SERVER['HTTP_X_REQUESTED_WITH'])){header('Content-Type: application/json');echo json_encode(['ok'=>true]);exit;}
+    header('Location:/admin?tab=pages&pid='.$pid);exit;
+  }
   if($a==='save_nav'){
     $id=(int)($_POST['id']??0);
     $data=[trim($_POST['label']),trim($_POST['url']),(int)($_POST['sort_order']??10),(int)($_POST['is_active']??0),(int)($_POST['open_new_tab']??0)];
@@ -3597,13 +3601,20 @@ document.addEventListener('DOMContentLoaded', () => {
 ══════════════════════════════════════════ */
 
 /* When editor is active, hide the normal tab wrapper overflow so editor can be full-width */
+/* reset contentInner when editor is open */
+.contentInner:has(.pe-editor) {
+  padding: 0;
+  max-width: none;
+  width: 100%;
+}
 .pe-editor {
-  margin: -24px -24px 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 56px);
+  height: calc(100vh - 56px);
   background: var(--bg, #0f1117);
   font-size: 13px;
+  overflow: hidden;
 }
 
 /* ── TOP BAR ── */

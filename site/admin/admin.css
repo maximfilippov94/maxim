@@ -336,6 +336,7 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 /* ── TAB SYSTEM ── */
 .tabContent { display: none; }
 .tabContent.active { display: block; }
+.tabContent.active:has(.pe-editor) { overflow: hidden; }
 
 /* ── BLOCK CARDS (Редактор главной, tab=blocks) ──────── */
 .blockCard {
