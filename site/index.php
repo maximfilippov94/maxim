@@ -24,9 +24,39 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=h($title)?></title>
 <meta name="description" content="<?=h($desc)?>">
+<meta name="robots" content="index, follow">
 <link rel="canonical" href="https://lukaoutdoor.com/">
-<meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($heroImage)?>">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"LUKA OUTDOOR","url":"https://lukaoutdoor.com","logo":"https://lukaoutdoor.com/assets/images/logo_luka_new.png","description":"<?=h($desc)?>","contactPoint":{"@type":"ContactPoint","telephone":"<?=h(setting('phone'))?>","contactType":"sales","areaServed":"RU","availableLanguage":"Russian"}}</script>
+<meta property="og:title" content="<?=h($title)?>">
+<meta property="og:description" content="<?=h($desc)?>">
+<meta property="og:image" content="https://lukaoutdoor.com/<?=h($heroImage)?>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://lukaoutdoor.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LUKA OUTDOOR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json"><?=json_encode([
+  '@context'  => 'https://schema.org',
+  '@graph'    => [
+    [
+      '@type'        => 'Organization',
+      '@id'          => 'https://lukaoutdoor.com/#organization',
+      'name'         => 'LUKA OUTDOOR',
+      'url'          => 'https://lukaoutdoor.com',
+      'logo'         => ['@type'=>'ImageObject','url'=>'https://lukaoutdoor.com/assets/images/logo_luka_new.png'],
+      'description'  => $desc,
+      'contactPoint' => ['@type'=>'ContactPoint','telephone'=>setting('phone'),'contactType'=>'sales','areaServed'=>'RU','availableLanguage'=>'Russian'],
+    ],
+    [
+      '@type'          => 'WebSite',
+      '@id'            => 'https://lukaoutdoor.com/#website',
+      'name'           => 'LUKA OUTDOOR',
+      'url'            => 'https://lukaoutdoor.com',
+      'publisher'      => ['@id'=>'https://lukaoutdoor.com/#organization'],
+      'potentialAction'=> ['@type'=>'SearchAction','target'=>['@type'=>'EntryPoint','urlTemplate'=>'https://lukaoutdoor.com/catalog.php?q={search_term_string}'],'query-input'=>'required name=search_term_string'],
+    ],
+  ],
+],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css?v=6.2.0">

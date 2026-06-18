@@ -19,6 +19,14 @@ $sections = $sections->fetchAll(PDO::FETCH_ASSOC);
 
 $pageTitle = $page['seo_title'] ?: $page['title'].' — LUKA OUTDOOR';
 $pageDesc  = $page['seo_description'] ?: '';
+$pageUrl   = 'https://lukaoutdoor.com/page.php?slug='.urlencode($slug);
+// Ищем первое изображение в секциях для og:image
+$ogImg = 'https://lukaoutdoor.com/assets/images/hero.webp';
+foreach($sections as $sec){ if(!empty($sec['image'])){ $ogImg = 'https://lukaoutdoor.com/'.$sec['image']; break; } }
+$breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>[
+  ['@type'=>'ListItem','position'=>1,'name'=>'Главная','item'=>'https://lukaoutdoor.com/'],
+  ['@type'=>'ListItem','position'=>2,'name'=>$page['title'],'item'=>$pageUrl],
+]];
 ?>
 <!doctype html>
 <html lang="ru">
@@ -27,6 +35,18 @@ $pageDesc  = $page['seo_description'] ?: '';
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=h($pageTitle)?></title>
 <meta name="description" content="<?=h($pageDesc)?>">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="<?=h($pageUrl)?>">
+<meta property="og:title" content="<?=h($pageTitle)?>">
+<meta property="og:description" content="<?=h($pageDesc)?>">
+<meta property="og:url" content="<?=h($pageUrl)?>">
+<meta property="og:image" content="<?=h($ogImg)?>">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="LUKA OUTDOOR">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json"><?=json_encode($breadcrumbLd,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
