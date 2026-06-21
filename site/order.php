@@ -6,9 +6,9 @@ header('Content-Type: application/json; charset=utf-8');
 // ── SMTP настройки (Spaceweb) ─────────────────────────────────────────────────
 define('SMTP_HOST', 'smtp.spaceweb.ru');
 define('SMTP_PORT', 465);
-define('SMTP_USER', 'noreply@luka-shop.ru');
+define('SMTP_USER', 'noreply@lukaoutdoor.com');
 define('SMTP_PASS', 'qWAszX1994fimax');
-define('SMTP_FROM', 'noreply@luka-shop.ru');
+define('SMTP_FROM', 'noreply@lukaoutdoor.com');
 define('SMTP_FROM_NAME', 'LUKA OUTDOOR');
 
 // ── Email helper через SMTP (сокеты, без библиотек) ───────────────────────────
