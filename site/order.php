@@ -165,8 +165,10 @@ function send_customer_email(array $order, array $items, string $customerEmail):
 
 // ── Основная логика ───────────────────────────────────────────────────────────
 try{
-    $csrfToken = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!empty($csrfToken) && !hash_equals($_SESSION['csrf_token'] ?? '', $csrfToken)) {
+    $csrfToken   = $_POST['csrf_token'] ?? '';
+    $sessionToken = $_SESSION['csrf_token'] ?? '';
+    // Проверяем только если оба токена присутствуют
+    if ($csrfToken && $sessionToken && !hash_equals($sessionToken, $csrfToken)) {
         http_response_code(403);
         echo json_encode(['ok'=>false,'message'=>'Недопустимый запрос'], JSON_UNESCAPED_UNICODE);
         exit;
