@@ -340,8 +340,8 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
 
 /* ── BLOCK CARDS (Редактор главной, tab=blocks) ──────── */
 .blockCard {
-  background:#16160f;
-  border:1px solid #2e2e26;
+  background:var(--surface);
+  border:1px solid var(--line2);
   border-radius:10px;
   margin-bottom:8px;
   overflow:hidden;
@@ -353,25 +353,25 @@ select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='ht
   display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;
 }
 .blockCardDrag {
-  color:#3a3a30;font-size:18px;cursor:grab;flex-shrink:0;user-select:none;
-  transition:color .15s;
+  color:var(--muted);font-size:18px;cursor:grab;flex-shrink:0;user-select:none;
+  opacity:.4;transition:opacity .15s;
 }
-.blockCard:hover .blockCardDrag { color:var(--muted); }
+.blockCard:hover .blockCardDrag { opacity:1; }
 .blockCardInfo { flex:1;min-width:0; }
 .blockCardInfo .type {
   font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
   color:var(--copper);margin-bottom:3px;
 }
 .blockCardInfo .title {
-  font-size:14px;font-weight:600;color:#f3f1ec;
+  font-size:14px;font-weight:600;color:var(--text);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .blockCardInfo .sub {
-  font-size:12px;color:#6a6760;margin-top:2px;
+  font-size:12px;color:var(--muted);margin-top:2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .blockCardActions { display:flex;gap:6px;flex-shrink:0;align-items:center; }
-.hidden-block .blockCardInfo .title { color:#4a4840; }
+.hidden-block .blockCardInfo .title { color:var(--muted); }
 
 /* list wrapper */
 #blocksList { display:flex;flex-direction:column;max-width:760px; }
