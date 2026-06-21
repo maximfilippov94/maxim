@@ -3,14 +3,50 @@ require __DIR__.'/includes/db.php';
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 
-// ── Email helper ──────────────────────────────────────────────────────────────
+// ── SMTP настройки (Spaceweb) ─────────────────────────────────────────────────
+define('SMTP_HOST', 'smtp.spaceweb.ru');
+define('SMTP_PORT', 465);
+define('SMTP_USER', 'noreply@luka-shop.ru');
+define('SMTP_PASS', 'qWAszX1994fimax');
+define('SMTP_FROM', 'noreply@luka-shop.ru');
+define('SMTP_FROM_NAME', 'LUKA OUTDOOR');
+
+// ── Email helper через SMTP (сокеты, без библиотек) ───────────────────────────
 function send_order_email(string $to, string $subject, string $htmlBody): void {
-    $headers  = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: LUKA OUTDOOR <noreply@lukaoutdoor.com>\r\n";
-    $headers .= "Reply-To: hello@lukaoutdoor.com\r\n";
-    $headers .= "X-Mailer: PHP/" . phpversion();
-    @mail($to, '=?UTF-8?B?'.base64_encode($subject).'?=', $htmlBody, $headers);
+    try {
+        // Подключаемся по SSL
+        $ctx = stream_context_create(['ssl'=>['verify_peer'=>false,'verify_peer_name'=>false]]);
+        $sock = stream_socket_client('ssl://'.SMTP_HOST.':'.SMTP_PORT, $errno, $errstr, 15, STREAM_CLIENT_CONNECT, $ctx);
+        if(!$sock) throw new Exception("SMTP connect failed: $errstr");
+
+        $read = function() use ($sock){ return fgets($sock, 512); };
+        $send = function(string $cmd) use ($sock){ fwrite($sock, $cmd."\r\n"); };
+
+        $read(); // 220 greeting
+        $send('EHLO lukaoutdoor.com'); while(($line=$read()) && substr($line,3,1)=='-');
+        $send('AUTH LOGIN'); $read();
+        $send(base64_encode(SMTP_USER)); $read();
+        $send(base64_encode(SMTP_PASS)); $read(); // 235
+        $send('MAIL FROM:<'.SMTP_FROM.'>'); $read();
+        $send('RCPT TO:<'.$to.'>'); $read();
+        $send('DATA'); $read();
+
+        $encodedSubject = '=?UTF-8?B?'.base64_encode($subject).'?=';
+        $boundary = md5(uniqid());
+        $msg  = "From: ".SMTP_FROM_NAME." <".SMTP_FROM.">\r\n";
+        $msg .= "To: <$to>\r\n";
+        $msg .= "Subject: $encodedSubject\r\n";
+        $msg .= "MIME-Version: 1.0\r\n";
+        $msg .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $msg .= "Content-Transfer-Encoding: base64\r\n";
+        $msg .= "\r\n";
+        $msg .= chunk_split(base64_encode($htmlBody));
+        $msg .= "\r\n.";
+        $send($msg); $read(); // 250
+        $send('QUIT'); fclose($sock);
+    } catch(\Throwable $e) {
+        error_log('[mail] '.$e->getMessage());
+    }
 }
 
 function order_email_style(): string {
