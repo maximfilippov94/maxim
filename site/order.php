@@ -57,37 +57,40 @@ function email_base(string $preheader, string $content): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark">
-<meta name="supported-color-schemes" content="dark">
+<meta name="color-scheme" content="dark only">
+<meta name="supported-color-schemes" content="dark only">
 <title>LUKA OUTDOOR</title>
 <style>
-  :root { color-scheme: dark; }
+  :root { color-scheme: dark only; supported-color-schemes: dark only; }
   body { margin:0; padding:0; background:#050505 !important; -webkit-text-size-adjust:100%; }
-  /* Force dark in Apple Mail / iOS */
+  /* Жёсткое переопределение для Apple Mail Auto Dark Mode */
+  [data-ogsc] body,
+  [data-ogsb] body { background:#050505 !important; }
   @media (prefers-color-scheme: light) {
-    body, .email-bg { background:#050505 !important; }
-    .card-bg        { background:#111110 !important; }
-    .hd-bg          { background:#0b0b0b !important; }
-    .ft-bg          { background:#050505 !important; }
-    .hero-bg        { background:#0b0b0b !important; }
-    .bar-bg         { background:#c9792b !important; }
-    .total-bg       { background:#050505 !important; }
-    .prod-bg        { background:#111110 !important; }
-    .contact-bg     { background:#111110 !important; }
-    .comment-bg     { background:#1a1a18 !important; }
-    .text-main      { color:#f3f1ec !important; }
-    .text-muted     { color:#9a9288 !important; }
-    .text-soft      { color:#d6cfc5 !important; }
-    .text-copper    { color:#c9792b !important; }
-    .border-sub     { border-color:rgba(243,241,236,0.10) !important; }
+    body, div, td, table { color-scheme: dark !important; }
+    body   { background:#050505 !important; color:#f3f1ec !important; }
+    .email-bg  { background:#050505 !important; }
+    .card-bg   { background:#111110 !important; }
+    .hd-bg     { background:#0b0b0b !important; }
+    .ft-bg     { background:#050505 !important; }
+    .hero-bg   { background:#0b0b0b !important; }
+    .bar-bg    { background:#c9792b !important; }
+    .total-bg  { background:#050505 !important; }
+    .prod-bg   { background:#1a1a18 !important; }
+    .contact-bg{ background:#1a1a18 !important; }
+    .comment-bg{ background:#1a1a18 !important; }
+    .text-main { color:#f3f1ec !important; }
+    .text-muted{ color:#9a9288 !important; }
+    .text-soft { color:#d6cfc5 !important; }
+    .text-copper{color:#c9792b !important; }
   }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#050505;font-family:Arial,Helvetica,sans-serif" class="email-bg">
+<body style="margin:0;padding:0;background:#050505 !important;font-family:Arial,Helvetica,sans-serif;color:#f3f1ec" class="email-bg">
 <span style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#050505;mso-hide:all">'.$preheader.'</span>
-
-<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" class="email-bg" style="background:#050505">
-  <tr><td align="center" style="padding:28px 12px;background:#050505" class="email-bg">
+<div style="background:#050505 !important;color:#f3f1ec">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#050505" class="email-bg" style="background:#050505 !important">
+  <tr><td align="center" bgcolor="#050505" style="padding:28px 12px;background:#050505 !important" class="email-bg">
 
     <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%" class="card-bg">
 
@@ -116,6 +119,7 @@ function email_base(string $preheader, string $content): string {
     </table>
   </td></tr>
 </table>
+</div>
 </body></html>';
 }
 
