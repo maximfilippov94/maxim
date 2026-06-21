@@ -98,6 +98,7 @@ function search_blob($o,$prev){ return mb_strtolower(($o['customer_name']??'').'
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LUKA / CRM</title>
 <link rel="stylesheet" href="admin.css">
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('adminTheme')||'dark')</script>
 </head>
 <body>
 <div class="adminWrap">
@@ -306,9 +307,7 @@ async function openOrder(id){
 }
 function renderOrder(o){
   const items=o.items||[];
-  const cdek=o.cdek_track?`<a href="https://lk.cdek.ru/order-history" target="_blank" class="btn-ghost btn-sm" style="color:var(--st-done)">🚚 ${esc(o.cdek_track)} · ЛК СДЭК ↗</a>`
-    : o.cdek_order_uuid?`<a href="https://lk.cdek.ru/order-history" target="_blank" class="btn-ghost btn-sm" style="color:var(--st-new)">📦 СДЭК создан · ЛК ↗</a>`
-    : `<span style="color:var(--muted);font-size:12px">СДЭК не создан — оформите в карточке заказа CMS</span>`;
+  const cdek=renderCdekBlock(o);
   document.getElementById('orderModalBody').innerHTML=`
     <div class="odBlock">
       <h4>Клиент</h4>
@@ -415,6 +414,105 @@ document.getElementById('lookupPhone').addEventListener('keydown',e=>{if(e.key==
   }
   setInterval(poll,10000);setTimeout(poll,4000);
 })();
+
+// ── CDEK ─────────────────────────────────────────────────────────────
+function cdekStatusLabel(code){
+  const map={'CREATED':['📦','Создан','#6ab0ff'],'SENDER_SEND':['🚚','Отправлен','#6ab0ff'],'ACCEPTED':['✓','Принят','#6ab0ff'],'RECEIVED_AT_SENDER_WAREHOUSE':['📦','На складе','#6ab0ff'],'READY_FOR_SHIPMENT_IN_SENDER_CITY':['🏭','Готов к отгрузке','#6ab0ff'],'RETURNED_TO_SENDER':['↩','Возврат','#e05252'],'DELIVERED':['✓','Доставлен','#7fd882'],'NOT_DELIVERED':['✗','Не доставлен','#e05252'],'INVALID':['⚠️','Некорректный','#e05252']};
+  const s=map[code]||['📦',code||'Создан','#6ab0ff'];
+  return `<span style="font-size:13px;font-weight:700;color:${s[2]}">${s[0]} ${s[1]}</span>`;
+}
+function parsePvzCode(address){
+  const m=String(address||'').match(/ПВЗ\s+([A-Z0-9\-]+)\s*:/);return m?m[1]:'';
+}
+function getCityCode(city){
+  const CDEK={"Абакан":823,"Архангельск":402,"Астрахань":432,"Барнаул":274,"Белгород":337,"Брянск":220,"Владивосток":288,"Владикавказ":1082,"Владимир":94,"Волгоград":426,"Вологда":246,"Воронеж":506,"Екатеринбург":250,"Иваново":164,"Ижевск":224,"Иркутск":281,"Казань":424,"Калининград":152,"Калуга":142,"Кемерово":272,"Киров":415,"Краснодар":435,"Красноярск":278,"Москва":44,"Нижний Новгород":414,"Новосибирск":270,"Омск":268,"Пермь":248,"Ростов-на-Дону":438,"Самара":430,"Санкт-Петербург":137,"Саратов":428,"Тольятти":431,"Тюмень":252,"Уфа":256,"Хабаровск":287,"Челябинск":259};
+  if(!city)return'';const c=city.trim();if(CDEK[c])return CDEK[c];
+  for(const[k,v]of Object.entries(CDEK)){if(c.toLowerCase().includes(k.toLowerCase()))return v;}return'';
+}
+function renderCdekBlock(o){
+  if(o.cdek_order_uuid){
+    return `<div style="background:rgba(58,138,232,.06);border:1px solid rgba(58,138,232,.2);border-radius:7px;padding:16px;margin-bottom:12px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:#6ab0ff;margin-bottom:10px;font-weight:700">📦 СДЭК</div>
+      ${o.cdek_track?`<div style="font-size:20px;font-weight:900;margin-bottom:6px;letter-spacing:.04em">${esc(o.cdek_track)}</div>`:''}
+      <div style="margin-bottom:12px">${cdekStatusLabel(o.cdek_status)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-ghost btn-sm" onclick="cdekStatus()">↻ Обновить</button>
+        <a href="https://lk.cdek.ru/order-history" target="_blank" class="btn-ghost btn-sm" style="color:#6ab0ff;border-color:rgba(58,138,232,.3);text-decoration:none;display:inline-flex;align-items:center">🔗 ЛК СДЭК</a>
+        <button class="btn-ghost btn-sm" style="color:#7fd882;border-color:rgba(76,175,80,.3)" onclick="cdekPrint('label')">🖨 Накладная</button>
+        <button class="btn-ghost btn-sm" style="color:#a78bfa;border-color:rgba(167,139,250,.3)" onclick="cdekPrint('barcode')">▦ Штрихкод</button>
+        <button class="btn-ghost btn-sm" style="color:#f5a623;border-color:rgba(245,166,35,.3)" onclick="cdekReset()">↺ Сбросить</button>
+        <button class="btn-danger btn-sm" onclick="cdekCancel()">✕ Отменить</button>
+      </div>
+    </div>`;
+  }
+  return `<div style="background:rgba(58,138,232,.06);border:1px solid rgba(58,138,232,.2);border-radius:7px;padding:16px;margin-bottom:12px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:#6ab0ff;margin-bottom:12px;font-weight:700">📦 СДЭК — Создать заказ</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Тип</div>
+        <select id="cdekTariff" style="background:var(--surface2);border:1px solid var(--line2);border-radius:6px;color:var(--text);padding:7px 10px;font:inherit;font-size:12px;width:100%">
+          <option value="136">До ПВЗ</option><option value="137">Курьер</option>
+        </select></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Код ПВЗ</div><input id="cdekPvzCode" style="background:var(--surface2);border:1px solid var(--line2);border-radius:6px;color:var(--text);padding:7px 10px;font:inherit;font-size:12px;width:100%" placeholder="OMS201" value="${esc(o.cdek_pvz_code||parsePvzCode(o.address||''))}"></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Код города</div><input id="cdekCityCode" type="number" style="background:var(--surface2);border:1px solid var(--line2);border-radius:6px;color:var(--text);padding:7px 10px;font:inherit;font-size:12px;width:100%" placeholder="270" value="${getCityCode(o.address||'')}"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Вес (г)</div><input id="cdekWeight" type="number" value="12000" style="background:var(--surface2);border:1px solid var(--line2);border-radius:6px;color:var(--text);padding:7px 10px;font:inherit;font-size:12px;width:100%"></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Длина (см)</div><input id="cdekLength" type="number" value="60" style="background:var(--surface2);border:1px solid var(--line2);border-radius:6px;color:var(--text);padding:7px 10px;font:inherit;font-size:12px;width:100%"></div>
+      <div><div style="font-size:10px;color:var(--muted);margin-bottom:4px">Ширина (см)</div><input id="cdekWidth" type="number" value="60" style="background:var(--surface2);border:1px solid var(--line2);border-radius:6px;color:var(--text);padding:7px 10px;font:inherit;font-size:12px;width:100%"></div>
+    </div>
+    <button class="btn-ghost" id="cdekCreateBtn" onclick="cdekCreate()" style="color:#6ab0ff;border-color:rgba(58,138,232,.4)">📦 Создать в СДЭК</button>
+    <p style="font-size:10px;color:var(--muted);margin-top:6px">Москва=44, СПб=137, Тольятти=431, Самара=430, Новосибирск=270</p>
+  </div>`;
+}
+async function cdekCreate(){
+  const btn=document.getElementById('cdekCreateBtn');
+  btn.disabled=true;btn.textContent='Создаём...';
+  const fd=new FormData();fd.append('action','create');fd.append('order_id',curOrderId);
+  fd.append('tariff',document.getElementById('cdekTariff').value);
+  fd.append('pvz_code',document.getElementById('cdekPvzCode').value);
+  fd.append('city_code',document.getElementById('cdekCityCode').value);
+  fd.append('weight',document.getElementById('cdekWeight').value);
+  fd.append('length',document.getElementById('cdekLength').value);
+  fd.append('width',document.getElementById('cdekWidth').value);
+  fd.append('height','40');
+  const r=await fetch('/admin/cdek_order.php',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d.ok){toast('✓ Заказ создан в СДЭК');openOrder(curOrderId);}
+  else{toast(d.error||'Ошибка СДЭК','err');btn.disabled=false;btn.textContent='📦 Создать в СДЭК';}
+}
+async function cdekStatus(){
+  const fd=new FormData();fd.append('action','status');fd.append('order_id',curOrderId);
+  const r=await fetch('/admin/cdek_order.php',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d.ok){toast(d.track?'🚚 '+d.track+' · '+d.status:'✓ '+d.status);openOrder(curOrderId);}
+  else toast(d.error||'Ошибка','err');
+}
+async function cdekPrint(type){
+  const labels={'label':'Накладная','barcode':'Штрихкод'};
+  toast('⏳ Готовим '+labels[type]+'...');
+  const fd=new FormData();fd.append('action',type);fd.append('order_id',curOrderId);
+  const r=await fetch('/admin/cdek_order.php',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d.ok&&d.url){window.open(d.url,'_blank');toast('✓ '+labels[type]+' открыта');}
+  else if(d.cdek_url){if(confirm('PDF ещё не готов. Открыть личный кабинет СДЭК?')){window.open(d.cdek_url,'_blank');}}
+  else toast(d.error||'Ошибка','err');
+}
+async function cdekReset(){
+  if(!confirm('Сбросить статус СДЭК? Это позволит создать новый заказ.'))return;
+  const fd=new FormData();fd.append('action','reset');fd.append('order_id',curOrderId);
+  const r=await fetch('/admin/cdek_order.php',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d.ok){toast('↺ СДЭК сброшен');openOrder(curOrderId);}
+  else toast(d.error||'Ошибка','err');
+}
+async function cdekCancel(){
+  if(!confirm('Отменить заказ в СДЭК?'))return;
+  const fd=new FormData();fd.append('action','cancel');fd.append('order_id',curOrderId);
+  const r=await fetch('/admin/cdek_order.php',{method:'POST',body:fd});
+  const d=await r.json();
+  if(d.ok){toast('Заказ отменён в СДЭК');openOrder(curOrderId);}
+  else toast(d.error||'Ошибка','err');
+}
 </script>
 </body>
 </html>
