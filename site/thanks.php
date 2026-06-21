@@ -42,7 +42,7 @@ $title = 'Спасибо за заявку — LUKA OUTDOOR';
 
 <main class="thanksPage">
   <div class="thanksInner">
-    <div class="thanksIcon">🔥</div>
+
     <p class="eyebrow">LUKA OUTDOOR</p>
     <h1>Заявка принята</h1>
     <p>Мы получили вашу заявку и свяжемся с вами в течение нескольких часов. Пока можете посмотреть другие товары коллекции.</p>
