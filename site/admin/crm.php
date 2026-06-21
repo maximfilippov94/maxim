@@ -5,9 +5,11 @@
 require __DIR__.'/../includes/db.php'; require __DIR__.'/../includes/auth.php';
 $pdo=db();
 // миграция полей СДЭК / источника
-foreach(['cdek_order_uuid TEXT DEFAULT ""','cdek_track TEXT DEFAULT ""','cdek_status TEXT DEFAULT ""','cdek_pvz_code TEXT DEFAULT ""','delivery_cost INTEGER DEFAULT 0','cdek_raw TEXT DEFAULT ""','manager_note TEXT DEFAULT ""','source TEXT DEFAULT "site"','email TEXT DEFAULT ""','ym_uid TEXT DEFAULT ""'] as $col_def){
+foreach(['cdek_order_uuid TEXT DEFAULT ""','cdek_track TEXT DEFAULT ""','cdek_status TEXT DEFAULT ""','cdek_pvz_code TEXT DEFAULT ""','delivery_cost INTEGER DEFAULT 0','cdek_raw TEXT DEFAULT ""','manager_note TEXT DEFAULT ""','source TEXT DEFAULT "site"','email TEXT DEFAULT ""','ym_uid TEXT DEFAULT ""','display_id INTEGER DEFAULT 0'] as $col_def){
   try{$pdo->exec("ALTER TABLE orders ADD COLUMN $col_def");}catch(Exception $e){}
 }
+// Заполняем display_id для старых заказов у которых он не задан
+$pdo->exec("UPDATE orders SET display_id = id + 6470 WHERE display_id = 0 OR display_id IS NULL");
 
 if(!is_admin()){ header('Location:/admin'); exit; }
 
@@ -167,7 +169,7 @@ function search_blob($o,$prev){ return mb_strtolower(($o['customer_name']??'').'
           $prev=$itemsPreview[$o['id']]??''; $cnt=$itemsCount[$o['id']]??0; ?>
         <div class="crm-card" data-id="<?=$o['id']?>" data-status="<?=h($o['status'])?>" data-date="<?=substr($o['created_at']??'',0,10)?>" data-search="<?=h(search_blob($o,$prev))?>" draggable="true" onclick="openOrder(<?=$o['id']?>)">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <span class="cId">#<?=$o['id']?></span>
+            <span class="cId">#<?=($o['display_id']??$o['id'])?></span>
             <?php if(!empty($o['cdek_track'])):?><span style="font-size:10px;color:var(--st-done)">🚚 <?=h($o['cdek_track'])?></span><?php elseif(!empty($o['cdek_order_uuid'])):?><span style="font-size:10px;color:var(--st-new)">📦 СДЭК</span><?php endif;?>
           </div>
           <div class="cName"><?=h($o['customer_name'])?></div>
@@ -194,7 +196,7 @@ function search_blob($o,$prev){ return mb_strtolower(($o['customer_name']??'').'
       <tbody id="listRows">
       <?php foreach($orders as $o): $prev=$itemsPreview[$o['id']]??''; $cnt=$itemsCount[$o['id']]??0; $st=$o['status']??'new'; ?>
       <tr class="crm-list-row" data-id="<?=$o['id']?>" data-status="<?=h($st)?>" data-date="<?=substr($o['created_at']??'',0,10)?>" data-search="<?=h(search_blob($o,$prev))?>">
-        <td style="font-weight:800;color:var(--muted)">#<?=$o['id']?></td>
+        <td style="font-weight:800;color:var(--muted)">#<?=($o['display_id']??$o['id'])?></td>
         <td style="color:var(--muted);font-size:12px;white-space:nowrap"><?=date('d.m.Y H:i',strtotime($o['created_at']??'now'))?></td>
         <td style="font-weight:700;cursor:pointer" onclick="openOrder(<?=$o['id']?>)"><?=h($o['customer_name'])?></td>
         <td><a href="tel:<?=h($o['phone'])?>" style="color:var(--copper)"><?=h($o['phone'])?></a></td>
@@ -293,7 +295,8 @@ async function quickStatus(id,status,sel){
 // ── ORDER MODAL ─────────────────────────────────────────────────────
 async function openOrder(id){
   curOrderId=id;
-  document.getElementById('orderModalTitle').textContent='Заявка #'+id;
+  const dispId=document.querySelector(`.crm-card[data-id="${id}"] .cId, .crm-list-row[data-id="${id}"] td`)?.textContent?.trim()||('#'+id);
+  document.getElementById('orderModalTitle').textContent='Заявка '+dispId;
   document.getElementById('orderModalBody').innerHTML='<div class="emptyState">Загрузка...</div>';
   openModal('orderModal');
   const fd=new FormData();fd.append('action','get_order');fd.append('order_id',id);
@@ -342,7 +345,7 @@ function renderOrder(o){
       <button class="btn-primary" onclick="saveOrderModal()">💾 Сохранить</button>
       <button class="btn-danger" style="margin-left:auto" onclick="deleteOrder(${o.id})">Удалить</button>
     </div>
-    <div style="font-size:11px;color:var(--muted);padding-top:10px">Источник: ${esc(o.source||'site')} · #${o.id}</div>
+    <div style="font-size:11px;color:var(--muted);padding-top:10px">Источник: ${esc(o.source||'site')} · #${o.display_id||o.id}</div>
   `;
 }
 async function saveOrderModal(silent){
@@ -369,7 +372,7 @@ async function loadHistory(phone,currentId){
   const others=(d.orders||[]).filter(o=>o.id!=currentId);
   if(!others.length)return;
   const el=document.getElementById('histBlock');if(!el)return;
-  el.innerHTML=`<div class="odBlock"><h4>История клиента (${others.length})</h4>${others.map(o=>`<div class="odItem" style="cursor:pointer" onclick="openOrder(${o.id})"><span><b style="color:var(--muted)">#${o.id}</b> ${esc(o.items_short||'—')}</span><span style="display:flex;gap:8px;align-items:center"><span class="statusBadge ${STATUS_CLASS[o.status]||''}" style="font-size:9px">${STATUS_LABELS[o.status]||o.status}</span><b style="color:var(--copper)">${fmt(o.total)}</b></span></div>`).join('')}</div>`;
+  el.innerHTML=`<div class="odBlock"><h4>История клиента (${others.length})</h4>${others.map(o=>`<div class="odItem" style="cursor:pointer" onclick="openOrder(${o.id})"><span><b style="color:var(--muted)">#${o.display_id||o.id}</b> ${esc(o.items_short||'—')}</span><span style="display:flex;gap:8px;align-items:center"><span class="statusBadge ${STATUS_CLASS[o.status]||''}" style="font-size:9px">${STATUS_LABELS[o.status]||o.status}</span><b style="color:var(--copper)">${fmt(o.total)}</b></span></div>`).join('')}</div>`;
 }
 
 // ── CUSTOMER LOOKUP ─────────────────────────────────────────────────
@@ -382,7 +385,7 @@ async function doLookup(){
   const res=document.getElementById('lookupResult');
   if(!d.orders||!d.orders.length){res.innerHTML='<p style="color:var(--muted)">Заказы не найдены</p>';return;}
   const total=d.orders.reduce((s,o)=>s+Number(o.total||0),0);
-  res.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Найдено ${d.orders.length} заказ(ов) на ${fmt(total)}</div>`+d.orders.map(o=>`<div class="odItem" style="cursor:pointer" onclick="closeModal('lookupModal');openOrder(${o.id})"><span><b style="color:var(--muted)">#${o.id}</b> ${esc(o.items_short||'—')}</span><span style="display:flex;gap:8px;align-items:center"><span class="statusBadge ${STATUS_CLASS[o.status]||''}" style="font-size:9px">${STATUS_LABELS[o.status]||o.status}</span><b style="color:var(--copper)">${fmt(o.total)}</b></span></div>`).join('');
+  res.innerHTML=`<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Найдено ${d.orders.length} заказ(ов) на ${fmt(total)}</div>`+d.orders.map(o=>`<div class="odItem" style="cursor:pointer" onclick="closeModal('lookupModal');openOrder(${o.id})"><span><b style="color:var(--muted)">#${o.display_id||o.id}</b> ${esc(o.items_short||'—')}</span><span style="display:flex;gap:8px;align-items:center"><span class="statusBadge ${STATUS_CLASS[o.status]||''}" style="font-size:9px">${STATUS_LABELS[o.status]||o.status}</span><b style="color:var(--copper)">${fmt(o.total)}</b></span></div>`).join('');
 }
 document.getElementById('lookupPhone').addEventListener('keydown',e=>{if(e.key==='Enter')doLookup();});
 
@@ -391,7 +394,7 @@ document.getElementById('lookupPhone').addEventListener('keydown',e=>{if(e.key==
   let lastId=<?=!empty($orders)?max(array_column($orders,'id')):0?>;
   function cardHtml(o){
     return `<div class="crm-card" data-id="${o.id}" data-status="new" data-date="${(o.created_at||'').slice(0,10)}" data-search="${esc(((o.customer_name||'')+' '+(o.phone||'')+' '+(o.items_str||'')).toLowerCase())}" draggable="true" onclick="openOrder(${o.id})" style="animation:fadeInCard .3s ease;border-color:var(--copper)">
-      <div style="display:flex;justify-content:space-between"><span class="cId">#${o.id}</span></div>
+      <div style="display:flex;justify-content:space-between"><span class="cId">#${o.display_id||o.id}</span></div>
       <div class="cName">${esc(o.customer_name)}</div><div class="cMeta">${esc(o.phone)}</div>
       <div class="cMeta" style="margin-top:3px">${o.items_count||0} тов.</div>
       <div class="cFoot"><span class="cTotal">${o.total?fmt(o.total):'—'}</span><span class="cAgo">только что</span></div>
@@ -405,7 +408,7 @@ document.getElementById('lookupPhone').addEventListener('keydown',e=>{if(e.key==
         document.getElementById('statToday').textContent=+document.getElementById('statToday').textContent+1;
         document.getElementById('statTotal').textContent=+document.getElementById('statTotal').textContent+1;
         document.getElementById('statNew').textContent=+document.getElementById('statNew').textContent+1;
-        toast('Новая заявка #'+o.id+' — '+o.customer_name);
+        toast('Новая заявка #'+(o.display_id||o.id)+' — '+o.customer_name);
         initDnd();
       });
     }catch(e){}

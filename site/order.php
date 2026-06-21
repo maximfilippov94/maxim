@@ -354,12 +354,12 @@ try{
 
     try { $pdo->exec("ALTER TABLE orders ADD COLUMN ym_uid TEXT DEFAULT ''"); } catch(Exception $e){}
 
-    // Генерируем визуальный номер заказа (4-значный, от 1000 до 9999)
-    $displayOrderId = rand(1000, 9999);
     $stmt = $pdo->prepare('INSERT INTO orders (customer_name,phone,email,address,delivery_method,payment_method,comment,source,total,status,ym_uid) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
     $stmt->execute([$name, $phone, $email, $city ?: 'Не указан', $delivery, $payment, trim($finalComment), $source, $total, 'new', $ym_uid]);
     $orderId = (int)$pdo->lastInsertId();
-    $displayOrderId = $displayOrderId + $orderId; // гарантируем уникальность
+    // Генерируем красивый номер заказа (от 6000+) и сохраняем в БД
+    $displayOrderId = 6470 + rand(1, 99) * 10 + $orderId;
+    $pdo->prepare('UPDATE orders SET display_id=? WHERE id=?')->execute([$displayOrderId, $orderId]);
 
     $itemStmt   = $pdo->prepare('INSERT INTO order_items (order_id,product_id,product_name,price,qty) VALUES (?,?,?,?,?)');
     $orderItems = [];
