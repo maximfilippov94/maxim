@@ -54,76 +54,34 @@ function email_base(string $preheader, string $content): string {
     return '<!doctype html>
 <html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>LUKA OUTDOOR</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#111;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a}
-  a{color:#c9792b;text-decoration:none}
-  .pre{display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#111}
-  .outer{width:100%;background:#111;padding:32px 16px}
-  .card{max-width:580px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden}
-  /* Header */
-  .hd{background:#0b0b0b;padding:32px 40px 24px;text-align:center;border-bottom:2px solid #c9792b}
-  .hd img{height:48px;display:block;margin:0 auto 12px}
-  .hd-tag{display:inline-block;background:#c9792b;color:#fff;font-size:11px;font-weight:700;
-    letter-spacing:.12em;text-transform:uppercase;padding:4px 14px;border-radius:99px;margin-top:4px}
-  /* Body */
-  .bd{padding:32px 40px}
-  .section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
-    color:#aaa;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
-  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:24px}
-  .info-cell{padding:10px 0;border-bottom:1px solid #f5f5f5}
-  .info-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#aaa;margin-bottom:3px}
-  .info-value{font-size:14px;font-weight:700;color:#111}
-  /* Product card */
-  .prod-card{display:table;width:100%;border:1px solid #f0f0f0;border-radius:12px;
-    overflow:hidden;margin-bottom:8px;background:#fafafa}
-  .prod-img{display:table-cell;width:88px;vertical-align:top}
-  .prod-img img{width:88px;height:88px;object-fit:cover;display:block}
-  .prod-img .no-img{width:88px;height:88px;background:#f0f0f0;display:block}
-  .prod-info{display:table-cell;vertical-align:middle;padding:14px 16px}
-  .prod-name{font-size:14px;font-weight:700;color:#111;margin-bottom:4px}
-  .prod-meta{font-size:12px;color:#888}
-  .prod-price{display:table-cell;vertical-align:middle;padding:14px 16px;
-    text-align:right;white-space:nowrap;font-size:16px;font-weight:700;color:#c9792b;width:110px}
-  /* Total */
-  .total-row{background:#0b0b0b;border-radius:10px;padding:16px 20px;
-    display:table;width:100%;margin-top:16px}
-  .total-label{display:table-cell;font-size:13px;font-weight:700;
-    text-transform:uppercase;letter-spacing:.08em;color:#9a9288}
-  .total-value{display:table-cell;text-align:right;font-size:22px;font-weight:700;color:#c9792b}
-  /* Button */
-  .btn-wrap{text-align:center;margin:28px 0 4px}
-  .btn{display:inline-block;background:#c9792b;color:#fff !important;padding:14px 36px;
-    border-radius:10px;font-weight:700;font-size:15px;letter-spacing:.03em;text-decoration:none}
-  .btn:hover{background:#e89a42}
-  /* Divider */
-  .divider{height:1px;background:#f0f0f0;margin:24px 0}
-  /* Footer */
-  .ft{background:#0b0b0b;padding:24px 40px;text-align:center}
-  .ft p{font-size:12px;color:#555;line-height:1.8}
-  .ft a{color:#c9792b}
-  .socials{margin:12px 0}
-  .socials a{display:inline-block;width:32px;height:32px;background:#1a1a1a;border-radius:50%;
-    margin:0 4px;line-height:32px;font-size:14px;text-align:center;color:#c9792b !important;text-decoration:none}
-  @media(max-width:480px){
-    .bd{padding:24px 20px} .hd{padding:24px 20px 18px}
-    .ft{padding:20px} .info-grid{grid-template-columns:1fr}
-    .prod-img img,.prod-img .no-img{width:72px;height:72px} .prod-img{width:72px}
-  }
-</style></head><body>
-<span class="pre">'.$preheader.'</span>
-<div class="outer">
-  <div class="card">
-    <div class="hd">
-      <img src="'.$logo.'" alt="LUKA OUTDOOR">
-    </div>
-    '.$content.'
-    <div class="ft">
-      <p style="color:#9a9288;font-size:13px;margin-bottom:8px">LUKA OUTDOOR &mdash; Premium Outdoor Fire Culture</p>
-      <p><a href="https://lukaoutdoor.com">lukaoutdoor.com</a></p>
-    </div>
-  </div>
-</div>
+</head><body style="margin:0;padding:0;background:#050505;font-family:Arial,Helvetica,sans-serif">
+<span style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#050505;mso-hide:all">'.$preheader.'</span>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#050505;min-height:100vh">
+  <tr><td align="center" style="padding:32px 16px">
+
+    <table width="580" cellpadding="0" cellspacing="0" border="0" style="max-width:580px;width:100%;border-radius:16px;overflow:hidden;border:1px solid rgba(243,241,236,0.10)">
+
+      <!-- Header -->
+      <tr>
+        <td style="background:#0b0b0b;padding:28px 40px 22px;text-align:center;border-bottom:1px solid rgba(201,121,43,0.5)">
+          <img src="'.$logo.'" alt="LUKA OUTDOOR" height="44" style="display:block;margin:0 auto">
+        </td>
+      </tr>
+
+      <!-- Content -->
+      <tr><td style="background:#0d0d0b">'.$content.'</td></tr>
+
+      <!-- Footer -->
+      <tr>
+        <td style="background:#050505;padding:24px 40px;text-align:center;border-top:1px solid rgba(243,241,236,0.08)">
+          <p style="margin:0 0 6px;font-size:12px;color:#9a9288;letter-spacing:.06em;text-transform:uppercase">LUKA OUTDOOR &mdash; Premium Outdoor Fire Culture</p>
+          <p style="margin:0"><a href="https://lukaoutdoor.com" style="font-size:12px;color:#c9792b;text-decoration:none">lukaoutdoor.com</a></p>
+        </td>
+      </tr>
+
+    </table>
+  </td></tr>
+</table>
 </body></html>';
 }
 
@@ -134,16 +92,22 @@ function render_product_rows(array $items): string {
         $name  = htmlspecialchars($i['name'] ?? 'Товар');
         $qty   = (int)($i['qty'] ?? 1);
         $price = (int)($i['price'] ?? 0);
-        $img   = !empty($i['image']) ? '<img src="'.$base.htmlspecialchars($i['image']).'" alt="'.$name.'">' : '<span class="no-img"></span>';
+        $imgTag = !empty($i['image'])
+            ? '<img src="'.$base.htmlspecialchars($i['image']).'" alt="'.$name.'" width="80" height="80" style="display:block;width:80px;height:80px;object-fit:cover">'
+            : '<div style="width:80px;height:80px;background:#1a1a18"></div>';
         $html .= '
-        <div class="prod-card">
-          <div class="prod-img">'.$img.'</div>
-          <div class="prod-info">
-            <div class="prod-name">'.$name.'</div>
-            <div class="prod-meta">'.$qty.' шт.</div>
-          </div>
-          <div class="prod-price">'.number_format($price * $qty, 0, '.', '&nbsp;').'&nbsp;&#8381;</div>
-        </div>';
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:8px;border:1px solid rgba(243,241,236,0.10);border-radius:10px;overflow:hidden;background:#111110">
+          <tr>
+            <td width="80" style="vertical-align:top">'.$imgTag.'</td>
+            <td style="padding:14px 14px;vertical-align:middle">
+              <div style="font-size:14px;font-weight:700;color:#f3f1ec;margin-bottom:4px">'.$name.'</div>
+              <div style="font-size:12px;color:#9a9288">'.$qty.'&nbsp;шт.</div>
+            </td>
+            <td style="padding:14px 16px;vertical-align:middle;text-align:right;white-space:nowrap;font-size:16px;font-weight:700;color:#c9792b;width:100px">
+              '.number_format($price * $qty, 0, '.', '&nbsp;').'&nbsp;&#8381;
+            </td>
+          </tr>
+        </table>';
     }
     return $html;
 }
@@ -157,46 +121,75 @@ function send_admin_email(array $order, array $items, string $adminEmail): void 
     $prodRows = render_product_rows($items);
 
     $content = '
-    <div style="background:#c9792b;padding:12px 40px;text-align:center">
-      <span style="color:#fff;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase">
-        &#9889; Новый заказ #'.$id.' &mdash; '.date('d.m.Y H:i').'
-      </span>
-    </div>
-    <div class="bd">
-      <div class="section-title">Покупатель</div>
-      <div class="info-grid">
-        <div class="info-cell">
-          <div class="info-label">Имя</div>
-          <div class="info-value">'.$name.'</div>
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Телефон</div>
-          <div class="info-value"><a href="tel:'.$order['phone'].'" style="color:#c9792b">'.$phone.'</a></div>
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Город / адрес</div>
-          <div class="info-value">'.$city.'</div>
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Доставка</div>
-          <div class="info-value">'.htmlspecialchars($order['delivery']).'</div>
-        </div>
-        <div class="info-cell">
-          <div class="info-label">Оплата</div>
-          <div class="info-value">'.htmlspecialchars($order['payment']).'</div>
-        </div>
-      </div>
-      '.($order['comment'] ? '<div class="section-title">Комментарий</div><p style="font-size:14px;color:#555;margin-bottom:24px;padding:12px;background:#fafafa;border-radius:8px;border-left:3px solid #c9792b">'.nl2br(htmlspecialchars($order['comment'])).'</p>' : '').'
-      <div class="section-title">Состав заказа</div>
-      '.$prodRows.'
-      <div class="total-row">
-        <span class="total-label">Итого</span>
-        <span class="total-value">'.$total.'&nbsp;&#8381;</span>
-      </div>
-      <div class="btn-wrap">
-        <a href="https://lukaoutdoor.com/admin/?tab=orders" class="btn">Открыть в CRM &rarr;</a>
-      </div>
-    </div>';
+      <!-- Orange alert bar -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="background:#c9792b;padding:11px 40px;text-align:center">
+          <span style="color:#fff;font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase">
+            Новый заказ #'.$id.' &mdash; '.date('d.m.Y H:i').'
+          </span>
+        </td></tr>
+      </table>
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 36px 0">
+        <tr><td>
+
+          <!-- Customer block -->
+          <p style="margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#9a9288;padding-bottom:8px;border-bottom:1px solid rgba(243,241,236,0.10)">Покупатель</p>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
+            <tr>
+              <td width="50%" style="padding:8px 0;border-bottom:1px solid rgba(243,241,236,0.06);vertical-align:top">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9a9288;margin-bottom:3px">Имя</div>
+                <div style="font-size:14px;font-weight:700;color:#f3f1ec">'.$name.'</div>
+              </td>
+              <td width="50%" style="padding:8px 16px;border-bottom:1px solid rgba(243,241,236,0.06);vertical-align:top">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9a9288;margin-bottom:3px">Телефон</div>
+                <div style="font-size:14px;font-weight:700"><a href="tel:'.$order['phone'].'" style="color:#c9792b;text-decoration:none">'.$phone.'</a></div>
+              </td>
+            </tr>
+            <tr>
+              <td width="50%" style="padding:8px 0;border-bottom:1px solid rgba(243,241,236,0.06);vertical-align:top">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9a9288;margin-bottom:3px">Город / адрес</div>
+                <div style="font-size:14px;font-weight:700;color:#f3f1ec">'.$city.'</div>
+              </td>
+              <td width="50%" style="padding:8px 16px;border-bottom:1px solid rgba(243,241,236,0.06);vertical-align:top">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9a9288;margin-bottom:3px">Доставка</div>
+                <div style="font-size:14px;font-weight:700;color:#f3f1ec">'.htmlspecialchars($order['delivery']).'</div>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding:8px 0;vertical-align:top">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9a9288;margin-bottom:3px">Оплата</div>
+                <div style="font-size:14px;font-weight:700;color:#f3f1ec">'.htmlspecialchars($order['payment']).'</div>
+              </td>
+            </tr>
+          </table>
+
+          '.($order['comment'] ? '
+          <p style="margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#9a9288;padding-bottom:8px;border-bottom:1px solid rgba(243,241,236,0.10)">Комментарий</p>
+          <p style="font-size:14px;color:#d6cfc5;line-height:1.7;margin:0 0 20px;padding:12px 16px;background:#1a1a18;border-radius:8px;border-left:3px solid #c9792b">'.nl2br(htmlspecialchars($order['comment'])).'</p>
+          ' : '').'
+
+          <!-- Products -->
+          <p style="margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#9a9288;padding-bottom:8px;border-bottom:1px solid rgba(243,241,236,0.10)">Состав заказа</p>
+          '.$prodRows.'
+
+          <!-- Total -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:12px 0 24px;background:#050505;border-radius:10px;border:1px solid rgba(243,241,236,0.10)">
+            <tr>
+              <td style="padding:14px 20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#9a9288">Итого</td>
+              <td style="padding:14px 20px;text-align:right;font-size:22px;font-weight:700;color:#c9792b">'.$total.'&nbsp;&#8381;</td>
+            </tr>
+          </table>
+
+          <!-- CRM button -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px">
+            <tr><td align="center">
+              <a href="https://lukaoutdoor.com/admin/?tab=orders" style="display:inline-block;background:#c9792b;color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;letter-spacing:.05em;text-transform:uppercase">Открыть в CRM &rarr;</a>
+            </td></tr>
+          </table>
+
+        </td></tr>
+      </table>';
 
     $html = email_base('Новый заказ #'.$id.' от '.$order['name'], $content);
     send_order_email($adminEmail, 'Новый заказ #'.$id.' — '.$order['name'].' ('.$order['total'].' руб)', $html);
@@ -209,57 +202,69 @@ function send_customer_email(array $order, array $items, string $customerEmail):
     $prodRows = render_product_rows($items);
 
     $content = '
-    <div style="background:linear-gradient(135deg,#0b0b0b 0%,#1a1008 100%);padding:28px 40px;text-align:center">
-      <div style="font-size:32px;margin-bottom:8px">&#128293;</div>
-      <div style="color:#c9792b;font-size:24px;font-weight:700;margin-bottom:4px">
-        Заказ #'.$id.' принят!
-      </div>
-      <div style="color:#9a9288;font-size:14px">Спасибо за покупку, '.$name.'</div>
-    </div>
-    <div class="bd">
-      <p style="font-size:15px;color:#444;line-height:1.7;margin-bottom:24px">
-        Мы уже обрабатываем ваш заказ. Наш менеджер свяжется с вами в ближайшее время для подтверждения и уточнения деталей доставки.
-      </p>
-
-      <div class="section-title">Ваш заказ</div>
-      '.$prodRows.'
-      <div class="total-row">
-        <span class="total-label">Итого</span>
-        <span class="total-value">'.$total.'&nbsp;&#8381;</span>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="section-title">Доставка</div>
-      <table style="width:100%;font-size:14px;color:#555;line-height:1.8;margin-bottom:24px">
-        <tr>
-          <td style="padding:6px 0">&#128666; Доставка через <b>СДЭК</b></td>
-          <td style="text-align:right;color:#111;font-weight:600">3&ndash;7 дней</td>
-        </tr>
-        <tr>
-          <td style="padding:6px 0">&#128221; Трек-номер</td>
-          <td style="text-align:right;color:#888">Пришлём когда отправим</td>
-        </tr>
-        <tr>
-          <td style="padding:6px 0">&#128260; Возврат</td>
-          <td style="text-align:right;color:#111;font-weight:600">14 дней</td>
-        </tr>
+      <!-- Hero block -->
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr><td style="background:#0b0b0b;padding:36px 40px;text-align:center;border-bottom:1px solid rgba(201,121,43,0.3)">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.18em;color:#9a9288">Подтверждение заказа</p>
+          <p style="margin:0 0 4px;font-size:28px;font-weight:700;color:#c9792b;letter-spacing:.02em">Заказ #'.$id.' принят</p>
+          <p style="margin:0;font-size:14px;color:#9a9288">Спасибо за покупку, '.$name.'</p>
+        </td></tr>
       </table>
 
-      <div style="background:#fafafa;border-radius:12px;padding:20px;border:1px solid #f0f0f0;margin-bottom:24px">
-        <div style="font-size:12px;color:#aaa;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Есть вопросы?</div>
-        <a href="tel:88001234567" style="display:block;font-size:15px;font-weight:700;color:#c9792b;margin-bottom:6px">
-          &#128222; 8 800 123-45-67
-        </a>
-        <a href="mailto:hello@lukaoutdoor.com" style="font-size:14px;color:#888">
-          hello@lukaoutdoor.com
-        </a>
-      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:28px 36px 0">
+        <tr><td>
 
-      <div class="btn-wrap">
-        <a href="https://lukaoutdoor.com/catalog.php" class="btn">Смотреть каталог</a>
-      </div>
-    </div>';
+          <p style="margin:0 0 24px;font-size:14px;color:#d6cfc5;line-height:1.8">
+            Мы уже обрабатываем ваш заказ. Наш менеджер свяжется с вами в ближайшее время для подтверждения и уточнения деталей доставки.
+          </p>
+
+          <!-- Products -->
+          <p style="margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#9a9288;padding-bottom:8px;border-bottom:1px solid rgba(243,241,236,0.10)">Ваш заказ</p>
+          '.$prodRows.'
+
+          <!-- Total -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:12px 0 24px;background:#050505;border-radius:10px;border:1px solid rgba(243,241,236,0.10)">
+            <tr>
+              <td style="padding:14px 20px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#9a9288">Итого</td>
+              <td style="padding:14px 20px;text-align:right;font-size:22px;font-weight:700;color:#c9792b">'.$total.'&nbsp;&#8381;</td>
+            </tr>
+          </table>
+
+          <!-- Delivery info -->
+          <p style="margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#9a9288;padding-bottom:8px;border-bottom:1px solid rgba(243,241,236,0.10)">Доставка</p>
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">
+            <tr>
+              <td style="padding:8px 0;font-size:14px;color:#d6cfc5;border-bottom:1px solid rgba(243,241,236,0.06)">Доставка через СДЭК</td>
+              <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:700;color:#f3f1ec;border-bottom:1px solid rgba(243,241,236,0.06)">3&ndash;7 дней</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;font-size:14px;color:#d6cfc5;border-bottom:1px solid rgba(243,241,236,0.06)">Трек-номер</td>
+              <td style="padding:8px 0;text-align:right;font-size:14px;color:#9a9288;border-bottom:1px solid rgba(243,241,236,0.06)">Пришлём когда отправим</td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;font-size:14px;color:#d6cfc5">Возврат</td>
+              <td style="padding:8px 0;text-align:right;font-size:14px;font-weight:700;color:#f3f1ec">14 дней</td>
+            </tr>
+          </table>
+
+          <!-- Contact box -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;background:#111110;border-radius:10px;border:1px solid rgba(243,241,236,0.10)">
+            <tr><td style="padding:20px 22px">
+              <p style="margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#9a9288">Есть вопросы?</p>
+              <a href="tel:88001234567" style="display:block;font-size:16px;font-weight:700;color:#c9792b;text-decoration:none;margin-bottom:6px">8 800 123-45-67</a>
+              <a href="mailto:hello@lukaoutdoor.com" style="font-size:13px;color:#9a9288;text-decoration:none">hello@lukaoutdoor.com</a>
+            </td></tr>
+          </table>
+
+          <!-- Catalog button -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px">
+            <tr><td align="center">
+              <a href="https://lukaoutdoor.com/catalog.php" style="display:inline-block;background:#c9792b;color:#fff;text-decoration:none;padding:14px 36px;border-radius:10px;font-weight:700;font-size:14px;letter-spacing:.05em;text-transform:uppercase">Смотреть каталог</a>
+            </td></tr>
+          </table>
+
+        </td></tr>
+      </table>';
 
     $html = email_base('Ваш заказ #'.$id.' принят — скоро свяжемся с вами!', $content);
     send_order_email($customerEmail, 'Заказ #'.$id.' принят — LUKA OUTDOOR', $html);
@@ -310,9 +315,12 @@ try{
 
     try { $pdo->exec("ALTER TABLE orders ADD COLUMN ym_uid TEXT DEFAULT ''"); } catch(Exception $e){}
 
+    // Генерируем визуальный номер заказа (4-значный, от 1000 до 9999)
+    $displayOrderId = rand(1000, 9999);
     $stmt = $pdo->prepare('INSERT INTO orders (customer_name,phone,email,address,delivery_method,payment_method,comment,source,total,status,ym_uid) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
     $stmt->execute([$name, $phone, $email, $city ?: 'Не указан', $delivery, $payment, trim($finalComment), $source, $total, 'new', $ym_uid]);
     $orderId = (int)$pdo->lastInsertId();
+    $displayOrderId = $displayOrderId + $orderId; // гарантируем уникальность
 
     $itemStmt   = $pdo->prepare('INSERT INTO order_items (order_id,product_id,product_name,price,qty) VALUES (?,?,?,?,?)');
     $orderItems = [];
@@ -346,7 +354,8 @@ try{
 
     // ── Отправка писем ────────────────────────────────────────────────────────
     $orderData = [
-        'id'       => $orderId,
+        'id'       => $displayOrderId,
+        'real_id'  => $orderId,
         'name'     => $name,
         'phone'    => $phone,
         'city'     => $city ?: 'Не указан',
