@@ -3,7 +3,9 @@ require __DIR__.'/includes/db.php';
 require __DIR__.'/includes/nav.php';
 $pdo = db();
 $categories = $pdo->query("SELECT * FROM categories WHERE is_active=1 AND (parent_id IS NULL OR parent_id=0) ORDER BY sort_order,id LIMIT 6")->fetchAll(PDO::FETCH_ASSOC);
-$products   = $pdo->query("SELECT p.*, c.name category_name, c.slug category_slug FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.is_active=1 ORDER BY c.sort_order,p.sort_order,p.id")->fetchAll(PDO::FETCH_ASSOC);
+try{$pdo->exec("ALTER TABLE products ADD COLUMN is_popular INTEGER DEFAULT 0");}catch(Exception $e){}
+$products   = $pdo->query("SELECT p.*, c.name category_name, c.slug category_slug FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.is_active=1 AND p.is_popular=1 ORDER BY c.sort_order,p.sort_order,p.id")->fetchAll(PDO::FETCH_ASSOC);
+if(empty($products)) $products = $pdo->query("SELECT p.*, c.name category_name, c.slug category_slug FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.is_active=1 ORDER BY c.sort_order,p.sort_order,p.id LIMIT 3")->fetchAll(PDO::FETCH_ASSOC);
 $coreBlockMap = [];
 foreach($pdo->query("SELECT * FROM page_blocks WHERE code<>''")->fetchAll(PDO::FETCH_ASSOC) as $cb){
     $coreBlockMap[$cb['code']] = $cb;
@@ -121,7 +123,7 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
   <?php if(!empty($products)): ?>
   <div class="sectionHeadV2" style="margin-bottom:24px"><p class="eyebrow">POPULAR</p><h2>Популярное</h2></div>
   <div class="productsGrid v2Grid">
-    <?php foreach(array_slice($products,0,3) as $p): $payload=["id"=>(int)$p["id"],"name"=>$p["name"],"price"=>(int)$p["price"],"image"=>$p["image"] ?: 'assets/images/hero.webp']; ?>
+    <?php foreach($products as $p): $payload=["id"=>(int)$p["id"],"name"=>$p["name"],"price"=>(int)$p["price"],"image"=>$p["image"] ?: 'assets/images/hero.webp']; ?>
     <article class="product cardV2 reveal">
       <a class="productImg" href="product.php?slug=<?=h($p['slug'] ?: $p['id'])?>"><img loading="lazy" src="<?=h($p['image'] ?: 'assets/images/hero.webp')?>" alt="<?=h($p['name'])?>">
       <?php if($p['badge']): ?><em><?=h($p['badge'])?></em><?php endif; ?></a>

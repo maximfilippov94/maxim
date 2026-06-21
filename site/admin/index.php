@@ -2,7 +2,7 @@
 require __DIR__.'/../includes/db.php'; require __DIR__.'/../includes/auth.php';
 $pdo=db();
 // Миграция products — новые поля (выполняется всегда при загрузке)
-foreach(['cost_price INTEGER DEFAULT 0','weight_g INTEGER DEFAULT 12000','length_cm INTEGER DEFAULT 60','width_cm INTEGER DEFAULT 60','height_cm INTEGER DEFAULT 40'] as $_col){
+foreach(['cost_price INTEGER DEFAULT 0','weight_g INTEGER DEFAULT 12000','length_cm INTEGER DEFAULT 60','width_cm INTEGER DEFAULT 60','height_cm INTEGER DEFAULT 40','is_popular INTEGER DEFAULT 0'] as $_col){
   try{$pdo->exec("ALTER TABLE products ADD COLUMN $_col");}catch(Exception $e){}
 }
 if(!is_admin()){
@@ -270,6 +270,11 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
     if($a==='delete_category'){$pdo->prepare('DELETE FROM categories WHERE id=?')->execute([(int)$_POST['id']]);echo json_encode($out);exit;}
     if($a==='toggle_category'){$id=(int)($_POST['id']??0);$pdo->prepare('UPDATE categories SET is_active=CASE WHEN is_active=1 THEN 0 ELSE 1 END WHERE id=?')->execute([$id]);$row=$pdo->prepare('SELECT is_active FROM categories WHERE id=?');$row->execute([$id]);$out['is_active']=(int)$row->fetchColumn();echo json_encode($out);exit;}
+    if($a==='toggle_popular'){
+  $pid=(int)$_POST['id']; $val=(int)$_POST['val'];
+  $pdo->prepare('UPDATE products SET is_popular=? WHERE id=?')->execute([$val,$pid]);
+  echo json_encode(['ok'=>true]); exit;
+}
     if($a==='get_block'){
       $id=(int)($_POST['id']??0);
       $st=$pdo->prepare('SELECT * FROM page_blocks WHERE id=?');
@@ -401,6 +406,7 @@ $blocks=$pdo->query('SELECT * FROM page_blocks ORDER BY sort_order,id')->fetchAl
       <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Главная
     </a>
+    <a data-tab="popular" class="<?=$tab==='popular'?'active':''?>">⭐ Популярное</a>
     <a data-tab="pages" class="<?=$tab==='pages'?'active':''?>">
       <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
       CMS Страницы
@@ -683,6 +689,27 @@ $crm_stats=['revenue'=>array_sum(array_column(array_filter($orders,fn($o)=>$o['s
         <button class="btn-danger btn-sm" onclick="blockDelete(<?=$b['id']?>,this)">✕</button>
       </div>
     </div>
+  </div>
+  <?php endforeach; ?>
+  </div>
+</div>
+
+<!-- ════════════ TAB: POPULAR ════════════ -->
+<div class="tabContent <?=$tab==='popular'?'active':''?>" id="tab-popular">
+  <div class="pageHeader">
+    <div><h1>Популярные товары</h1><p>Выберите товары которые показываются на главной странице</p></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+  <?php foreach($products as $p): ?>
+  <div style="background:var(--surface);border:1px solid var(--line2);border-radius:10px;padding:14px;display:flex;gap:12px;align-items:center">
+    <?php if($p['image']): ?><img src="/<?=h($p['image'])?>" style="width:56px;height:56px;object-fit:cover;border-radius:8px;flex-shrink:0"><?php endif; ?>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?=h($p['name'])?></div>
+      <div style="font-size:12px;color:var(--muted)"><?=money($p['price'])?></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0">
+      <input type="checkbox" onchange="togglePopular(<?=$p['id']?>,this.checked)" <?=$p['is_popular']?'checked':''?> style="width:18px;height:18px;cursor:pointer;accent-color:var(--copper)">
+    </label>
   </div>
   <?php endforeach; ?>
   </div>
@@ -3600,6 +3627,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
 })();
+
+async function togglePopular(id, checked){
+  const fd=new FormData();fd.append('action','toggle_popular');fd.append('id',id);fd.append('val',checked?1:0);
+  const r=await fetch('/admin/index.php',{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});
+  const d=await r.json();
+  if(d.ok) toast(checked?'Добавлено в популярное':'Убрано из популярного');
+  else toast('Ошибка','err');
+}
 </script>
 <style>
 @keyframes ringAnim{from{transform:rotate(-15deg)}to{transform:rotate(15deg)}}
