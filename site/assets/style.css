@@ -1154,13 +1154,13 @@ button:focus-visible { border-radius: var(--radius-sm); }
 .productInfo {
   position: sticky;
   top: 112px;
-  background: rgba(10,10,8,.45);
+  background: rgba(255,255,255,.03);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(243,241,236,.10);
+  border: 1px solid rgba(243,241,236,.08);
   border-radius: var(--radius-xl);
   padding: 34px;
-  box-shadow: 0 8px 40px rgba(0,0,0,.45);
+  box-shadow: 0 8px 40px rgba(0,0,0,.3);
 }
 .productSub { font-size: 22px !important; color: #d4ccc2 !important; }
 .productInfo p { color: #bdb5aa; line-height: 1.65; }
