@@ -68,6 +68,8 @@ $CDEK_CITIES = [
 <title><?=h($title)?></title>
 <link rel="canonical" href="https://lukaoutdoor.com/checkout.php">
 <meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/png" href="/assets/images/favicon.png">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
