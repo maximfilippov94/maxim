@@ -238,25 +238,39 @@ button:focus-visible { border-radius: var(--radius-sm); }
 .topbar nav a:hover { opacity: 1; color: var(--copper2); }
 
 .cartBtn, .menuBtn {
-  border: 1px solid var(--line2);
-  background: linear-gradient(180deg, rgba(19,19,19,.78), rgba(7,7,7,.72));
+  border: 1px solid rgba(243,241,236,.13);
+  background: rgba(255,255,255,.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   color: var(--text);
-  border-radius: var(--radius-md);
-  padding: 14px 20px;
+  border-radius: 50px;
+  padding: 10px 18px 10px 14px;
   cursor: pointer;
-  font-weight: 800;
-  transition: 250ms ease;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: .04em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 250ms ease, border-color 250ms ease, transform 200ms ease;
 }
+.cartBtn:hover {
+  background: rgba(255,255,255,.12);
+  border-color: rgba(243,241,236,.22);
+  transform: translateY(-1px);
+}
+.cartBtn svg { flex-shrink: 0; opacity: .85; }
 .cartBtn b {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-left: 8px;
-  min-width: 26px;
-  height: 26px;
+  min-width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--copper);
   color: #120b05;
+  font-size: 12px;
+  font-weight: 900;
 }
 .menuBtn { display: none; }
 
@@ -1286,64 +1300,81 @@ button:focus-visible { border-radius: var(--radius-sm); }
   top: 0;
   height: 100dvh;
   width: min(440px, 100vw);
-  background: linear-gradient(180deg, #0b0b0b, #050505);
-  border-left: 1px solid var(--line);
+  background: rgba(6,6,5,.82);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border-left: 1px solid rgba(243,241,236,.09);
   transform: translateX(calc(100% + 30px));
-  transition: transform .3s cubic-bezier(.4,0,.2,1);
-  padding: 26px;
+  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  padding: 32px 28px 28px;
   overflow: auto;
   will-change: transform;
+  display: flex;
+  flex-direction: column;
 }
 .cartPanel.open { transform: translateX(0); }
 .cartPanel .close {
-  float: right;
-  background: transparent;
-  border: 0;
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(243,241,236,.12);
   color: var(--text);
-  font-size: 34px;
+  font-size: 20px;
   cursor: pointer;
-  /* touch-target sizing */
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 200ms ease;
 }
+.cartPanel .close:hover { background: rgba(255,255,255,.13); }
 
 .cartItem {
   display: grid;
-  grid-template-columns: 70px 1fr 32px 32px 32px;
-  gap: 8px;
+  grid-template-columns: 80px 1fr 36px 36px 36px;
+  gap: 10px;
   align-items: center;
-  border-bottom: 1px solid var(--line);
-  padding: 16px 0;
+  border-bottom: 1px solid rgba(243,241,236,.07);
+  padding: 18px 0;
 }
 .cartItem img {
-  width: 70px;
-  height: 58px;
-  border-radius: var(--radius-sm);
+  width: 80px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid rgba(243,241,236,.08);
 }
-
-/* FIX #3: was height:30px → now min-height:44px; min-width:44px */
 .cartItem button {
-  border: 1px solid var(--line2);
-  background: #111;
-  color: #fff;
+  border: 1px solid rgba(243,241,236,.12);
+  background: rgba(255,255,255,.05);
+  color: var(--text);
   border-radius: 50%;
-  min-height: 44px;
-  min-width: 44px;
+  min-height: 36px;
+  min-width: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  font-size: 16px;
   transition: background 150ms ease, border-color 150ms ease;
 }
 .cartItem button:hover {
-  background: #1c1c1c;
-  border-color: var(--line2);
+  background: rgba(255,255,255,.12);
+  border-color: rgba(243,241,236,.25);
 }
-
-.cartTotal { margin: 18px 0; font-size: 18px; }
+.cartTotal {
+  margin: 24px 0 20px;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid rgba(243,241,236,.09);
+}
 .cartToast {
   position: fixed;
   z-index: 120;
