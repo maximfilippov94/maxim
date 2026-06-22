@@ -204,9 +204,10 @@ button:focus-visible { border-radius: var(--radius-sm); }
   align-items: center;
   justify-content: space-between;
   padding: 0 clamp(18px, 5vw, 72px);
-  background: linear-gradient(180deg, rgba(5,5,5,.94), rgba(5,5,5,.72));
-  border-bottom: 1px solid rgba(243,241,236,.07);
-  backdrop-filter: blur(16px);
+  background: rgba(5,5,4,.52);
+  border-bottom: 1px solid rgba(243,241,236,.09);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
 .brand, .logoWithIcon {
@@ -1153,10 +1154,13 @@ button:focus-visible { border-radius: var(--radius-sm); }
 .productInfo {
   position: sticky;
   top: 112px;
-  background: linear-gradient(180deg, rgba(12,12,12,.92), rgba(5,5,5,.90));
-  border: 1px solid var(--line);
+  background: rgba(10,10,8,.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(243,241,236,.10);
   border-radius: var(--radius-xl);
   padding: 34px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.45);
 }
 .productSub { font-size: 22px !important; color: #d4ccc2 !important; }
 .productInfo p { color: #bdb5aa; line-height: 1.65; }
@@ -1744,10 +1748,10 @@ button:focus-visible { border-radius: var(--radius-sm); }
   .topbar {
     height: 68px;
     padding: 0 20px;
-    background: rgba(5,5,5,.95);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(243,241,236,.07);
+    background: rgba(5,5,4,.55);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid rgba(243,241,236,.09);
     gap: 10px;
   }
   .topbar nav { display: none; }

@@ -78,7 +78,7 @@ try {
 .megaDrop{position:absolute;top:calc(100% + 12px);left:0;transform:translateY(-6px);z-index:200;min-width:560px;padding-top:8px}
 /* Невидимый мост между ссылкой и дропом чтобы курсор не терялся */
 .megaDrop::before{content:"";position:absolute;top:-12px;left:0;right:0;height:12px}
-.megaDropInner{background:#0a0a0a;border:1px solid rgba(243,241,236,.1);border-radius:20px;padding:20px;display:flex;gap:0;box-shadow:0 24px 60px rgba(0,0,0,.7)}
+.megaDropInner{background:rgba(10,10,8,.55);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid rgba(243,241,236,.12);border-radius:20px;padding:20px;display:flex;gap:0;box-shadow:0 24px 60px rgba(0,0,0,.6)}
 .megaLeft{width:200px;flex-shrink:0;border-right:1px solid rgba(243,241,236,.07);padding-right:16px;display:flex;flex-direction:column;gap:2px}
 .megaRight{flex:1;padding-left:16px;min-height:200px}
 .megaLeftItem{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:10px;cursor:pointer;text-decoration:none;transition:.15s;font-size:13px;font-weight:700;color:rgba(243,241,236,.6);text-transform:uppercase;letter-spacing:.06em}
