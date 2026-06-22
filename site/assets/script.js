@@ -61,11 +61,13 @@ function goCheckout(){
 function openCart(){
   document.getElementById('cartPanel')?.classList.add('open');
   document.getElementById('shade')?.classList.add('show');
+  document.querySelectorAll('main,footer,.topbar').forEach(el=>el.classList.add('cart-blur'));
   document.body.style.overflow='hidden';
 }
 function closeCart(){
   document.getElementById('cartPanel')?.classList.remove('open');
   document.getElementById('shade')?.classList.remove('show');
+  document.querySelectorAll('main,footer,.topbar').forEach(el=>el.classList.remove('cart-blur'));
   document.body.style.overflow='';
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ closeCart(); closeMenu(); } });

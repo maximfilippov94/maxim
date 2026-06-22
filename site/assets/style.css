@@ -1289,9 +1289,20 @@ button:focus-visible { border-radius: var(--radius-sm); }
   z-index: 80;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 300ms ease;
+  transition: opacity 550ms cubic-bezier(.4,0,.2,1);
 }
 #shade.show { opacity: 1; pointer-events: auto; }
+
+.cart-blur {
+  transition: filter .55s cubic-bezier(.4,0,.2,1), transform .55s cubic-bezier(.4,0,.2,1) !important;
+  filter: blur(3px) brightness(.65);
+  transform: scale(.982);
+  transform-origin: left center;
+}
+main, footer, .topbar {
+  transition: filter .55s cubic-bezier(.4,0,.2,1), transform .55s cubic-bezier(.4,0,.2,1);
+  will-change: filter;
+}
 
 .cartPanel {
   position: fixed;
@@ -1305,7 +1316,7 @@ button:focus-visible { border-radius: var(--radius-sm); }
   -webkit-backdrop-filter: blur(40px);
   border-left: 1px solid rgba(243,241,236,.10);
   transform: translateX(calc(100% + 30px));
-  transition: transform .35s cubic-bezier(.4,0,.2,1);
+  transition: transform .55s cubic-bezier(.4,0,.2,1);
   padding: 32px 28px 28px;
   overflow: auto;
   will-change: transform;
