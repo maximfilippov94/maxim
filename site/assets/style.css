@@ -1500,10 +1500,12 @@ button:focus-visible { border-radius: var(--radius-sm); }
   margin-top: 28px;
 }
 .featureCard {
-  border: 1px solid rgba(243,241,236,.10);
+  border: 1px solid rgba(243,241,236,.08);
   border-radius: var(--radius-md);
   padding: 26px 24px 28px;
-  background: #0b0b0b;
+  background: rgba(255,255,255,.03);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   flex-direction: column;
   gap: 16px;
