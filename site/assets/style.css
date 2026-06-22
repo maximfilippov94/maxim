@@ -2147,7 +2147,7 @@ main, footer {
 /* ── Sticky buy entrance ──────────────────────────────────────── */
 .stickyBuy { display: none; }
 @media(max-width:980px) {
-  .stickyBuy { transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .35s; opacity: 0; }
+  .stickyBuy { display: flex; transform: translateY(100%); transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .35s; opacity: 0; }
   .stickyBuy.sticky-visible { transform: translateY(0); opacity: 1; }
 }
 
