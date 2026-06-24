@@ -2012,13 +2012,6 @@ main, footer {
     background: linear-gradient(transparent, rgba(5,5,5,.98) 28%);
     gap: 10px;
     pointer-events: none;
-    transform: translateY(100%);
-    opacity: 0;
-    transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .35s;
-  }
-  .stickyBuy.sticky-visible {
-    transform: translateY(0);
-    opacity: 1;
   }
   .stickyBuy .btn {
     pointer-events: auto;
