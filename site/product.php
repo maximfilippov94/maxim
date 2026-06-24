@@ -191,6 +191,7 @@ if($hasSpecs): ?>
 </section>
 
 
+</main>
 <!-- Модальное окно «Купить в 1 клик» -->
 <div class="oneClickModal" id="oneClickModalWrap">
   <div class="oneClickBackdrop" onclick="closeOneClick()"></div>
@@ -213,7 +214,6 @@ if($hasSpecs): ?>
     </form>
   </div>
 </div>
-</main>
 <div class="stickyBuy"><button id="stickyBuyBtn" class="btn primary" onclick='addToCart(<?=json_encode($payload, JSON_UNESCAPED_UNICODE)?>,this)'>В корзину — <?=money($p['price'])?></button><button class="btn ghost" onclick="openOneClick('<?=h($p['name'])?>','<?=money($p['price'])?>')">1 клик</button></div>
 <?php render_footer($pdo); ?>
 <?php include __DIR__.'/includes/cart.php'; ?><script src="assets/script.js?v=6.2.0"></script><script>

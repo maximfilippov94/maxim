@@ -1298,7 +1298,6 @@ button:focus-visible { border-radius: var(--radius-sm); }
 }
 main, footer {
   transition: filter .55s cubic-bezier(.4,0,.2,1);
-  will-change: filter;
 }
 
 
