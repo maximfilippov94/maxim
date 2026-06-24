@@ -1294,15 +1294,13 @@ button:focus-visible { border-radius: var(--radius-sm); }
 #shade.show { opacity: 1; pointer-events: auto; }
 
 .cart-blur {
-  transition: filter .55s cubic-bezier(.4,0,.2,1), transform .55s cubic-bezier(.4,0,.2,1) !important;
   filter: blur(3px) brightness(.65);
-  transform: scale(.982);
-  transform-origin: left center;
 }
 main, footer {
-  transition: filter .55s cubic-bezier(.4,0,.2,1), transform .55s cubic-bezier(.4,0,.2,1);
+  transition: filter .55s cubic-bezier(.4,0,.2,1);
   will-change: filter;
 }
+
 
 .cartPanel {
   position: fixed;
