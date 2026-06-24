@@ -2144,9 +2144,6 @@ main, footer {
   .mobileMenuSocials a:active { transform: scale(.88); }
 }
 
-/* ── Sticky buy entrance ──────────────────────────────────────── */
-.stickyBuy { display: none; }
-
 /* ── Cart button pulse ────────────────────────────────────────── */
 .cartBtn.cart-pulse { animation: pulseGlow .5s ease; }
 
