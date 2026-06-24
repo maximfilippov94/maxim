@@ -2018,6 +2018,14 @@ main, footer {
     text-align: center;
     justify-content: center;
   }
+  .stickyBuy {
+    transition: transform .35s cubic-bezier(.4,0,.2,1), opacity .35s;
+  }
+  .stickyBuy.hidden {
+    transform: translateY(100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
 
   .relatedProducts .productsGrid.v2Grid {
     display: flex;
