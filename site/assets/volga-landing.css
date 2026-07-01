@@ -34,7 +34,10 @@
 .vHeader__phone { font-weight: 700; color: var(--text); font-size: 15px; }
 .vHeader__cta { padding: 10px 20px; font-size: 13px; }
 @media (max-width: 640px) {
-  .vHeader__phone { display: none; }
+  .vHeader__inner { gap: 10px; padding: 10px 16px; }
+  .vHeader__logo img { height: 40px; width: 40px; }
+  .vHeader__phone { display: block; font-size: 16px; color: var(--copper2); white-space: nowrap; }
+  .volgaPage .vHeader__cta { display: none; }
 }
 
 /* ── Hero ───────────────────────────────────────────── */
