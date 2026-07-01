@@ -1,0 +1,188 @@
+/* Volga Smoker BBQ — landing page styles (built on LUKA design tokens) */
+
+.volgaPage { background: var(--bg); }
+
+.volgaPage .btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 14px 28px; border-radius: var(--radius-pill);
+  font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .04em;
+  border: 1px solid transparent; cursor: pointer; transition: var(--transition-base);
+  white-space: nowrap;
+}
+.volgaPage .btn--accent { background: var(--copper2); color: var(--accent-on); }
+.volgaPage .btn--accent:hover { background: var(--gold); transform: translateY(-1px); }
+.volgaPage .btn--ghost { border-color: var(--line2); color: var(--text); }
+.volgaPage .btn--ghost:hover { border-color: var(--copper2); color: var(--copper2); }
+.volgaPage .btn--sm { padding: 10px 20px; font-size: 13px; width: 100%; }
+
+.vEyebrow {
+  font-size: 13px; text-transform: uppercase; letter-spacing: .12em;
+  color: var(--copper2); font-weight: 700; margin: 0 0 10px;
+}
+
+/* ── Header ─────────────────────────────────────────── */
+.vHeader {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(5,5,5,.86); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.vHeader__inner {
+  max-width: var(--max); margin: 0 auto; padding: 12px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.vHeader__logo img { height: 48px; width: 48px; object-fit: contain; }
+.vHeader__phone { font-weight: 700; color: var(--text); font-size: 15px; }
+.vHeader__cta { padding: 10px 20px; font-size: 13px; }
+@media (max-width: 640px) {
+  .vHeader__phone { display: none; }
+}
+
+/* ── Hero ───────────────────────────────────────────── */
+.vHero {
+  position: relative; overflow: hidden;
+  padding: 64px 24px 72px;
+  background: radial-gradient(circle at 78% 0%, rgba(201,121,43,.22), transparent 40%),
+              radial-gradient(circle at 10% 90%, rgba(201,121,43,.12), transparent 45%),
+              var(--bg);
+}
+.vHero__bull {
+  position: absolute; right: -60px; top: 50%; transform: translateY(-50%);
+  width: 420px; opacity: .10; pointer-events: none;
+}
+.vHero__bull img { width: 100%; }
+.vHero__inner { max-width: var(--max); margin: 0 auto; position: relative; z-index: 1; }
+.vHero__title {
+  font-family: var(--head); font-weight: 400; text-transform: uppercase;
+  font-size: clamp(48px, 8vw, 96px); line-height: .92; letter-spacing: .01em;
+  color: var(--text); margin: 18px 0 24px;
+}
+.vHero__text { max-width: 560px; color: var(--soft); font-size: 17px; margin: 0 0 32px; }
+.vHero__actions { display: flex; gap: 16px; flex-wrap: wrap; }
+
+/* ── Sections ───────────────────────────────────────── */
+.vSection { padding: 56px 24px; }
+.vSection__inner { max-width: var(--max); margin: 0 auto; }
+.vSection h2 {
+  font-family: var(--head); font-weight: 400; text-transform: uppercase;
+  font-size: clamp(30px, 4vw, 46px); color: var(--text); margin: 0 0 8px; letter-spacing: .01em;
+}
+
+/* ── Offer ──────────────────────────────────────────── */
+.vOffer { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; margin-bottom: 32px; }
+.vOffer__text { color: var(--muted); font-size: 16px; margin: 0; }
+.vOfferCards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.vCard {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 28px 24px;
+}
+.vCard__icon { font-size: 30px; margin-bottom: 14px; }
+.vCard h3 { color: var(--text); font-size: 18px; margin: 0 0 8px; }
+.vCard p { color: var(--muted); font-size: 14px; margin: 0; line-height: 1.55; }
+
+/* ── Advantages ─────────────────────────────────────── */
+.vAdvantages { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 24px; }
+.vAdvantages__media {
+  border-radius: var(--radius-lg); min-height: 320px;
+  background: radial-gradient(circle at 40% 30%, rgba(201,121,43,.28), transparent 60%), var(--surface2);
+  border: 1px solid var(--line);
+}
+.vAdvantages__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
+.vAdvantages__list li { border-top: 1px solid var(--line); padding-top: 14px; }
+.vAdvantages__list h4 { color: var(--text); font-size: 15px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .02em; }
+.vAdvantages__list p { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.5; }
+
+/* ── Lead form ──────────────────────────────────────── */
+.vLeadSection { padding: 40px 24px; }
+.vLeadCard {
+  max-width: 560px; margin: 0 auto; text-align: center;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-xl);
+  padding: 40px 32px; box-shadow: var(--shadow-md);
+}
+.vLeadCard h2 { font-family: var(--head); text-transform: uppercase; font-size: 34px; color: var(--text); margin: 0 0 12px; }
+.vLeadCard p { color: var(--muted); margin: 0 0 24px; font-size: 15px; }
+.vLeadForm { display: grid; gap: 14px; }
+.vLeadForm input[type=text], .vLeadForm input[type=tel] {
+  background: var(--bg); border: 1px solid var(--line2); border-radius: var(--radius-sm);
+  padding: 14px 16px; color: var(--text); font-size: 15px;
+}
+.vLeadForm input::placeholder { color: var(--muted); }
+.vCheckbox { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--muted); text-align: left; }
+.vCheckbox input { margin-top: 3px; }
+.vLeadForm__status { min-height: 20px; font-size: 14px; color: var(--copper2); margin: 0; }
+.vLeadForm__status.is-error { color: var(--error); }
+.vLeadForm__status.is-success { color: var(--success); }
+
+/* ── Video block ────────────────────────────────────── */
+.vVideoBlock {
+  position: relative; border-radius: var(--radius-lg); min-height: 340px;
+  background: radial-gradient(circle at 50% 40%, rgba(201,121,43,.22), transparent 65%), var(--surface2);
+  border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+}
+.vVideoBlock__play {
+  width: 72px; height: 72px; border-radius: 50%; background: var(--copper2); color: var(--accent-on);
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+.vVideoBlock__label { color: var(--muted); font-size: 14px; }
+
+/* ── FAQ ────────────────────────────────────────────── */
+.vFaq { display: grid; gap: 12px; margin-top: 16px; }
+.vFaqItem { border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); overflow: hidden; }
+.vFaqItem__q {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: none; border: none; color: var(--text); font-size: 15px; font-weight: 600;
+  padding: 18px 20px; cursor: pointer; text-align: left;
+}
+.vFaqItem__icon { color: var(--copper2); font-size: 20px; transition: var(--transition-base); flex-shrink: 0; }
+.vFaqItem.is-open .vFaqItem__icon { transform: rotate(45deg); }
+.vFaqItem__a { max-height: 0; overflow: hidden; transition: max-height var(--transition-base); }
+.vFaqItem.is-open .vFaqItem__a { max-height: 240px; }
+.vFaqItem__a p { margin: 0; padding: 0 20px 18px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+/* ── Products ───────────────────────────────────────── */
+.vProducts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin-top: 16px; }
+.vProductCard {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
+  padding: 14px; display: flex; flex-direction: column; gap: 10px;
+}
+.vProductCard__media { border-radius: var(--radius-sm); overflow: hidden; aspect-ratio: 1/1; }
+.vProductCard__media img { width: 100%; height: 100%; object-fit: cover; }
+.vProductCard h3 { color: var(--text); font-size: 15px; margin: 0; }
+.vProductCard__price { color: var(--copper2); font-size: 13px; margin: 0; font-weight: 700; }
+
+/* ── Steps ──────────────────────────────────────────── */
+.vSteps { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 16px; }
+.vSteps__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+.vSteps__list li { display: flex; gap: 16px; align-items: flex-start; border-top: 1px solid var(--line); padding-top: 14px; }
+.vSteps__num { font-family: var(--head); font-size: 20px; color: var(--copper2); flex-shrink: 0; }
+.vSteps__list h4 { color: var(--text); font-size: 15px; margin: 0 0 4px; }
+.vSteps__list p { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.5; }
+.vSteps__media {
+  border-radius: var(--radius-lg); min-height: 320px;
+  background: radial-gradient(circle at 60% 30%, rgba(201,121,43,.22), transparent 60%), var(--surface2);
+  border: 1px solid var(--line);
+}
+
+/* ── Footer ─────────────────────────────────────────── */
+.vFooter { border-top: 1px solid var(--line); padding: 32px 24px; }
+.vFooter__inner {
+  max-width: var(--max); margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+}
+.vFooter__brand { display: flex; align-items: center; gap: 12px; }
+.vFooter__brand img { height: 40px; width: 40px; object-fit: contain; }
+.vFooter__brand p { color: var(--muted); font-size: 13px; margin: 0; }
+.vFooter__contacts a { color: var(--text); font-weight: 700; }
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 900px) {
+  .vOffer, .vAdvantages, .vSteps { grid-template-columns: 1fr; }
+  .vOfferCards { grid-template-columns: 1fr; }
+  .vProducts { grid-template-columns: repeat(2, 1fr); }
+  .vAdvantages__list { grid-template-columns: 1fr; }
+  .vAdvantages__media, .vSteps__media { order: -1; min-height: 220px; }
+}
+@media (max-width: 520px) {
+  .vProducts { grid-template-columns: repeat(2, 1fr); }
+  .vHero { padding: 48px 16px 56px; }
+  .vSection { padding: 40px 16px; }
+  .vLeadCard { padding: 28px 20px; }
+}

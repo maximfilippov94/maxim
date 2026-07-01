@@ -49,40 +49,28 @@ function init_db(PDO $pdo): void {
     $pdo->exec("CREATE TABLE IF NOT EXISTS page_blocks (id INTEGER PRIMARY KEY AUTOINCREMENT,type TEXT DEFAULT 'text_image',code TEXT DEFAULT '',label TEXT DEFAULT '',eyebrow TEXT DEFAULT '',title TEXT DEFAULT '',subtitle TEXT DEFAULT '',text TEXT DEFAULT '',image TEXT DEFAULT '',cta_text TEXT DEFAULT '',cta_link TEXT DEFAULT '',extra TEXT DEFAULT '',sort_order INTEGER DEFAULT 0,is_active INTEGER DEFAULT 1)");
     add_col($pdo,'page_blocks','code',"TEXT DEFAULT ''");
     $pdo->exec("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY,value TEXT DEFAULT '')");
-    $defaults=['site_title'=>'LUKA OUTDOOR — костровые системы премиум-класса','site_description'=>'Премиальные костровые чаши, аксессуары и комплекты для outdoor lifestyle.','phone'=>'8 800 123-45-67','telegram'=>'','whatsapp'=>'','og_image'=>'assets/images/hero.webp'];
+    $defaults=['site_title'=>'Volga Smoker BBQ — мясные полуфабрикаты слоу-смок оптом','site_description'=>'Брискет, рёбра, рваная говядина и свинина в дровяном смокере по техасской технологии. Оптовые поставки для ресторанов, кафе и фастфудов в Тольятти и Самаре.','phone'=>'+7 000 000-00-00','telegram'=>'','whatsapp'=>'','og_image'=>'assets/images/volga-logo-solid.png'];
     $st=$pdo->prepare('INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)'); foreach($defaults as $k=>$v) $st->execute([$k,$v]);
     $count = (int)$pdo->query('SELECT COUNT(*) FROM categories')->fetchColumn();
     if ($count === 0) {
         $pdo->exec("INSERT INTO categories (name, slug, sort_order, seo_title, seo_description) VALUES
-            ('Костровые чаши', 'fire-bowls', 1, 'Костровые чаши LUKA OUTDOOR', 'Премиальные костровые чаши для дачи, леса и террасы.'),
-            ('Аксессуары', 'accessories', 2, 'Аксессуары LUKA OUTDOOR', 'Решетки, чехлы, перчатки и outdoor аксессуары.'),
-            ('Комплекты', 'sets', 3, 'Готовые комплекты LUKA OUTDOOR', 'Готовые fire cooking комплекты для подарка и участка.')");
-        $catBowl = (int)$pdo->query("SELECT id FROM categories WHERE slug='fire-bowls'")->fetchColumn();
-        $catAcc = (int)$pdo->query("SELECT id FROM categories WHERE slug='accessories'")->fetchColumn();
+            ('Полуфабрикаты BBQ', 'bbq', 1, 'Мясные полуфабрикаты BBQ — Volga Smoker BBQ', 'Брискет, рёбра и рваное мясо слоу-смок для ресторанов и кафе.')");
+        $catBbq = (int)$pdo->query("SELECT id FROM categories WHERE slug='bbq'")->fetchColumn();
         $stmt=$pdo->prepare("INSERT INTO products (category_id,name,slug,subtitle,description,price,image,specs,dimensions,materials,assembly,badge,sort_order,seo_title,seo_description) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-        $stmt->execute([$catBowl,'LUKA OUTDOOR','volga-fire-base','Стандартная чаша','Базовая костровая система для дачи, леса и путешествий. Подходит для живого огня, гриля и отдыха небольшой компанией.',12900,'assets/images/hero.webp','Для 2–4 человек · сталь 4 мм · сборка 60 сек','Диаметр 52 см · вес 11 кг','Сталь 4 мм · жаростойкое покрытие','Сборка без инструмента за 60 секунд','ХИТ',1,'LUKA OUTDOOR — стандартная костровая чаша','Стандартная премиальная костровая система для отдыха на природе.']);
-        $stmt->execute([$catBowl,'LUKA OUTDOOR PRO','volga-fire-base-pro','Усиленная чаша','Больше жара, устойчивости и площади для готовки. Оптимальный выбор для семьи, дачи и выездов.',15900,'assets/images/product-pro.webp','Для 4–6 человек · усиленная конструкция','Диаметр 62 см · вес 14 кг','Усиленная сталь · жаростойкое покрытие','Панельная сборка без инструмента','NEW',2,'LUKA OUTDOOR PRO — усиленная костровая чаша','Усиленная костровая чаша для fire cooking и отдыха компанией.']);
-        $stmt->execute([$catBowl,'LUKA OUTDOOR MAX','volga-fire-base-max','Большой формат','Для больших компаний, террас и загородных пространств. Максимальная зона огня и эффектный внешний вид.',18900,'assets/images/product-forest.webp','Для 6–8 человек · максимальный размер','Диаметр 72 см · вес 17 кг','Сталь 4 мм · увеличенная геометрия','Сборка за 1–2 минуты','MAX',3,'LUKA OUTDOOR MAX — большая костровая чаша','Большая костровая система для участка, террасы и большой компании.']);
-        $stmt->execute([$catAcc,'Решетка для гриля','grill-grate','Аксессуар','Для приготовления стейков, овощей и блюд на живом огне.',2900,'assets/images/product-pro.webp','Нержавеющая сталь · съемная конструкция','Подходит BASE / PRO / MAX','Нержавеющая сталь','Устанавливается сверху чаши','',1,'Решетка для гриля LUKA OUTDOOR','Съемная решетка для приготовления на живом огне.']);
-        $stmt->execute([$catAcc,'Чехол для переноски','carry-bag','Аксессуар','Плотный транспортировочный чехол для поездок и хранения.',3900,'assets/images/hero.webp','Плотная ткань · усиленные ручки','Под размер выбранной чаши','Плотная ткань · кожаные элементы','Сложите элементы и поместите в чехол','',2,'Чехол для LUKA OUTDOOR','Чехол для хранения и перевозки костровой системы.']);
-        $stmt->execute([$catAcc,'Кожаные перчатки','leather-gloves','Аксессуар','Защита рук и премиальный outdoor стиль.',1900,'assets/images/lifestyle.webp','Натуральная кожа · жаростойкие','Универсальный размер','Натуральная кожа','Используются при работе с горячими элементами','',3,'Кожаные перчатки LUKA OUTDOOR','Жаростойкие кожаные перчатки для костровой чаши.']);
+        $stmt->execute([$catBbq,'Брискет','brisket','Говяжья грудинка слоу-смок','Говяжья грудинка, томлёная на дубовых дровах по техасской технологии 12+ часов. Вакуумная упаковка, разогрев за 15 минут.',0,'assets/images/placeholder-meat.svg','Говядина · вакуумная упаковка · срок годности уточняется','Порция/вес уточняется','—','Разогреть и подавать','ХИТ',1,'Брискет слоу-смок оптом — Volga Smoker BBQ','Говяжий брискет томлёный на дровах, оптовые поставки для HoReCa.']);
+        $stmt->execute([$catBbq,'Рёбра свиные','ribs-pork','Свиные рёбра слоу-смок','Свиные рёбра с дымным ароматом дубовых дров, томлёные по техасской технологии. Готовы к разогреву и подаче.',0,'assets/images/placeholder-meat.svg','Свинина · вакуумная упаковка','Порция/вес уточняется','—','Разогреть и подавать','',2,'Свиные рёбра BBQ оптом — Volga Smoker BBQ','Свиные рёбра слоу-смок, оптовые поставки для ресторанов и кафе.']);
+        $stmt->execute([$catBbq,'Рёбра говяжьи','ribs-beef','Говяжьи рёбра слоу-смок','Говяжьи рёбра длительного томления на живом огне, техасский стиль копчения.',0,'assets/images/placeholder-meat.svg','Говядина · вакуумная упаковка','Порция/вес уточняется','—','Разогреть и подавать','',3,'Говяжьи рёбра BBQ оптом — Volga Smoker BBQ','Говяжьи рёбра слоу-смок, оптовые поставки для HoReCa.']);
+        $stmt->execute([$catBbq,'Рваная говядина','pulled-beef','Beef pulled слоу-смок','Рваная говядина — готовый ингредиент для бургеров, сэндвичей и пиццы. Томится на дубовых дровах до мягкой текстуры.',0,'assets/images/placeholder-meat.svg','Говядина · вакуумная упаковка','Порция/вес уточняется','—','Разогреть и использовать как начинку','',4,'Рваная говядина оптом — Volga Smoker BBQ','Pulled beef слоу-смок, ингредиент для бургеров и сэндвичей.']);
+        $stmt->execute([$catBbq,'Рваная свинина','pulled-pork','Pulled pork слоу-смок','Рваная свинина слоу-смок — универсальный ингредиент для бургеров, сэндвичей и пиццы.',0,'assets/images/placeholder-meat.svg','Свинина · вакуумная упаковка','Порция/вес уточняется','—','Разогреть и использовать как начинку','',5,'Рваная свинина оптом — Volga Smoker BBQ','Pulled pork слоу-смок, ингредиент для бургеров и пиццы.']);
     }
 
     $mediaCount = (int)$pdo->query('SELECT COUNT(*) FROM product_media')->fetchColumn();
     if($mediaCount === 0){
-        $mediaSeed = [
-            'volga-fire-base' => ['assets/images/product-pro.webp','assets/images/lifestyle.webp'],
-            'volga-fire-base-pro' => ['assets/images/hero.webp','assets/images/lifestyle.webp'],
-            'volga-fire-base-max' => ['assets/images/product-pro.webp','assets/images/hero.webp'],
-            'grill-grate' => ['assets/images/hero.webp','assets/images/lifestyle.webp'],
-            'carry-bag' => ['assets/images/product-pro.webp','assets/images/lifestyle.webp'],
-            'leather-gloves' => ['assets/images/hero.webp','assets/images/product-pro.webp']
-        ];
         $pidStmt=$pdo->prepare('SELECT id FROM products WHERE slug=?');
         $insMedia=$pdo->prepare('INSERT INTO product_media(product_id,path,type,sort_order) VALUES(?,?,?,?)');
-        foreach($mediaSeed as $slug=>$paths){
+        foreach(['brisket','ribs-pork','ribs-beef','pulled-beef','pulled-pork'] as $slug){
             $pidStmt->execute([$slug]); $pid=(int)$pidStmt->fetchColumn(); if(!$pid) continue;
-            $sort=10; foreach($paths as $path){ $insMedia->execute([$pid,$path,'image',$sort]); $sort+=10; }
+            $insMedia->execute([$pid,'assets/images/placeholder-meat.svg','image',10]);
         }
     }
 }
