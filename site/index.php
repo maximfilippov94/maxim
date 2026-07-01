@@ -40,7 +40,7 @@ $steps = landing_list('steps_items');
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css?v=1">
-<link rel="stylesheet" href="assets/volga-landing.css?v=1">
+<link rel="stylesheet" href="assets/volga-landing.css?v=2">
 </head>
 <body class="volgaPage">
 

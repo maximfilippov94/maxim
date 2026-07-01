@@ -166,16 +166,29 @@
 .vFaqItem.is-open .vFaqItem__a { max-height: 240px; }
 .vFaqItem__a p { margin: 0; padding: 0 20px 18px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 
-/* ── Products ───────────────────────────────────────── */
-.vProducts { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; margin-top: 16px; }
+/* ── Products (glass cards) ─────────────────────────── */
+.vProducts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 16px; }
 .vProductCard {
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md);
-  padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--radius-lg);
+  padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: transform var(--transition-base), border-color var(--transition-base), box-shadow var(--transition-base);
 }
-.vProductCard__media { border-radius: var(--radius-sm); overflow: hidden; aspect-ratio: 1/1; }
-.vProductCard__media img { width: 100%; height: 100%; object-fit: cover; }
-.vProductCard h3 { color: var(--text); font-size: 15px; margin: 0; }
-.vProductCard__price { color: var(--copper2); font-size: 13px; margin: 0; font-weight: 700; }
+.vProductCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(232,154,66,.45);
+  box-shadow: 0 26px 60px rgba(0,0,0,.55), var(--shadow-copper), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.vProductCard__media { border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 4/3; }
+.vProductCard__media img { width: 100%; height: 100%; object-fit: cover; transition: transform var(--transition-slow); }
+.vProductCard:hover .vProductCard__media img { transform: scale(1.05); }
+.vProductCard h3 { color: var(--text); font-size: 20px; margin: 0; }
+.vProductCard__price { color: var(--copper2); font-size: 16px; margin: 0; font-weight: 700; }
+.vProductCard .btn--sm { padding: 13px 20px; font-size: 14px; margin-top: auto; }
 
 /* ── Steps ──────────────────────────────────────────── */
 .vSteps { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 16px; }
@@ -211,7 +224,7 @@
   .vGallery, .vGallery--4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 520px) {
-  .vProducts { grid-template-columns: repeat(2, 1fr); }
+  .vProducts { grid-template-columns: 1fr; }
   .vHero { padding: 48px 16px 56px; }
   .vSection { padding: 40px 16px; }
   .vLeadCard { padding: 28px 20px; }
