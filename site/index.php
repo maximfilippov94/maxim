@@ -87,6 +87,28 @@ $steps = landing_list('steps_items');
     </div>
   </section>
 
+  <section class="vSection" id="products">
+    <div class="vSection__inner">
+      <p class="vEyebrow">Ассортимент</p>
+      <h2>Продукция</h2>
+    </div>
+    <?php foreach ($categories as $cat): if (empty($productsByCat[$cat['id']])) continue; ?>
+    <div class="vSection__inner vProductGroup">
+      <h3 class="vProductGroup__title">Продукция <span>|</span> <?=h($cat['name'])?></h3>
+      <div class="vProducts">
+        <?php foreach ($productsByCat[$cat['id']] as $p): ?>
+        <div class="vProductCard">
+          <div class="vProductCard__media"><img src="<?=h($p['image'])?>" alt="<?=h($p['name'])?>"></div>
+          <h3><?=h($p['name'])?></h3>
+          <p class="vProductCard__price"><?= (int)$p['price'] > 0 ? h(money($p['price'])).'/кг' : 'Цена по запросу' ?></p>
+          <a class="btn btn--accent btn--sm" href="#lead-form-2">Заказать</a>
+        </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endforeach; ?>
+  </section>
+
   <section class="vSection" id="technology">
     <div class="vSection__inner">
       <p class="vEyebrow">Наш процесс</p>
@@ -170,28 +192,6 @@ $steps = landing_list('steps_items');
       </div>
       <?php endforeach; ?>
     </div>
-  </section>
-
-  <section class="vSection" id="products">
-    <div class="vSection__inner">
-      <p class="vEyebrow">Ассортимент</p>
-      <h2>Продукция</h2>
-    </div>
-    <?php foreach ($categories as $cat): if (empty($productsByCat[$cat['id']])) continue; ?>
-    <div class="vSection__inner vProductGroup">
-      <h3 class="vProductGroup__title">Продукция <span>|</span> <?=h($cat['name'])?></h3>
-      <div class="vProducts">
-        <?php foreach ($productsByCat[$cat['id']] as $p): ?>
-        <div class="vProductCard">
-          <div class="vProductCard__media"><img src="<?=h($p['image'])?>" alt="<?=h($p['name'])?>"></div>
-          <h3><?=h($p['name'])?></h3>
-          <p class="vProductCard__price"><?= (int)$p['price'] > 0 ? h(money($p['price'])).'/кг' : 'Цена по запросу' ?></p>
-          <a class="btn btn--accent btn--sm" href="#lead-form-2">Заказать</a>
-        </div>
-        <?php endforeach; ?>
-      </div>
-    </div>
-    <?php endforeach; ?>
   </section>
 
   <section class="vSection vLeadSection" id="lead-form-2">
