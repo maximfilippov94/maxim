@@ -21,24 +21,8 @@ $gallery = [
     ['assets/images/gallery/seasoning-crop.jpg', 'Сухой посол перед томлением'],
 ];
 
-$faq = [
-    ['Какой минимальный объём заказа для опта?', 'Минимальный объём обсуждается индивидуально при первой заявке — подберём партию под формат вашего заведения.'],
-    ['Как хранить и разогревать продукцию?', 'Продукция поставляется в вакуумной упаковке. Хранится в холодильнике или морозильной камере, перед подачей — разогреть и сервировать либо использовать как ингредиент.'],
-    ['Какой срок годности в вакуумной упаковке?', 'Срок годности зависит от условий хранения (охлаждённое/замороженное) — уточняем на этапе консультации по каждой позиции.'],
-    ['Как происходит доставка в Тольятти и Самару?', 'Развозим партии по заведениям в обоих городах по согласованному графику. Условия доставки обсуждаем при оформлении заявки.'],
-    ['Можно ли заказать пробную партию?', 'Да, для новых партнёров можно согласовать пробную поставку, чтобы оценить продукт перед регулярными закупками.'],
-    ['Как оформить постоянные поставки по договору?', 'После пробной поставки заключаем договор с фиксированным ассортиментом, объёмом и графиком — работаем на регулярной основе.'],
-];
-
-$steps = [
-    'Заявка' => 'Оставляете заявку на сайте или по телефону.',
-    'Консультация' => 'Обсуждаем ассортимент, объёмы и формат вашего заведения.',
-    'Согласование цены' => 'Считаем стоимость партии и условия поставки.',
-    'Заключение договора' => 'Фиксируем условия сотрудничества на бумаге.',
-    'Пробная поставка' => 'Привозим первую партию, чтобы вы оценили продукт.',
-    'Регулярные поставки' => 'Переходим на постоянный график поставок.',
-    'Поддержка' => 'Менеджер на связи по всем вопросам сотрудничества.',
-];
+$faq   = landing_list('faq_items');
+$steps = landing_list('steps_items');
 ?>
 <!doctype html>
 <html lang="ru">
@@ -74,9 +58,9 @@ $steps = [
     <div class="vHero__overlay" aria-hidden="true"></div>
     <div class="vHero__bull" aria-hidden="true"><img src="assets/images/volga-logo.png" alt=""></div>
     <div class="vHero__inner">
-      <p class="vEyebrow">Погрузитесь в аромат<br>техасского копчения</p>
-      <h1 class="vHero__title">VOLGA<br>SMOKER BBQ</h1>
-      <p class="vHero__text">Мясные полуфабрикаты слоу-смок из дровяной печи. Томим говядину, свинину и курицу на дубовых дровах по техасской технологии — оптом для ресторанов, кафе и фастфудов Тольятти и Самары.</p>
+      <p class="vEyebrow"><?=nl2br(h(landing_val('hero_eyebrow')))?></p>
+      <h1 class="vHero__title"><?=nl2br(h(landing_val('hero_title')))?></h1>
+      <p class="vHero__text"><?=h(landing_val('hero_text'))?></p>
       <div class="vHero__actions">
         <a href="#lead-form-1" class="btn btn--accent">Оставить заявку</a>
         <a href="#products" class="btn btn--ghost">Смотреть продукцию</a>
@@ -88,26 +72,18 @@ $steps = [
     <div class="vSection__inner vOffer">
       <div>
         <p class="vEyebrow">О нас</p>
-        <h2>Что мы предлагаем?</h2>
+        <h2><?=h(landing_val('offer_title'))?></h2>
       </div>
-      <p class="vOffer__text">Команда Volga Smoker BBQ занимается приготовлением и поставкой высококачественных мясных полуфабрикатов, приготовленных в смокере на дубовых дровах по технологии техасского копчения. Продукт поставляется готовым к разогреву — экономит время, площадь и персонал вашей кухни.</p>
+      <p class="vOffer__text"><?=h(landing_val('offer_text'))?></p>
     </div>
     <div class="vSection__inner vOfferCards">
+      <?php $offerIcons=['🥩','🔥','⏱']; foreach (landing_list('offer_cards') as $ci=>$card): ?>
       <div class="vCard">
-        <div class="vCard__icon">🥩</div>
-        <h3>Отборное сырьё</h3>
-        <p>Используем крупные отрубы качественного мяса от проверенных поставщиков.</p>
+        <div class="vCard__icon"><?=$offerIcons[$ci] ?? '🔥'?></div>
+        <h3><?=h($card[0])?></h3>
+        <p><?=h($card[1])?></p>
       </div>
-      <div class="vCard">
-        <div class="vCard__icon">🔥</div>
-        <h3>Натуральный вкус</h3>
-        <p>Готовим на дубовых дровах без жидкого дыма и ароматизаторов — только настоящий костровой дым.</p>
-      </div>
-      <div class="vCard">
-        <div class="vCard__icon">⏱</div>
-        <h3>Уникальная технология</h3>
-        <p>Томим 12+ часов по техасской технологии slow smoking для мягкой текстуры и глубокого вкуса.</p>
-      </div>
+      <?php endforeach; ?>
     </div>
   </section>
 
@@ -126,25 +102,22 @@ $steps = [
   <section class="vSection" id="advantages">
     <div class="vSection__inner">
       <p class="vEyebrow">Почему мы</p>
-      <h2>Преимущества работы с нами</h2>
+      <h2><?=h(landing_val('adv_title'))?></h2>
     </div>
     <div class="vSection__inner vAdvantages">
       <div class="vAdvantages__media" aria-hidden="true" style="background-image:url('assets/images/brisket-slicing.jpg')"></div>
       <ul class="vAdvantages__list">
-        <li><h4>Экономите на персонале</h4><p>Не нужен повар-мастер по смокингу и копчению в штате.</p></li>
-        <li><h4>Экономите площадь кухни</h4><p>Не нужны печь-смокер и место для многочасового томления.</p></li>
-        <li><h4>Не нужно закупать оборудование</h4><p>Готовый продукт без вложений в смокер и дрова.</p></li>
-        <li><h4>Быстрая доставка</h4><p>Развозим партии по Тольятти и Самаре по согласованному графику.</p></li>
-        <li><h4>Стабильное качество</h4><p>Одна технология и рецептура в каждой партии.</p></li>
-        <li><h4>Готово за 15 минут</h4><p>Разогрели — подали, либо использовали как ингредиент для блюда.</p></li>
+        <?php foreach (landing_list('adv_items') as $adv): ?>
+        <li><h4><?=h($adv[0])?></h4><p><?=h($adv[1])?></p></li>
+        <?php endforeach; ?>
       </ul>
     </div>
   </section>
 
   <section class="vSection vLeadSection" id="lead-form-1">
     <div class="vLeadCard">
-      <h2>Оставьте заявку</h2>
-      <p>Мы работаем с ресторанами, кафе и фастфудами Тольятти и Самары. Оставьте заявку — согласуем ассортимент, объём и условия поставки.</p>
+      <h2><?=h(landing_val('lead_title'))?></h2>
+      <p><?=h(landing_val('lead_text'))?></p>
       <form class="vLeadForm" data-lead-form>
         <input type="text" name="name" placeholder="Ваше имя" required>
         <input type="tel" name="phone" placeholder="Ваш телефон" required>
@@ -171,8 +144,8 @@ $steps = [
   <section class="vSection" id="easy">
     <div class="vSection__inner">
       <p class="vEyebrow">Готовый продукт</p>
-      <h2>Просто и удобно</h2>
-      <p class="vOffer__text">Вы получаете готовый продукт в вакуумной упаковке — остаётся разогреть и подать к столу, или использовать как ингредиент для бургеров, сэндвичей и пиццы.</p>
+      <h2><?=h(landing_val('easy_title'))?></h2>
+      <p class="vOffer__text"><?=h(landing_val('easy_text'))?></p>
     </div>
     <div class="vSection__inner vGallery vGallery--4">
       <div class="vGallery__item"><img src="assets/images/product-ribs-glazed.jpg" alt="Готовые рёбра слоу-смок"></div>
@@ -184,7 +157,7 @@ $steps = [
 
   <section class="vSection" id="faq">
     <div class="vSection__inner">
-      <h2>FAQ</h2>
+      <h2><?=h(landing_val('faq_title'))?></h2>
     </div>
     <div class="vSection__inner vFaq">
       <?php foreach ($faq as $i => $item): ?>
@@ -223,8 +196,8 @@ $steps = [
 
   <section class="vSection vLeadSection" id="lead-form-2">
     <div class="vLeadCard">
-      <h2>Оставьте заявку</h2>
-      <p>Расскажите, что вас интересует — подберём ассортимент и посчитаем стоимость партии под ваше заведение.</p>
+      <h2><?=h(landing_val('lead_title'))?></h2>
+      <p><?=h(landing_val('lead_text'))?></p>
       <form class="vLeadForm" data-lead-form>
         <input type="text" name="name" placeholder="Ваше имя" required>
         <input type="tel" name="phone" placeholder="Ваш телефон" required>
@@ -237,14 +210,14 @@ $steps = [
 
   <section class="vSection" id="order">
     <div class="vSection__inner">
-      <h2>Как заказать</h2>
+      <h2><?=h(landing_val('steps_title'))?></h2>
     </div>
     <div class="vSection__inner vSteps">
       <ol class="vSteps__list">
-        <?php $i=1; foreach ($steps as $stepTitle => $stepText): ?>
+        <?php $i=1; foreach ($steps as $step): ?>
         <li>
           <span class="vSteps__num"><?=str_pad($i,2,'0',STR_PAD_LEFT)?></span>
-          <div><h4><?=h($stepTitle)?></h4><p><?=h($stepText)?></p></div>
+          <div><h4><?=h($step[0])?></h4><p><?=h($step[1])?></p></div>
         </li>
         <?php $i++; endforeach; ?>
       </ol>
@@ -258,7 +231,7 @@ $steps = [
   <div class="vFooter__inner">
     <div class="vFooter__brand">
       <img src="assets/images/volga-logo.png" alt="Volga Smoker BBQ">
-      <p>г. Тольятти</p>
+      <p><?=h(landing_val('footer_city'))?></p>
     </div>
     <div class="vFooter__contacts">
       <a href="tel:<?=h($phoneHref)?>"><?=h($phone)?></a>

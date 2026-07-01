@@ -60,6 +60,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     }
   }
   $a=$_POST['action']??'';
+  if($a==='save_landing'){
+    $st=$pdo->prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');
+    foreach(landing_fields() as $group){ foreach($group as $k=>$def){ if(isset($_POST[$k])) $st->execute([$k, trim($_POST[$k])]); } }
+    if(!empty($_SERVER['HTTP_X_REQUESTED_WITH'])){header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true]);exit;}
+    header('Location:/admin?tab=landing'); exit;
+  }
   if($a==='save_product'){
     $id=(int)($_POST['id']??0); $img=upload_file('image') ?: ($_POST['old_image']??''); $vid=upload_file('video') ?: ($_POST['old_video']??''); $slug=trim($_POST['slug']??'') ?: slugify($_POST['name']??'product');
     if($GLOBALS['_upload_error'] && !empty($_SERVER['HTTP_X_REQUESTED_WITH'])){
@@ -436,6 +442,10 @@ $blocks=$pdo->query('SELECT * FROM page_blocks ORDER BY sort_order,id')->fetchAl
     <a data-tab="blocks" class="<?=$tab==='blocks'?'active':''?>">
       <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
       Главная
+    </a>
+    <a data-tab="landing" class="<?=$tab==='landing'?'active':''?>">
+      <svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16M4 12h10M4 19h16"/></svg>
+      Тексты лендинга
     </a>
     <a data-tab="popular" class="<?=$tab==='popular'?'active':''?>">⭐ Популярное</a>
     <a data-tab="pages" class="<?=$tab==='pages'?'active':''?>">
@@ -962,6 +972,31 @@ $crm_stats=['revenue'=>array_sum(array_column(array_filter($orders,fn($o)=>$o['s
   </div>
 </div>
 <?php endforeach;?></div><?php endif;?>
+</div>
+
+<div class="tabContent <?=$tab==='landing'?'active':''?>" id="tab-landing">
+  <div class="pageHeader">
+    <div><h1>Тексты лендинга</h1><p>Редактирование текстов главной страницы. В списках каждая строка — «Левая часть | Правая часть».</p></div>
+    <button class="btn-primary" onclick="saveLanding()">Сохранить</button>
+  </div>
+  <form id="landingForm" style="max-width:760px">
+    <?php foreach (landing_fields() as $groupName => $fields): ?>
+    <div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px">
+      <h3 style="margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)"><?=h($groupName)?></h3>
+      <?php foreach ($fields as $key => $def): [$label,$type,$default]=$def; $val=setting($key,$default); ?>
+      <label class="drawerLabel" style="display:block;margin-bottom:12px">
+        <span style="display:block;margin-bottom:5px;font-size:12px;color:var(--muted)"><?=h($label)?></span>
+        <?php if ($type==='text'): ?>
+        <input name="<?=h($key)?>" value="<?=h($val)?>" style="width:100%">
+        <?php else: ?>
+        <textarea name="<?=h($key)?>" rows="<?=$type==='list'?6:3?>" style="width:100%"><?=h($val)?></textarea>
+        <?php endif; ?>
+      </label>
+      <?php endforeach; ?>
+    </div>
+    <?php endforeach; ?>
+    <button type="button" class="btn-primary" onclick="saveLanding()">Сохранить изменения</button>
+  </form>
 </div>
 
 <div class="tabContent <?=$tab==='settings'?'active':''?>" id="tab-settings">
@@ -1499,6 +1534,17 @@ async function ajaxForm(formId){
 }
 
 // ── TABS ─────────────────────────────────────────────────────────────────
+async function saveLanding(){
+  const form=document.getElementById('landingForm');
+  const fd=new FormData(form);
+  fd.append('action','save_landing');
+  try{
+    const r=await fetch('/admin/index.php',{method:'POST',body:fd,headers:AJAX_HEADERS});
+    const d=await r.json();
+    toast(d.ok?'Тексты сохранены':'Ошибка сохранения', d.ok?'ok':'err');
+  }catch(e){ toast('Ошибка: '+e.message,'err'); }
+}
+
 document.querySelectorAll('.sidebarNav a[data-tab]').forEach(a=>{
   a.addEventListener('click', e=>{
     e.preventDefault();
