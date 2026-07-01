@@ -27,19 +27,7 @@ $title = 'Спасибо за заявку — LUKA OUTDOOR';
 </style>
 </head>
 <body>
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-   (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-   m[i].l=1*new Date();
-   for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-   k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window, document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
-   ym(109475188, 'init', {
-     clickmap:true, trackLinks:true, accurateTrackBounce:true,
-     webvisor:true, ecommerce:"dataLayer"
-   });
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/109475188" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
+<?php include __DIR__.'/includes/metrika.php'; ?>
 <?php render_topbar($pdo); ?>
 
 <main class="thanksPage">
@@ -73,7 +61,7 @@ $title = 'Спасибо за заявку — LUKA OUTDOOR';
     const total = cart.reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||1), 0);
     const items = cart.map(i=>({id:i.id, name:i.name, price:i.price, quantity:i.qty||1}));
     if(typeof ym === 'function'){
-      ym(109475188, 'reachGoal', 'purchase', {
+      ym(110312362, 'reachGoal', 'purchase', {
         order_price: total,
         currency: 'RUB',
         products: items

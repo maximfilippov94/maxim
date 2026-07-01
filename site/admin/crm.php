@@ -28,7 +28,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if($newStatus==='done' && ($oldOrder['status']??'')!=='done' && !empty($oldOrder['ym_uid'])){
       try{
         $ymData=['id'=>'luka-order-'.$orderId,'date_time'=>date('Y-m-d\TH:i:s'),'client_id'=>$oldOrder['ym_uid'],'target'=>'purchase','price'=>(float)($oldOrder['total']??0),'currency'=>'RUB'];
-        $ch=curl_init('https://api-metrika.yandex.net/management/v1/counter/109475188/offline_conversions/upload');
+        $ch=curl_init('https://api-metrika.yandex.net/management/v1/counter/110312362/offline_conversions/upload');
         curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(['conversions'=>[$ymData]]),CURLOPT_HTTPHEADER=>['Authorization: OAuth y0__wgBEKW57BcYz9BCILD7uNkXkiUmFv4ceEovyav43JHemXdvGIQ','Content-Type: application/json'],CURLOPT_TIMEOUT=>5,CURLOPT_SSL_VERIFYPEER=>false]);
         curl_exec($ch); curl_close($ch);
       }catch(Exception $e){}

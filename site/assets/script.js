@@ -1,7 +1,7 @@
 // ── Яндекс.Метрика — цели ──────────────────────────────────────────────
 function ymGoal(target, params){
   try {
-    if(typeof ym === 'function') ym(109475188, 'reachGoal', target, params||{});
+    if(typeof ym === 'function') ym(110312362, 'reachGoal', target, params||{});
   } catch(e){}
 }
 
