@@ -9,13 +9,23 @@ if(!is_admin()){
   $err=''; if($_SERVER['REQUEST_METHOD']==='POST'){ $pass=$_POST['password']??''; if(password_verify($pass, ADMIN_PASSWORD_HASH)){$_SESSION['admin']=true; header('Location:/admin'); exit;} else $err='Неверный пароль'; }
   ?><!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Вход в кабинет LUKA OUTDOOR</title><link rel="stylesheet" href="admin.css"></head><body class="loginPage"><form method="post" class="loginBox"><img src="../assets/images/luka-logo.svg" alt=""><b>LUKA OUTDOOR / ADMIN</b><h1>Вход в кабинет</h1><?php if($err):?><p class="alert"><?=$err?></p><?php endif;?><input type="password" name="password" placeholder="Пароль" required autofocus><button>Войти</button><a href="/">← Вернуться на сайт</a></form></body></html><?php exit;
 }
+$GLOBALS['_upload_error'] = '';
 function upload_file($field){
+  if(empty($_FILES[$field])) return '';
+  $err = $_FILES[$field]['error'] ?? UPLOAD_ERR_NO_FILE;
+  if($err === UPLOAD_ERR_INI_SIZE || $err === UPLOAD_ERR_FORM_SIZE){
+    $limit = ini_get('upload_max_filesize');
+    $GLOBALS['_upload_error'] = "Файл слишком большой для лимита хостинга (upload_max_filesize: {$limit}). Уменьшите размер фото и попробуйте снова.";
+    return '';
+  }
+  if($err !== UPLOAD_ERR_OK) return '';
   if(empty($_FILES[$field]['tmp_name'])) return '';
   $ext=strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
   if(!in_array($ext,['jpg','jpeg','png','webp','gif','mp4','webm'])) return '';
   $dir=__DIR__.'/../assets/uploads'; if(!is_dir($dir)) mkdir($dir,0775,true);
   $name=date('YmdHis').'-'.bin2hex(random_bytes(4)).'.'.$ext; $path=$dir.'/'.$name;
   if(move_uploaded_file($_FILES[$field]['tmp_name'],$path)) return 'assets/uploads/'.$name;
+  $GLOBALS['_upload_error'] = 'Не удалось сохранить загруженный файл на сервере (проверьте права на папку assets/uploads).';
   return '';
 }
 function upload_files($field){
@@ -40,10 +50,23 @@ if(isset($_GET['export']) && $_GET['export']==='orders'){
   exit;
 }
 if($_SERVER['REQUEST_METHOD']==='POST'){
+  // Если тело запроса превысило post_max_size на хостинге, PHP молча очищает $_POST и $_FILES.
+  if(empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH']??0) > 0){
+    $limit = ini_get('post_max_size');
+    if(!empty($_SERVER['HTTP_X_REQUESTED_WITH'])){
+      header('Content-Type: application/json; charset=utf-8');
+      echo json_encode(['ok'=>false,'error'=>"Файл(ы) слишком большие для лимита хостинга (post_max_size: {$limit}). Уменьшите размер фото и попробуйте снова."]);
+      exit;
+    }
+  }
   $a=$_POST['action']??'';
   if($a==='save_product'){
     $id=(int)($_POST['id']??0); $img=upload_file('image') ?: ($_POST['old_image']??''); $vid=upload_file('video') ?: ($_POST['old_video']??''); $slug=trim($_POST['slug']??'') ?: slugify($_POST['name']??'product');
-    $relIds=implode(',',array_filter(array_map('intval',explode(',',$_POST['related_ids']??''))));$data=[(int)$_POST['category_id'],trim($_POST['name']),$slug,trim($_POST['subtitle']??''),trim($_POST['description']??''),(int)$_POST['price'],(int)($_POST['old_price']??0),$img,$vid,trim($_POST['specs']??''),trim($_POST['dimensions']??''),trim($_POST['materials']??''),trim($_POST['assembly']??''),trim($_POST['badge']??''),trim($_POST['seo_title']??''),trim($_POST['seo_description']??''),isset($_POST['is_active'])?1:0,(int)($_POST['sort_order']??0),$relIds,(int)($_POST['cost_price']??0),(int)($_POST['weight_g']??12000),(int)($_POST['length_cm']??60),(int)($_POST['width_cm']??60),(int)($_POST['height_cm']??40)];
+    if($GLOBALS['_upload_error'] && !empty($_SERVER['HTTP_X_REQUESTED_WITH'])){
+      header('Content-Type: application/json; charset=utf-8');
+      echo json_encode(['ok'=>false,'error'=>$GLOBALS['_upload_error']]); exit;
+    }
+    $relIds=implode(',',array_filter(array_map('intval',explode(',',$_POST['related_ids']??''))));$data=[(int)$_POST['category_id'],trim($_POST['name']),$slug,trim($_POST['subtitle']??''),trim($_POST['description']??''),(int)($_POST['price']??0),(int)($_POST['old_price']??0),$img,$vid,trim($_POST['specs']??''),trim($_POST['dimensions']??''),trim($_POST['materials']??''),trim($_POST['assembly']??''),trim($_POST['badge']??''),trim($_POST['seo_title']??''),trim($_POST['seo_description']??''),isset($_POST['is_active'])?1:0,(int)($_POST['sort_order']??0),$relIds,(int)($_POST['cost_price']??0),(int)($_POST['weight_g']??12000),(int)($_POST['length_cm']??60),(int)($_POST['width_cm']??60),(int)($_POST['height_cm']??40)];
     if($id){$data[]=$id;$pdo->prepare('UPDATE products SET category_id=?,name=?,slug=?,subtitle=?,description=?,price=?,old_price=?,image=?,video=?,specs=?,dimensions=?,materials=?,assembly=?,badge=?,seo_title=?,seo_description=?,is_active=?,sort_order=?,related_ids=?,cost_price=?,weight_g=?,length_cm=?,width_cm=?,height_cm=? WHERE id=?')->execute($data);} else {$pdo->prepare('INSERT INTO products(category_id,name,slug,subtitle,description,price,old_price,image,video,specs,dimensions,materials,assembly,badge,seo_title,seo_description,is_active,sort_order,related_ids,cost_price,weight_g,length_cm,width_cm,height_cm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute($data); $id=(int)$pdo->lastInsertId();}
     if($id && !empty($_FILES['gallery']['name'][0])){
       $dir=__DIR__.'/../assets/uploads'; if(!is_dir($dir)) mkdir($dir,0775,true);
@@ -1939,7 +1962,14 @@ async function submitProductForm(){
   try{
     const fd=new FormData(form);
     const r=await fetch('/admin/index.php',{method:'POST',body:fd,headers:AJAX_HEADERS});
-    const d=await r.json();
+    const raw=await r.text();
+    let d;
+    try{ d=JSON.parse(raw); }
+    catch(parseErr){
+      throw new Error(!r.ok
+        ? `Сервер ответил ошибкой ${r.status}. Часто это лимит на размер файла на хостинге — попробуйте фото поменьше.`
+        : 'Сервер вернул пустой ответ. Возможно, файл слишком большой для лимита загрузки на хостинге — попробуйте фото поменьше.');
+    }
     if(d.ok){
       toast('Товар сохранён');
       if(d.id){
