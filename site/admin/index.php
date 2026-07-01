@@ -2,7 +2,7 @@
 require __DIR__.'/../includes/db.php'; require __DIR__.'/../includes/auth.php';
 $pdo=db();
 // Миграция products — новые поля (выполняется всегда при загрузке)
-foreach(['cost_price INTEGER DEFAULT 0','weight_g INTEGER DEFAULT 12000','length_cm INTEGER DEFAULT 60','width_cm INTEGER DEFAULT 60','height_cm INTEGER DEFAULT 40','is_popular INTEGER DEFAULT 0'] as $_col){
+foreach(['cost_price INTEGER DEFAULT 0','weight_g INTEGER DEFAULT 12000','length_cm INTEGER DEFAULT 60','width_cm INTEGER DEFAULT 60','height_cm INTEGER DEFAULT 40','is_popular INTEGER DEFAULT 0','related_ids TEXT DEFAULT \'\''] as $_col){
   try{$pdo->exec("ALTER TABLE products ADD COLUMN $_col");}catch(Exception $e){}
 }
 if(!is_admin()){
@@ -66,7 +66,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
       header('Content-Type: application/json; charset=utf-8');
       echo json_encode(['ok'=>false,'error'=>$GLOBALS['_upload_error']]); exit;
     }
-    $relIds=implode(',',array_filter(array_map('intval',explode(',',$_POST['related_ids']??''))));$data=[(int)$_POST['category_id'],trim($_POST['name']),$slug,trim($_POST['subtitle']??''),trim($_POST['description']??''),(int)($_POST['price']??0),(int)($_POST['old_price']??0),$img,$vid,trim($_POST['specs']??''),trim($_POST['dimensions']??''),trim($_POST['materials']??''),trim($_POST['assembly']??''),trim($_POST['badge']??''),trim($_POST['seo_title']??''),trim($_POST['seo_description']??''),isset($_POST['is_active'])?1:0,(int)($_POST['sort_order']??0),$relIds,(int)($_POST['cost_price']??0),(int)($_POST['weight_g']??12000),(int)($_POST['length_cm']??60),(int)($_POST['width_cm']??60),(int)($_POST['height_cm']??40)];
+    $catId=(int)($_POST['category_id']??0); $catId=$catId>0?$catId:null;
+    $relIds=implode(',',array_filter(array_map('intval',explode(',',$_POST['related_ids']??''))));$data=[$catId,trim($_POST['name']),$slug,trim($_POST['subtitle']??''),trim($_POST['description']??''),(int)($_POST['price']??0),(int)($_POST['old_price']??0),$img,$vid,trim($_POST['specs']??''),trim($_POST['dimensions']??''),trim($_POST['materials']??''),trim($_POST['assembly']??''),trim($_POST['badge']??''),trim($_POST['seo_title']??''),trim($_POST['seo_description']??''),isset($_POST['is_active'])?1:0,(int)($_POST['sort_order']??0),$relIds,(int)($_POST['cost_price']??0),(int)($_POST['weight_g']??12000),(int)($_POST['length_cm']??60),(int)($_POST['width_cm']??60),(int)($_POST['height_cm']??40)];
     if($id){$data[]=$id;$pdo->prepare('UPDATE products SET category_id=?,name=?,slug=?,subtitle=?,description=?,price=?,old_price=?,image=?,video=?,specs=?,dimensions=?,materials=?,assembly=?,badge=?,seo_title=?,seo_description=?,is_active=?,sort_order=?,related_ids=?,cost_price=?,weight_g=?,length_cm=?,width_cm=?,height_cm=? WHERE id=?')->execute($data);} else {$pdo->prepare('INSERT INTO products(category_id,name,slug,subtitle,description,price,old_price,image,video,specs,dimensions,materials,assembly,badge,seo_title,seo_description,is_active,sort_order,related_ids,cost_price,weight_g,length_cm,width_cm,height_cm) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)')->execute($data); $id=(int)$pdo->lastInsertId();}
     if($id && !empty($_FILES['gallery']['name'][0])){
       $dir=__DIR__.'/../assets/uploads'; if(!is_dir($dir)) mkdir($dir,0775,true);
@@ -105,11 +106,18 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     if(!empty($_SERVER['HTTP_X_REQUESTED_WITH'])){header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true]);exit;}
   }
   if($a==='save_product_block'){
-    $pid=(int)$_POST['product_id']; $bid=(int)($_POST['id']??0);
+    $pid=(int)($_POST['product_id']??0); $bid=(int)($_POST['id']??0);
+    $isAjax=!empty($_SERVER['HTTP_X_REQUESTED_WITH']);
+    if($pid<=0){
+      if($isAjax){header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'error'=>'Сначала сохраните товар, затем добавляйте блоки']);exit;}
+      header('Location:/admin?tab=products'); exit;
+    }
     $img=upload_file('pb_image') ?: ($_POST['old_pb_image']??'');
+    if($GLOBALS['_upload_error'] && $isAjax){header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>false,'error'=>$GLOBALS['_upload_error']]);exit;}
     $data=[trim($_POST['pb_type']??'how'),trim($_POST['pb_title']??''),trim($_POST['pb_subtitle']??''),trim($_POST['pb_text']??''),$img,trim($_POST['pb_extra']??''),(int)($_POST['pb_sort']??10),isset($_POST['pb_active'])?1:0,$pid];
     if($bid){$data[]=$bid;$pdo->prepare('UPDATE product_blocks SET type=?,title=?,subtitle=?,text=?,image=?,extra=?,sort_order=?,is_active=?,product_id=? WHERE id=?')->execute($data);}
     else{$pdo->prepare('INSERT INTO product_blocks(type,title,subtitle,text,image,extra,sort_order,is_active,product_id) VALUES(?,?,?,?,?,?,?,?,?)')->execute($data);}
+    if($isAjax){header('Content-Type: application/json; charset=utf-8');echo json_encode(['ok'=>true]);exit;}
     header('Location:/admin?tab=products'); exit;
   }
   if($a==='delete_product_block'){$pdo->prepare('DELETE FROM product_blocks WHERE id=?')->execute([(int)$_POST['id']]);}
@@ -1224,24 +1232,14 @@ $totalMargin = $totalRevenue > 0 ? round($totalProfit/$totalRevenue*100) : 0;
       </div>
       <!-- Основное -->
       <div class="drawerTabPanel active" data-tab="main">
-        <div class="drawerRow" style="margin-bottom:10px">
-          <label class="drawerLabel">Раздел
-            <select id="pf_parent_cat" onchange="pfFilterSubcats(this.value)">
-              <option value="">— Выберите раздел —</option>
-              <?php foreach($cats as $c): if(empty($c['parent_id'])): ?>
-              <option value="<?=$c['id']?>"><?=h($c['name'])?></option>
-              <?php endif; endforeach; ?>
-            </select>
-          </label>
-          <label class="drawerLabel">Подкатегория
-            <select name="category_id" id="pf_category_id">
-              <option value="">— Выберите —</option>
-              <?php foreach($cats as $c): if(!empty($c['parent_id'])): ?>
-              <option value="<?=$c['id']?>" data-parent="<?=$c['parent_id']?>"><?=h($c['name'])?></option>
-              <?php endif; endforeach; ?>
-            </select>
-          </label>
-        </div>
+        <label class="drawerLabel" style="margin-bottom:10px">Категория *
+          <select name="category_id" id="pf_category_id" required>
+            <option value="">— Выберите категорию —</option>
+            <?php foreach($cats as $c): ?>
+            <option value="<?=$c['id']?>" data-parent="<?=(int)($c['parent_id']??0)?>"><?=!empty($c['parent_id'])?'— ':''?><?=h($c['name'])?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
         <label class="drawerLabel">Название *<input name="name" id="pf_name" required placeholder="VOLGA FIRE BASE PRO"></label>
         <label class="drawerLabel">Slug URL<input name="slug" id="pf_slug" placeholder="volga-fire-base-pro"></label>
         <label class="drawerLabel">Подзаголовок<input name="subtitle" id="pf_subtitle"></label>
@@ -1294,21 +1292,21 @@ $totalMargin = $totalRevenue > 0 ? round($totalProfit/$totalRevenue*100) : 0;
         <div id="pf_blocks_list" style="margin-bottom:12px"></div>
         <button type="button" class="btn-ghost" style="width:100%;justify-content:center" onclick="addPbBlock()">+ Добавить блок к товару</button>
         <div id="pbBlockEditor" style="display:none;background:var(--panel);border:1px solid var(--line2);border-radius:7px;padding:16px;margin-top:12px">
-          <form id="pbBlockForm" enctype="multipart/form-data">
-            <input type="hidden" name="action" value="save_product_block">
-            <input type="hidden" name="product_id" id="pb_product_id">
-            <input type="hidden" name="id" id="pb_id">
-            <input type="hidden" name="old_pb_image" id="pb_old_image">
-            <label class="drawerLabel">Тип<select name="pb_type" id="pb_type"><option value="included">Комплектация</option><option value="how">Как использовать</option><option value="features">Преимущества</option><option value="lifestyle">Lifestyle фото</option></select></label>
-            <label class="drawerLabel">Заголовок<input name="pb_title" id="pb_title"></label>
-            <label class="drawerLabel">Текст<textarea name="pb_text" id="pb_text" rows="2"></textarea></label>
-            <label class="drawerLabel">Пункты через |<input name="pb_extra" id="pb_extra" placeholder="Шаг 1|Шаг 2|Шаг 3"></label>
-            <label class="drawerLabel">Фото<input type="file" name="pb_image" accept="image/*"></label>
+          <!-- NB: не <form> — этот блок находится внутри #productForm, вложенные формы недопустимы в HTML -->
+          <div id="pbBlockForm">
+            <input type="hidden" id="pb_product_id">
+            <input type="hidden" id="pb_id">
+            <input type="hidden" id="pb_old_image">
+            <label class="drawerLabel">Тип<select id="pb_type"><option value="included">Комплектация</option><option value="how">Как использовать</option><option value="features">Преимущества</option><option value="lifestyle">Lifestyle фото</option></select></label>
+            <label class="drawerLabel">Заголовок<input id="pb_title"></label>
+            <label class="drawerLabel">Текст<textarea id="pb_text" rows="2"></textarea></label>
+            <label class="drawerLabel">Пункты через |<input id="pb_extra" placeholder="Шаг 1|Шаг 2|Шаг 3"></label>
+            <label class="drawerLabel">Фото<input type="file" id="pb_image" accept="image/*"></label>
             <div style="display:flex;gap:8px;margin-top:12px">
               <button type="button" class="btn-primary" onclick="submitPbBlock()">Сохранить блок</button>
               <button type="button" class="btn-ghost" onclick="document.getElementById('pbBlockEditor').style.display='none'">Отмена</button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </form>
@@ -1886,12 +1884,8 @@ function openProductDrawer(p){
     const preview=document.getElementById('pf_photo_preview');
     if(p.image){ preview.innerHTML=`<img src="../${p.image}">`; }
     else preview.innerHTML='<span>Нет фото</span>';
-    // Category — двухуровневый выбор
-    const subOpt = document.querySelector('#pf_category_id option[value="'+p.category_id+'"]');
-    const parentId = subOpt ? subOpt.dataset.parent : '';
-    const parentSel = document.getElementById('pf_parent_cat');
-    if(parentSel){ parentSel.value = parentId||''; pfFilterSubcats(parentId||'', p.category_id); }
-    else { document.getElementById('pf_category_id').value = p.category_id; }
+    // Category — плоский список категорий
+    document.getElementById('pf_category_id').value = p.category_id || '';
     // Delete btn
     document.getElementById('productDeleteBtn').style.display='block';
     document.getElementById('productDeleteBtn').dataset.id=p.id;
@@ -1902,8 +1896,7 @@ function openProductDrawer(p){
     document.getElementById('productForm').reset();
     document.getElementById('pf_id').value='';
     document.getElementById('pf_photo_preview').innerHTML='<span>Нет фото</span>';
-    const ps = document.getElementById('pf_parent_cat');
-    if(ps){ ps.value=''; pfFilterSubcats(''); }
+    document.getElementById('pf_category_id').value='';
     document.getElementById('productDeleteBtn').style.display='none';
     document.getElementById('pf_blocks_list').innerHTML='<p style="color:var(--muted);font-size:13px">Сохраните товар, чтобы добавить блоки</p>';
   }
@@ -1953,6 +1946,33 @@ function previewImg(input, previewId){
   r.readAsDataURL(input.files[0]);
 }
 
+// Уменьшаем и пережимаем фото прямо в браузере, чтобы уложиться в лимит загрузки хостинга
+function compressImage(file, maxSize=1920, quality=0.85){
+  return new Promise((resolve)=>{
+    if(!file || !file.type || file.type.indexOf('image/')!==0){ resolve(file); return; }
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let w=img.naturalWidth, h=img.naturalHeight;
+      if(w>maxSize||h>maxSize){
+        if(w>=h){ h=Math.round(h*maxSize/w); w=maxSize; }
+        else { w=Math.round(w*maxSize/h); h=maxSize; }
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      if(!canvas.toBlob){ resolve(file); return; }
+      canvas.toBlob((blob)=>{
+        // используем сжатую версию, если она меньше исходника
+        resolve((blob && blob.size < file.size) ? blob : file);
+      }, 'image/jpeg', quality);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); resolve(file); };
+    img.src=url;
+  });
+}
+
 async function submitProductForm(){
   const form=document.getElementById('productForm');
   const btn=document.getElementById('productSaveBtn');
@@ -1961,6 +1981,18 @@ async function submitProductForm(){
   status.style.display='none';
   try{
     const fd=new FormData(form);
+    // Пережимаем главное фото и галерею в браузере (обходит лимит upload_max_filesize на хостинге)
+    const imgInput=form.querySelector('input[name="image"]');
+    if(imgInput && imgInput.files[0]){
+      fd.set('image', await compressImage(imgInput.files[0]), 'photo.jpg');
+    }
+    const galInput=form.querySelector('input[name="gallery[]"]');
+    if(galInput && galInput.files.length){
+      fd.delete('gallery[]');
+      for(let i=0;i<galInput.files.length;i++){
+        fd.append('gallery[]', await compressImage(galInput.files[i]), 'photo'+(i+1)+'.jpg');
+      }
+    }
     const r=await fetch('/admin/index.php',{method:'POST',body:fd,headers:AJAX_HEADERS});
     const raw=await r.text();
     let d;
@@ -2076,9 +2108,23 @@ function editPbBlock(b){
   document.getElementById('pbBlockEditor').style.display='block';
 }
 async function submitPbBlock(){
-  const fd=new FormData(document.getElementById('pbBlockForm'));
+  const pid=document.getElementById('pb_product_id').value||document.getElementById('pf_id').value;
+  const fd=new FormData();
+  fd.append('action','save_product_block');
+  fd.append('product_id', pid||'');
+  fd.append('id', document.getElementById('pb_id').value||'');
+  fd.append('old_pb_image', document.getElementById('pb_old_image').value||'');
+  fd.append('pb_type', document.getElementById('pb_type').value||'how');
+  fd.append('pb_title', document.getElementById('pb_title').value||'');
+  fd.append('pb_text', document.getElementById('pb_text').value||'');
+  fd.append('pb_extra', document.getElementById('pb_extra').value||'');
+  const pbImg=document.getElementById('pb_image');
+  if(pbImg && pbImg.files[0]) fd.append('pb_image', await compressImage(pbImg.files[0]), 'block.jpg');
   const r=await fetch('/admin/index.php',{method:'POST',body:fd,headers:AJAX_HEADERS});
-  const d=await r.json();
+  const raw=await r.text();
+  let d;
+  try{ d=JSON.parse(raw); }
+  catch(e){ toast('Не удалось сохранить блок (ответ сервера некорректен)','err'); return; }
   if(d.ok){
     toast('Блок сохранён');
     document.getElementById('pbBlockEditor').style.display='none';
