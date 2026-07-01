@@ -1,9 +1,12 @@
 <?php
-// Secure session cookie settings (HTTPS-only, no JS access)
+// Secure session cookie settings (HTTPS-only when the site is actually served over HTTPS, no JS access)
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+    || (($_SERVER['SERVER_PORT'] ?? '') == 443);
 session_set_cookie_params([
     'lifetime' => 0,
     'path'     => '/',
-    'secure'   => true,
+    'secure'   => $isHttps,
     'httponly' => true,
     'samesite' => 'Strict',
 ]);
