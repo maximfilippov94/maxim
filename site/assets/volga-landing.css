@@ -41,16 +41,19 @@
 .vHero {
   position: relative; overflow: hidden;
   padding: 64px 24px 72px;
-  background: radial-gradient(circle at 78% 0%, rgba(201,121,43,.22), transparent 40%),
-              radial-gradient(circle at 10% 90%, rgba(201,121,43,.12), transparent 45%),
-              var(--bg);
+  background-size: cover; background-position: center;
+}
+.vHero__overlay {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 78% 0%, rgba(201,121,43,.25), transparent 40%),
+              linear-gradient(90deg, rgba(5,5,5,.94) 0%, rgba(5,5,5,.82) 45%, rgba(5,5,5,.55) 100%);
 }
 .vHero__bull {
   position: absolute; right: -60px; top: 50%; transform: translateY(-50%);
-  width: 420px; opacity: .10; pointer-events: none;
+  width: 420px; opacity: .16; pointer-events: none; z-index: 1;
 }
 .vHero__bull img { width: 100%; }
-.vHero__inner { max-width: var(--max); margin: 0 auto; position: relative; z-index: 1; }
+.vHero__inner { max-width: var(--max); margin: 0 auto; position: relative; z-index: 2; }
 .vHero__title {
   font-family: var(--head); font-weight: 400; text-transform: uppercase;
   font-size: clamp(48px, 8vw, 96px); line-height: .92; letter-spacing: .01em;
@@ -84,8 +87,32 @@
 .vAdvantages__media {
   border-radius: var(--radius-lg); min-height: 320px;
   background: radial-gradient(circle at 40% 30%, rgba(201,121,43,.28), transparent 60%), var(--surface2);
+  background-size: cover; background-position: center;
   border: 1px solid var(--line);
 }
+
+/* ── Gallery ────────────────────────────────────────── */
+.vGallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+.vGallery--4 { grid-template-columns: repeat(4, 1fr); }
+.vGallery__item {
+  position: relative; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--line);
+  aspect-ratio: 4/3;
+}
+.vGallery__item img { width: 100%; height: 100%; object-fit: cover; }
+.vGallery__item span {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 12px;
+  background: linear-gradient(0deg, rgba(0,0,0,.75), transparent);
+  color: var(--soft); font-size: 12px;
+}
+
+/* ── Product group ──────────────────────────────────── */
+.vProductGroup { margin-top: 32px; }
+.vProductGroup:first-of-type { margin-top: 16px; }
+.vProductGroup__title {
+  font-family: var(--head); font-weight: 400; text-transform: uppercase;
+  font-size: 22px; color: var(--text); margin: 0 0 16px;
+}
+.vProductGroup__title span { color: var(--copper2); }
 .vAdvantages__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; grid-template-columns: 1fr 1fr; }
 .vAdvantages__list li { border-top: 1px solid var(--line); padding-top: 14px; }
 .vAdvantages__list h4 { color: var(--text); font-size: 15px; margin: 0 0 6px; text-transform: uppercase; letter-spacing: .02em; }
@@ -116,6 +143,7 @@
 .vVideoBlock {
   position: relative; border-radius: var(--radius-lg); min-height: 340px;
   background: radial-gradient(circle at 50% 40%, rgba(201,121,43,.22), transparent 65%), var(--surface2);
+  background-size: cover; background-position: center;
   border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
 }
 .vVideoBlock__play {
@@ -159,6 +187,7 @@
 .vSteps__media {
   border-radius: var(--radius-lg); min-height: 320px;
   background: radial-gradient(circle at 60% 30%, rgba(201,121,43,.22), transparent 60%), var(--surface2);
+  background-size: cover; background-position: center;
   border: 1px solid var(--line);
 }
 
@@ -179,6 +208,7 @@
   .vProducts { grid-template-columns: repeat(2, 1fr); }
   .vAdvantages__list { grid-template-columns: 1fr; }
   .vAdvantages__media, .vSteps__media { order: -1; min-height: 220px; }
+  .vGallery, .vGallery--4 { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 520px) {
   .vProducts { grid-template-columns: repeat(2, 1fr); }

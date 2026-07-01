@@ -7,7 +7,19 @@ $desc  = setting('site_description', 'Мясные полуфабрикаты с
 $phone = setting('phone', '+7 000 000-00-00');
 $phoneHref = preg_replace('~[^0-9+]~', '', $phone);
 
-$products = $pdo->query("SELECT p.* FROM products p LEFT JOIN categories c ON c.id=p.category_id WHERE p.is_active=1 ORDER BY p.sort_order,p.id")->fetchAll(PDO::FETCH_ASSOC);
+$categories = $pdo->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order,id")->fetchAll(PDO::FETCH_ASSOC);
+$productsByCat = [];
+foreach ($categories as $c) {
+    $st = $pdo->prepare("SELECT * FROM products WHERE is_active=1 AND category_id=? ORDER BY sort_order,id");
+    $st->execute([$c['id']]);
+    $productsByCat[$c['id']] = $st->fetchAll(PDO::FETCH_ASSOC);
+}
+
+$gallery = [
+    ['assets/images/gallery/grate-raw-ribs.jpg', 'На решётке смокера'],
+    ['assets/images/gallery/grate-hand.jpg', 'Контроль готовности'],
+    ['assets/images/gallery/seasoning-crop.jpg', 'Сухой посол перед томлением'],
+];
 
 $faq = [
     ['Какой минимальный объём заказа для опта?', 'Минимальный объём обсуждается индивидуально при первой заявке — подберём партию под формат вашего заведения.'],
@@ -58,7 +70,8 @@ $steps = [
 
 <main id="top">
 
-  <section class="vHero">
+  <section class="vHero" style="background-image:url('assets/images/hero-ribs-board.jpg')">
+    <div class="vHero__overlay" aria-hidden="true"></div>
     <div class="vHero__bull" aria-hidden="true"><img src="assets/images/volga-logo.png" alt=""></div>
     <div class="vHero__inner">
       <p class="vEyebrow">Погрузитесь в аромат<br>техасского копчения</p>
@@ -98,13 +111,25 @@ $steps = [
     </div>
   </section>
 
+  <section class="vSection" id="technology">
+    <div class="vSection__inner">
+      <p class="vEyebrow">Наш процесс</p>
+      <h2>Уникальная технология</h2>
+    </div>
+    <div class="vSection__inner vGallery">
+      <?php foreach ($gallery as $g): ?>
+      <div class="vGallery__item"><img src="<?=h($g[0])?>" alt="<?=h($g[1])?>"><span><?=h($g[1])?></span></div>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
   <section class="vSection" id="advantages">
     <div class="vSection__inner">
       <p class="vEyebrow">Почему мы</p>
       <h2>Преимущества работы с нами</h2>
     </div>
     <div class="vSection__inner vAdvantages">
-      <div class="vAdvantages__media" aria-hidden="true"></div>
+      <div class="vAdvantages__media" aria-hidden="true" style="background-image:url('assets/images/brisket-slicing.jpg')"></div>
       <ul class="vAdvantages__list">
         <li><h4>Экономите на персонале</h4><p>Не нужен повар-мастер по смокингу и копчению в штате.</p></li>
         <li><h4>Экономите площадь кухни</h4><p>Не нужны печь-смокер и место для многочасового томления.</p></li>
@@ -143,6 +168,20 @@ $steps = [
     </div>
   </section>
 
+  <section class="vSection" id="easy">
+    <div class="vSection__inner">
+      <p class="vEyebrow">Готовый продукт</p>
+      <h2>Просто и удобно</h2>
+      <p class="vOffer__text">Вы получаете готовый продукт в вакуумной упаковке — остаётся разогреть и подать к столу, или использовать как ингредиент для бургеров, сэндвичей и пиццы.</p>
+    </div>
+    <div class="vSection__inner vGallery vGallery--4">
+      <div class="vGallery__item"><img src="assets/images/product-ribs-glazed.jpg" alt="Готовые рёбра слоу-смок"></div>
+      <div class="vGallery__item"><img src="assets/images/product-brisket-pack.jpg" alt="Брискет в вакуумной упаковке"></div>
+      <div class="vGallery__item"><img src="assets/images/product-pulled-beef-pack.jpg" alt="Рваная говядина в вакуумной упаковке"></div>
+      <div class="vGallery__item"><img src="assets/images/brisket-bark.jpg" alt="Брискет слоу-смок"></div>
+    </div>
+  </section>
+
   <section class="vSection" id="faq">
     <div class="vSection__inner">
       <h2>FAQ</h2>
@@ -165,16 +204,21 @@ $steps = [
       <p class="vEyebrow">Ассортимент</p>
       <h2>Продукция</h2>
     </div>
-    <div class="vSection__inner vProducts">
-      <?php foreach ($products as $p): ?>
-      <div class="vProductCard">
-        <div class="vProductCard__media"><img src="<?=h($p['image'])?>" alt="<?=h($p['name'])?>"></div>
-        <h3><?=h($p['name'])?></h3>
-        <p class="vProductCard__price"><?= (int)$p['price'] > 0 ? h(money($p['price'])) : 'Цена по запросу' ?></p>
-        <a class="btn btn--accent btn--sm" href="#lead-form-2">Заказать</a>
+    <?php foreach ($categories as $cat): if (empty($productsByCat[$cat['id']])) continue; ?>
+    <div class="vSection__inner vProductGroup">
+      <h3 class="vProductGroup__title">Продукция <span>|</span> <?=h($cat['name'])?></h3>
+      <div class="vProducts">
+        <?php foreach ($productsByCat[$cat['id']] as $p): ?>
+        <div class="vProductCard">
+          <div class="vProductCard__media"><img src="<?=h($p['image'])?>" alt="<?=h($p['name'])?>"></div>
+          <h3><?=h($p['name'])?></h3>
+          <p class="vProductCard__price"><?= (int)$p['price'] > 0 ? h(money($p['price'])).'/кг' : 'Цена по запросу' ?></p>
+          <a class="btn btn--accent btn--sm" href="#lead-form-2">Заказать</a>
+        </div>
+        <?php endforeach; ?>
       </div>
-      <?php endforeach; ?>
     </div>
+    <?php endforeach; ?>
   </section>
 
   <section class="vSection vLeadSection" id="lead-form-2">
@@ -204,7 +248,7 @@ $steps = [
         </li>
         <?php $i++; endforeach; ?>
       </ol>
-      <div class="vSteps__media" aria-hidden="true"></div>
+      <div class="vSteps__media" aria-hidden="true" style="background-image:url('assets/images/brisket-bark.jpg')"></div>
     </div>
   </section>
 
