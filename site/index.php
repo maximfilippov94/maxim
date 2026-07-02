@@ -7,6 +7,12 @@ $desc  = setting('site_description', 'Мясные полуфабрикаты с
 $phone = setting('phone', '+7 000 000-00-00');
 $phoneHref = preg_replace('~[^0-9+]~', '', $phone);
 
+$tg = trim(landing_val('footer_telegram'));
+$tgUser = ltrim($tg, '@');
+$tgHref = preg_match('~^https?://~', $tg) ? $tg : 'https://t.me/'.$tgUser;
+$tgLabel = preg_match('~^https?://~', $tg) ? $tg : '@'.$tgUser;
+$email = trim(landing_val('footer_email'));
+
 $categories = $pdo->query("SELECT * FROM categories WHERE is_active=1 ORDER BY sort_order,id")->fetchAll(PDO::FETCH_ASSOC);
 $productsByCat = [];
 foreach ($categories as $c) {
@@ -40,7 +46,7 @@ $steps = landing_list('steps_items');
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css?v=1">
-<link rel="stylesheet" href="assets/volga-landing.css?v=3">
+<link rel="stylesheet" href="assets/volga-landing.css?v=4">
 <?php include __DIR__.'/includes/metrika.php'; ?>
 </head>
 <body class="volgaPage">
@@ -226,6 +232,39 @@ $steps = landing_list('steps_items');
     </div>
   </section>
 
+  <section class="vSection" id="contacts">
+    <div class="vSection__inner">
+      <p class="vEyebrow">Свяжитесь с нами</p>
+      <h2>Контакты</h2>
+    </div>
+    <div class="vSection__inner vContacts">
+      <a class="vContactCard" href="tel:<?=h($phoneHref)?>">
+        <span class="vContactCard__icon">📞</span>
+        <span class="vContactCard__label">Телефон</span>
+        <span class="vContactCard__value"><?=h($phone)?></span>
+      </a>
+      <?php if ($tgUser !== ''): ?>
+      <a class="vContactCard" href="<?=h($tgHref)?>" target="_blank" rel="noopener">
+        <span class="vContactCard__icon">✈️</span>
+        <span class="vContactCard__label">Telegram</span>
+        <span class="vContactCard__value"><?=h($tgLabel)?></span>
+      </a>
+      <?php endif; ?>
+      <?php if ($email !== ''): ?>
+      <a class="vContactCard" href="mailto:<?=h($email)?>">
+        <span class="vContactCard__icon">✉️</span>
+        <span class="vContactCard__label">Почта</span>
+        <span class="vContactCard__value"><?=h($email)?></span>
+      </a>
+      <?php endif; ?>
+      <div class="vContactCard vContactCard--static">
+        <span class="vContactCard__icon">📍</span>
+        <span class="vContactCard__label">Город</span>
+        <span class="vContactCard__value"><?=h(landing_val('footer_city'))?></span>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer class="vFooter">
@@ -236,11 +275,13 @@ $steps = landing_list('steps_items');
     </div>
     <div class="vFooter__contacts">
       <a href="tel:<?=h($phoneHref)?>"><?=h($phone)?></a>
+      <?php if ($tgUser !== ''): ?><a href="<?=h($tgHref)?>" target="_blank" rel="noopener"><?=h($tgLabel)?></a><?php endif; ?>
+      <?php if ($email !== ''): ?><a href="mailto:<?=h($email)?>"><?=h($email)?></a><?php endif; ?>
     </div>
     <a class="btn btn--accent" href="#lead-form-1">Оставить заявку</a>
   </div>
 </footer>
 
-<script src="assets/volga-landing.js?v=1"></script>
+<script src="assets/volga-landing.js?v=2"></script>
 </body>
 </html>

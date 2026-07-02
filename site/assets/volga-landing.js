@@ -24,7 +24,11 @@
         .then(function (data) {
           status.textContent = data.message || '';
           status.classList.add(data.ok ? 'is-success' : 'is-error');
-          if (data.ok) form.reset();
+          if (data.ok) {
+            form.reset();
+            // Цель Яндекс.Метрики на успешную отправку заявки
+            if (typeof ym === 'function') ym(110312362, 'reachGoal', 'lead');
+          }
         })
         .catch(function () {
           status.textContent = 'Не удалось отправить заявку, попробуйте позже';

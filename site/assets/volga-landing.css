@@ -207,6 +207,23 @@
   border: 1px solid var(--line);
 }
 
+/* ── Contacts ───────────────────────────────────────── */
+.vContacts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 16px; }
+.vContactCard {
+  display: flex; flex-direction: column; gap: 6px;
+  background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  backdrop-filter: blur(16px) saturate(120%);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--radius-lg); padding: 22px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+  transition: transform var(--transition-base), border-color var(--transition-base);
+}
+a.vContactCard:hover { transform: translateY(-3px); border-color: rgba(232,154,66,.45); }
+.vContactCard__icon { font-size: 26px; }
+.vContactCard__label { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.vContactCard__value { font-size: 17px; font-weight: 700; color: var(--text); word-break: break-word; }
+
 /* ── Footer ─────────────────────────────────────────── */
 .vFooter { border-top: 1px solid var(--line); padding: 32px 24px; }
 .vFooter__inner {
@@ -215,7 +232,9 @@
 .vFooter__brand { display: flex; align-items: center; gap: 12px; }
 .vFooter__brand img { height: 40px; width: 40px; object-fit: contain; }
 .vFooter__brand p { color: var(--muted); font-size: 13px; margin: 0; }
+.vFooter__contacts { display: flex; flex-direction: column; gap: 4px; }
 .vFooter__contacts a { color: var(--text); font-weight: 700; }
+.vFooter__contacts a:hover { color: var(--copper2); }
 
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -225,9 +244,11 @@
   .vAdvantages__list { grid-template-columns: 1fr; }
   .vAdvantages__media, .vSteps__media { order: -1; min-height: 220px; }
   .vGallery, .vGallery--4 { grid-template-columns: repeat(2, 1fr); }
+  .vContacts { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 520px) {
   .vProducts { grid-template-columns: 1fr; }
+  .vContacts { grid-template-columns: 1fr; }
   .vHero { padding: 48px 16px 56px; }
   .vSection { padding: 40px 16px; }
   .vLeadCard { padding: 28px 20px; }
