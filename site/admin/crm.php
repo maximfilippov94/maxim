@@ -1,6 +1,6 @@
 <?php
 /**
- * admin/crm.php — LUKA OUTDOOR — Standalone CRM (orders & customers)
+ * admin/crm.php — Фанера63.рф — Standalone CRM (orders & customers)
  */
 require __DIR__.'/../includes/db.php'; require __DIR__.'/../includes/auth.php';
 $pdo=db();
@@ -27,7 +27,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     // офлайн-конверсия в Яндекс.Метрику при переводе в "Готово"
     if($newStatus==='done' && ($oldOrder['status']??'')!=='done' && !empty($oldOrder['ym_uid'])){
       try{
-        $ymData=['id'=>'luka-order-'.$orderId,'date_time'=>date('Y-m-d\TH:i:s'),'client_id'=>$oldOrder['ym_uid'],'target'=>'purchase','price'=>(float)($oldOrder['total']??0),'currency'=>'RUB'];
+        $ymData=['id'=>'fanera63-order-'.$orderId,'date_time'=>date('Y-m-d\TH:i:s'),'client_id'=>$oldOrder['ym_uid'],'target'=>'purchase','price'=>(float)($oldOrder['total']??0),'currency'=>'RUB'];
         $ch=curl_init('https://api-metrika.yandex.net/management/v1/counter/109475188/offline_conversions/upload');
         curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(['conversions'=>[$ymData]]),CURLOPT_HTTPHEADER=>['Authorization: OAuth y0__wgBEKW57BcYz9BCILD7uNkXkiUmFv4ceEovyav43JHemXdvGIQ','Content-Type: application/json'],CURLOPT_TIMEOUT=>5,CURLOPT_SSL_VERIFYPEER=>false]);
         curl_exec($ch); curl_close($ch);
@@ -47,7 +47,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 // ── CSV export ──────────────────────────────────────────────────────────
 if(isset($_GET['export']) && $_GET['export']==='orders'){
-  header('Content-Type:text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="luka-orders.csv"');
+  header('Content-Type:text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename="fanera63-orders.csv"');
   $out=fopen('php://output','w'); fwrite($out,"\xEF\xBB\xBF");
   fputcsv($out,['id','date','status','name','phone','city','total','comment','items','manager_note'],';');
   $orders=$pdo->query("SELECT * FROM orders ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
@@ -96,7 +96,7 @@ function search_blob($o,$prev){ return mb_strtolower(($o['customer_name']??'').'
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LUKA / CRM</title>
+<title>Фанера63 / CRM</title>
 <link rel="stylesheet" href="admin.css">
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('adminTheme')||'dark')</script>
 </head>
@@ -106,7 +106,7 @@ function search_blob($o,$prev){ return mb_strtolower(($o['customer_name']??'').'
 <!-- SIDEBAR -->
 <div class="sidebarBackdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 <aside class="sidebar" id="sidebar">
-  <div class="sidebarLogo"><div class="sidebarLogoMark">L</div><span>LUKA<br>OUTDOOR<br>CRM</span></div>
+  <div class="sidebarLogo"><div class="sidebarLogoMark">Ф</div><span>ФАНЕРА63<br>.РФ<br>CRM</span></div>
   <nav class="sidebarNav">
     <a class="active"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Заказы<?php if(count($byStatus['new'])):?><span class="sideBadge"><?=count($byStatus['new'])?></span><?php endif;?></a>
     <a href="/admin/index.php"><svg class="navIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> CMS / Контент</a>

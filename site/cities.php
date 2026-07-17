@@ -5,8 +5,8 @@ $pdo = db();
 
 require __DIR__.'/includes/cities_data.php';
 
-$title = 'Доставка по России — LUKA OUTDOOR';
-$desc  = 'Доставляем костровые чаши и outdoor снаряжение во все города России через СДЭК. Выберите ваш город.';
+$title = 'Доставка по России — Фанера63.рф';
+$desc  = 'Доставляем фанеру, ОСБ и плитные материалы по Тольятти и области, а также через СДЭК в другие города. Выберите ваш город.';
 ?>
 <!doctype html>
 <html lang="ru">
@@ -14,12 +14,12 @@ $desc  = 'Доставляем костровые чаши и outdoor снаря
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=h($title)?></title>
 <meta name="description" content="<?=h($desc)?>">
-<link rel="canonical" href="https://lukaoutdoor.com/cities.php">
+<link rel="canonical" href="https://fanera63.ru/cities.php">
 <link rel="icon" type="image/png" href="/assets/images/favicon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=6.2.0">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css?v=8.0.0">
 <style>
 .citiesPage { width: min(var(--max), calc(100vw - 120px)); margin: 0 auto; padding: 120px 0 100px; }
 .citiesHeader { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(243,241,236,.08); }
@@ -145,6 +145,6 @@ $desc  = 'Доставляем костровые чаши и outdoor снаря
 
 <?php render_footer($pdo); ?>
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="/assets/script.js?v=6.2.0"></script>
+<script src="/assets/script.js?v=8.0.0"></script>
 </body>
 </html>

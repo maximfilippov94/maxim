@@ -1,6 +1,6 @@
 <?php
 /**
- * review.php — LUKA OUTDOOR
+ * review.php — Фанера63.рф
  * Приём и сохранение отзывов
  */
 require __DIR__.'/includes/db.php';

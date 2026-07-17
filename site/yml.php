@@ -1,13 +1,13 @@
 <?php
 /**
  * YML-фид для Яндекс.Директ / Яндекс.Маркет
- * URL: https://lukaoutdoor.com/yml.php
+ * URL: https://fanera63.ru/yml.php
  * Обновляется в реальном времени из базы данных
  */
 require __DIR__.'/includes/db.php';
 $pdo = db();
 
-$baseUrl = 'https://lukaoutdoor.com';
+$baseUrl = 'https://fanera63.ru';
 
 // Получаем все активные категории
 $categories = $pdo->query("
@@ -45,7 +45,7 @@ try {
 } catch (Exception $e) {
     $settings = [];
 }
-$shopName  = $settings['site_title'] ?? 'LUKA OUTDOOR';
+$shopName  = $settings['site_title'] ?? 'Фанера63.рф';
 $shopPhone = $settings['phone'] ?? '';
 
 header('Content-Type: application/xml; charset=UTF-8');
@@ -57,7 +57,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <yml_catalog date="<?=date('Y-m-d H:i')?>">
   <shop>
     <name><?=htmlspecialchars($shopName, ENT_XML1)?></name>
-    <company>LUKA OUTDOOR</company>
+    <company>Фанера63.рф</company>
     <url><?=$baseUrl?>/</url>
 
     <currencies>
@@ -115,7 +115,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         <picture><?=htmlspecialchars($baseUrl . '/' . $img, ENT_XML1)?></picture>
 <?php endforeach; ?>
         <description><![CDATA[<?=htmlspecialchars($description, ENT_XML1)?>]]></description>
-        <vendor>LUKA OUTDOOR</vendor>
+        <vendor>Фанера63.рф</vendor>
         <vendorCode>LO-<?=(int)$p['id']?></vendorCode>
         <delivery>true</delivery>
         <pickup>false</pickup>
@@ -129,7 +129,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 <?php endif; ?>
         <param name="Материал">Сталь</param>
         <param name="Ручная работа">Да</param>
-        <param name="Бренд">LUKA OUTDOOR</param>
+        <param name="Бренд">Фанера63.рф</param>
       </offer>
 <?php endforeach; ?>
     </offers>

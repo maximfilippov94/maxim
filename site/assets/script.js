@@ -5,9 +5,9 @@ function ymGoal(target, params){
   } catch(e){}
 }
 
-let cart = JSON.parse(localStorage.getItem('luka_cart') || '[]');
+let cart = JSON.parse(localStorage.getItem('fanera63_cart') || '[]');
 const fmt = n => new Intl.NumberFormat('ru-RU').format(Number(n || 0)) + ' ₽';
-function saveCart(){ localStorage.setItem('luka_cart', JSON.stringify(cart)); renderCart(); }
+function saveCart(){ localStorage.setItem('fanera63_cart', JSON.stringify(cart)); renderCart(); }
 function showToast(message='Добавлено в корзину'){ const t=document.getElementById('cartToast'); if(!t) return; t.textContent=message; t.classList.add('show'); clearTimeout(window.__cartToastTimer); window.__cartToastTimer=setTimeout(()=>t.classList.remove('show'),1800); }
 function addToCart(p, btn){
   const item=cart.find(x=>String(x.id)===String(p.id));
@@ -93,10 +93,10 @@ document.addEventListener('click',e=>{ const btn=e.target.closest('.chip'); if(!
   const keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
   const utm = {};
   keys.forEach(k=>{ if(p.get(k)) utm[k]=p.get(k); });
-  if(Object.keys(utm).length) sessionStorage.setItem('luka_utm', JSON.stringify(utm));
+  if(Object.keys(utm).length) sessionStorage.setItem('fanera63_utm', JSON.stringify(utm));
 })();
 function getUtmFields(){
-  const utm = JSON.parse(sessionStorage.getItem('luka_utm')||'{}');
+  const utm = JSON.parse(sessionStorage.getItem('fanera63_utm')||'{}');
   return utm;
 }
 function getYmUid(){

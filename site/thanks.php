@@ -2,7 +2,7 @@
 require __DIR__.'/includes/db.php';
 require __DIR__.'/includes/nav.php';
 $pdo = db();
-$title = 'Спасибо за заявку — LUKA OUTDOOR';
+$title = 'Спасибо за заявку — Фанера63.рф';
 ?>
 <!doctype html>
 <html lang="ru">
@@ -15,8 +15,8 @@ $title = 'Спасибо за заявку — LUKA OUTDOOR';
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=4.0.0">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css?v=8.0.0">
 <style>
 .thanksPage{min-height:80vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:80px 24px}
 .thanksInner{max-width:600px}
@@ -45,7 +45,7 @@ $title = 'Спасибо за заявку — LUKA OUTDOOR';
 <main class="thanksPage">
   <div class="thanksInner">
 
-    <p class="eyebrow">LUKA OUTDOOR</p>
+    <p class="eyebrow">Фанера63.рф</p>
     <h1>Заявка принята</h1>
     <p>Мы получили вашу заявку и свяжемся с вами в течение нескольких часов. Пока можете посмотреть другие товары коллекции.</p>
     <div class="thanksActions">
@@ -56,20 +56,20 @@ $title = 'Спасибо за заявку — LUKA OUTDOOR';
 </main>
 
 <footer class="footer">
-  <div><img src="/assets/images/logo_luka_new.png" alt="LUKA OUTDOOR" class="footerLogo"><p>LIVE OUTSIDE. EXPLORE MORE.</p></div>
+  <div><img src="/assets/images/fanera63-logo.svg" alt="Фанера63.рф" class="footerLogo"><p>LIVE OUTSIDE. EXPLORE MORE.</p></div>
   <nav>
     <?php foreach(get_nav_items($pdo) as $ni): ?>
     <a href="<?=h($ni['url'])?>"><?=h($ni['label'])?></a>
     <?php endforeach; ?>
   </nav>
 </footer>
-<script src="/assets/script.js?v=4.0.0"></script>
+<script src="/assets/script.js?v=8.0.0"></script>
 <script>
 // Яндекс.Метрика — цель "покупка"
 (function(){
   try {
     // Читаем данные заказа из localStorage если есть
-    const cart = JSON.parse(localStorage.getItem('luka_cart') || '[]');
+    const cart = JSON.parse(localStorage.getItem('fanera63_cart') || '[]');
     const total = cart.reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||1), 0);
     const items = cart.map(i=>({id:i.id, name:i.name, price:i.price, quantity:i.qty||1}));
     if(typeof ym === 'function'){
@@ -80,7 +80,7 @@ $title = 'Спасибо за заявку — LUKA OUTDOOR';
       });
     }
     // Очищаем корзину после успешного заказа
-    localStorage.removeItem('luka_cart');
+    localStorage.removeItem('fanera63_cart');
   } catch(e){}
 })();
 </script>

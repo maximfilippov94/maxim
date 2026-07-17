@@ -17,14 +17,14 @@ $sections = $pdo->prepare("SELECT * FROM page_sections WHERE page_id=? AND is_ac
 $sections->execute([$page['id']]);
 $sections = $sections->fetchAll(PDO::FETCH_ASSOC);
 
-$pageTitle = $page['seo_title'] ?: $page['title'].' — LUKA OUTDOOR';
+$pageTitle = $page['seo_title'] ?: $page['title'].' — Фанера63.рф';
 $pageDesc  = $page['seo_description'] ?: '';
-$pageUrl   = 'https://lukaoutdoor.com/page.php?slug='.urlencode($slug);
+$pageUrl   = 'https://fanera63.ru/page.php?slug='.urlencode($slug);
 // Ищем первое изображение в секциях для og:image
-$ogImg = 'https://lukaoutdoor.com/assets/images/hero.webp';
-foreach($sections as $sec){ if(!empty($sec['image'])){ $ogImg = 'https://lukaoutdoor.com/'.$sec['image']; break; } }
+$ogImg = 'https://fanera63.ru/assets/images/hero.webp';
+foreach($sections as $sec){ if(!empty($sec['image'])){ $ogImg = 'https://fanera63.ru/'.$sec['image']; break; } }
 $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>[
-  ['@type'=>'ListItem','position'=>1,'name'=>'Главная','item'=>'https://lukaoutdoor.com/'],
+  ['@type'=>'ListItem','position'=>1,'name'=>'Главная','item'=>'https://fanera63.ru/'],
   ['@type'=>'ListItem','position'=>2,'name'=>$page['title'],'item'=>$pageUrl],
 ]];
 ?>
@@ -44,15 +44,15 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LUKA OUTDOOR">
+<meta property="og:site_name" content="Фанера63.рф">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json"><?=json_encode($breadcrumbLd,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script>
 <link rel="icon" type="image/png" href="/assets/images/favicon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=6.2.0">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css?v=8.0.0">
 <style>
 .customPage{width:min(var(--max),calc(100vw - 120px));margin:0 auto;padding:120px 0 100px}
 .pageSectionWrap:first-of-type{padding-top:0}
@@ -296,7 +296,7 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
 <?php render_footer($pdo); ?>
 
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="/assets/script.js?v=6.2.0"></script>
+<script src="/assets/script.js?v=8.0.0"></script>
 <script>
 // Page lead form
 document.getElementById('pageLeadForm') && document.getElementById('pageLeadForm').addEventListener('submit', async function(e){

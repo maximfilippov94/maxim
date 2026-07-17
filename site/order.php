@@ -6,10 +6,10 @@ header('Content-Type: application/json; charset=utf-8');
 // ── SMTP настройки (Spaceweb) ─────────────────────────────────────────────────
 define('SMTP_HOST', 'smtp.spaceweb.ru');
 define('SMTP_PORT', 465);
-define('SMTP_USER', 'noreply@lukaoutdoor.com');
+define('SMTP_USER', 'noreply@fanera63.ru');
 define('SMTP_PASS', 'qWAszX1994fimax');
-define('SMTP_FROM', 'noreply@lukaoutdoor.com');
-define('SMTP_FROM_NAME', 'LUKA OUTDOOR');
+define('SMTP_FROM', 'noreply@fanera63.ru');
+define('SMTP_FROM_NAME', 'Фанера63.рф');
 
 // ── Email helper через SMTP (сокеты, без библиотек) ───────────────────────────
 function send_order_email(string $to, string $subject, string $htmlBody): void {
@@ -23,7 +23,7 @@ function send_order_email(string $to, string $subject, string $htmlBody): void {
         $send = function(string $cmd) use ($sock){ fwrite($sock, $cmd."\r\n"); };
 
         $read(); // 220 greeting
-        $send('EHLO lukaoutdoor.com'); while(($line=$read()) && substr($line,3,1)=='-');
+        $send('EHLO fanera63.ru'); while(($line=$read()) && substr($line,3,1)=='-');
         $send('AUTH LOGIN'); $read();
         $send(base64_encode(SMTP_USER)); $read();
         $send(base64_encode(SMTP_PASS)); $read(); // 235
@@ -50,7 +50,7 @@ function send_order_email(string $to, string $subject, string $htmlBody): void {
 }
 
 function email_base(string $preheader, string $content): string {
-    $logo = 'https://lukaoutdoor.com/assets/images/logo_luka_new.png';
+    $logo = 'https://fanera63.ru/assets/images/fanera63-logo.svg';
     // BG colors spelled out as hex so Apple Mail cannot override them in light mode
     return '<!doctype html>
 <html lang="ru" style="background:#050505">
@@ -59,7 +59,7 @@ function email_base(string $preheader, string $content): string {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="dark only">
 <meta name="supported-color-schemes" content="dark only">
-<title>LUKA OUTDOOR</title>
+<title>Фанера63.рф</title>
 <style>
   :root { color-scheme: dark only; supported-color-schemes: dark only; }
   body { margin:0; padding:0; background:#050505 !important; -webkit-text-size-adjust:100%; }
@@ -97,7 +97,7 @@ function email_base(string $preheader, string $content): string {
       <!-- Header -->
       <tr>
         <td bgcolor="#0b0b0b" class="hd-bg" style="background:#0b0b0b;padding:26px 36px 20px;text-align:center;border-bottom:2px solid #c9792b">
-          <img src="'.$logo.'" alt="LUKA OUTDOOR" height="42" style="display:block;margin:0 auto;height:42px">
+          <img src="'.$logo.'" alt="Фанера63.рф" height="42" style="display:block;margin:0 auto;height:42px">
         </td>
       </tr>
 
@@ -111,8 +111,8 @@ function email_base(string $preheader, string $content): string {
       <!-- Footer -->
       <tr>
         <td bgcolor="#050505" class="ft-bg" style="background:#050505;padding:20px 36px;text-align:center;border-top:1px solid #1e1e1c">
-          <p style="margin:0 0 5px;font-size:11px;color:#9a9288;letter-spacing:.08em;text-transform:uppercase" class="text-muted">LUKA OUTDOOR &mdash; Premium Outdoor Fire Culture</p>
-          <p style="margin:0"><a href="https://lukaoutdoor.com" style="font-size:11px;color:#c9792b;text-decoration:none" class="text-copper">lukaoutdoor.com</a></p>
+          <p style="margin:0 0 5px;font-size:11px;color:#9a9288;letter-spacing:.08em;text-transform:uppercase" class="text-muted">Фанера63.рф &mdash; фанера и ОСБ в Тольятти</p>
+          <p style="margin:0"><a href="https://fanera63.ru" style="font-size:11px;color:#c9792b;text-decoration:none" class="text-copper">fanera63.ru</a></p>
         </td>
       </tr>
 
@@ -124,7 +124,7 @@ function email_base(string $preheader, string $content): string {
 }
 
 function render_product_rows(array $items): string {
-    $base = 'https://lukaoutdoor.com/';
+    $base = 'https://fanera63.ru/';
     $html = '';
     foreach ($items as $i) {
         $name  = htmlspecialchars($i['name'] ?? 'Товар');
@@ -222,7 +222,7 @@ function send_admin_email(array $order, array $items, string $adminEmail): void 
           <!-- CRM button -->
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px">
             <tr><td align="center">
-              <a href="https://lukaoutdoor.com/admin/?tab=orders" style="display:inline-block;background:#c9792b;color:#ffffff;text-decoration:none;padding:13px 32px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase">Открыть в CRM &rarr;</a>
+              <a href="https://fanera63.ru/admin/?tab=orders" style="display:inline-block;background:#c9792b;color:#ffffff;text-decoration:none;padding:13px 32px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase">Открыть в CRM &rarr;</a>
             </td></tr>
           </table>
 
@@ -295,14 +295,14 @@ function send_customer_email(array $order, array $items, string $customerEmail):
             <tr><td bgcolor="#1a1a18" class="contact-bg" style="background:#1a1a18;padding:18px 20px">
               <p style="margin:0 0 10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#9a9288" class="text-muted">Есть вопросы?</p>
               <a href="tel:88001234567" style="display:block;font-size:16px;font-weight:700;color:#c9792b;text-decoration:none;margin-bottom:5px" class="text-copper">8 800 123-45-67</a>
-              <a href="mailto:hello@lukaoutdoor.com" style="font-size:13px;color:#9a9288;text-decoration:none" class="text-muted">hello@lukaoutdoor.com</a>
+              <a href="mailto:hello@fanera63.ru" style="font-size:13px;color:#9a9288;text-decoration:none" class="text-muted">hello@fanera63.ru</a>
             </td></tr>
           </table>
 
           <!-- Catalog button -->
           <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:28px">
             <tr><td align="center">
-              <a href="https://lukaoutdoor.com/catalog.php" style="display:inline-block;background:#c9792b;color:#ffffff;text-decoration:none;padding:13px 32px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase">Смотреть каталог</a>
+              <a href="https://fanera63.ru/catalog.php" style="display:inline-block;background:#c9792b;color:#ffffff;text-decoration:none;padding:13px 32px;border-radius:8px;font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase">Смотреть каталог</a>
             </td></tr>
           </table>
 
@@ -310,7 +310,7 @@ function send_customer_email(array $order, array $items, string $customerEmail):
       </table>';
 
     $html = email_base('Ваш заказ #'.$id.' принят — скоро свяжемся с вами!', $content);
-    send_order_email($customerEmail, 'Заказ #'.$id.' принят — LUKA OUTDOOR', $html);
+    send_order_email($customerEmail, 'Заказ #'.$id.' принят — Фанера63.рф', $html);
 }
 
 // ── Основная логика ───────────────────────────────────────────────────────────

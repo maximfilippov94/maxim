@@ -1,6 +1,6 @@
 <?php
 /**
- * novofon.php — LUKA OUTDOOR
+ * novofon.php — Фанера63.рф
  * Интеграция с Новофон (Zadarma) API
  * - Исходящие звонки из CRM
  * - Вебхук входящих звонков → уведомление в Telegram

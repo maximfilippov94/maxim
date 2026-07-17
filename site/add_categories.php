@@ -1,7 +1,7 @@
 <?php
 /**
- * add_categories.php — LUKA OUTDOOR
- * Запусти один раз: https://lukaoutdoor.com/add_categories.php
+ * add_categories.php — Фанера63.рф
+ * Запусти один раз: https://fanera63.ru/add_categories.php
  * После запуска УДАЛИ этот файл с сервера!
  */
 require __DIR__.'/includes/db.php';

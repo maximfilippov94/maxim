@@ -58,7 +58,7 @@ $st = $pdo->prepare($sql);
 $st->execute($params);
 $products = $st->fetchAll(PDO::FETCH_ASSOC);
 
-$pageTitle = $currentCat ? h($currentCat['name']) . ' — LUKA OUTDOOR' : 'Каталог — LUKA OUTDOOR';
+$pageTitle = $currentCat ? h($currentCat['name']) . ' — Фанера63.рф' : 'Каталог — Фанера63.рф';
 $totalCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_active=1")->fetchColumn();
 ?><!doctype html>
 <html lang="ru">
@@ -66,24 +66,24 @@ $totalCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_active=1"
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=$pageTitle?></title>
-<meta name="description" content="<?=$currentCat ? h($currentCat['seo_description'] ?: 'Купить '.h($currentCat['name']).' в интернет-магазине LUKA OUTDOOR. Премиальное outdoor снаряжение ручной работы. Быстрая доставка по всей России.') : 'Каталог LUKA OUTDOOR — костровые системы, походная одежда и outdoor аксессуары ручной работы. Более 50 товаров. Быстрая доставка по всей России.'?>">
-<link rel="canonical" href="https://lukaoutdoor.com/catalog.php<?=$catSlug ? '?cat='.urlencode($catSlug) : ''?>">
+<meta name="description" content="<?=$currentCat ? h($currentCat['seo_description'] ?: 'Купить '.h($currentCat['name']).' в Тольятти в интернет-магазине Фанера63.рф. Сертифицированные материалы, опт и розница, доставка по городу и области.') : 'Каталог Фанера63.рф — фанера ФК, ФСФ, ламинированная фанера и ОСБ-плиты в Тольятти. Опт и розница, доставка по городу и области.'?>">
+<link rel="canonical" href="https://fanera63.ru/catalog.php<?=$catSlug ? '?cat='.urlencode($catSlug) : ''?>">
 <meta property="og:title" content="<?=$pageTitle?>">
-<meta property="og:description" content="<?=$currentCat ? h($currentCat['name']).' — купить в LUKA OUTDOOR' : 'Весь каталог LUKA OUTDOOR'?>">
-<meta property="og:url" content="https://lukaoutdoor.com/catalog.php<?=$catSlug ? '?cat='.urlencode($catSlug) : ''?>">
-<meta property="og:image" content="https://lukaoutdoor.com/assets/images/hero.webp">
+<meta property="og:description" content="<?=$currentCat ? h($currentCat['name']).' — купить в Фанера63.рф' : 'Весь каталог Фанера63.рф'?>">
+<meta property="og:url" content="https://fanera63.ru/catalog.php<?=$catSlug ? '?cat='.urlencode($catSlug) : ''?>">
+<meta property="og:image" content="https://fanera63.ru/assets/images/hero.webp">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LUKA OUTDOOR">
+<meta property="og:site_name" content="Фанера63.рф">
 <meta name="robots" content="index, follow">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/png" href="/assets/images/favicon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=6.2.0">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=8.0.0">
 <style>
 .catalogPage{width:min(var(--max),calc(100vw - 120px));margin:0 auto;padding:120px 0 100px}
 .catalogHeader{margin-bottom:40px}
@@ -108,10 +108,10 @@ $totalCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_active=1"
 <script type="application/ld+json">
 <?php
 $breadcrumbs = [
-  ['@type'=>'ListItem','position'=>1,'name'=>'Главная','item'=>'https://lukaoutdoor.com/'],
-  ['@type'=>'ListItem','position'=>2,'name'=>'Каталог','item'=>'https://lukaoutdoor.com/catalog.php'],
+  ['@type'=>'ListItem','position'=>1,'name'=>'Главная','item'=>'https://fanera63.ru/'],
+  ['@type'=>'ListItem','position'=>2,'name'=>'Каталог','item'=>'https://fanera63.ru/catalog.php'],
 ];
-if($currentCat) $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$currentCat['name'],'item'=>'https://lukaoutdoor.com/catalog.php?cat='.urlencode($catSlug)];
+if($currentCat) $breadcrumbs[] = ['@type'=>'ListItem','position'=>3,'name'=>$currentCat['name'],'item'=>'https://fanera63.ru/catalog.php?cat='.urlencode($catSlug)];
 echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','itemListElement'=>$breadcrumbs],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 ?>
 </script>
@@ -140,9 +140,9 @@ echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','it
     <?php endif; ?>
   </nav>
   <div class="catalogHeader">
-    <p class="eyebrow"><?=$currentCat ? 'КАТАЛОГ' : 'LUKA OUTDOOR'?></p>
+    <p class="eyebrow"><?=$currentCat ? 'КАТАЛОГ' : 'Фанера63.рф'?></p>
     <h1><?=$currentCat ? h($currentCat['name']) : 'Весь каталог'?></h1>
-    <?php if(!$currentCat): ?><p>Костровые системы, аксессуары и outdoor снаряжение.</p><?php endif; ?>
+    <?php if(!$currentCat): ?><p>Фанера ФК, ФСФ, ламинированная фанера и ОСБ-плиты — опт и розница в Тольятти.</p><?php endif; ?>
   </div>
 
 <?php if(!$catSlug || $catSlug==='all'): ?>
@@ -156,7 +156,7 @@ echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','it
       <?php if(!empty($cat['image'])): ?>
         <img src="/<?=h($cat['image'])?>" alt="<?=h($cat['name'])?>">
       <?php else: ?>
-        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" stroke="#c9792b" stroke-width="1.5" width="52" height="52"><path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/><path d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/></svg></div>
+        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" width="52" height="52"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#f3f1ec"/></svg></div>
       <?php endif; ?>
       <div class="catCardOverlay"></div>
       <div class="catCardBody">
@@ -188,7 +188,7 @@ echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','it
       <?php if(!empty($sub['image'])): ?>
         <img src="/<?=h($sub['image'])?>" alt="<?=h($sub['name'])?>">
       <?php else: ?>
-        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" stroke="#c9792b" stroke-width="1.5" width="44" height="44"><path d="M20.38 3.46L16 2a4 4 0 01-8 0L3.62 3.46a2 2 0 00-1.34 2.23l.58 3.57a1 1 0 00.99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 002-2V10h2.15a1 1 0 00.99-.84l.58-3.57a2 2 0 00-1.34-2.23z"/></svg></div>
+        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" width="44" height="44"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#f3f1ec"/></svg></div>
       <?php endif; ?>
       <div class="catCardOverlay"></div>
       <div class="catCardBody">
@@ -241,7 +241,7 @@ echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','it
 <?php render_footer($pdo); ?>
 
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="assets/script.js?v=6.2.0"></script>
+<script src="assets/script.js?v=8.0.0"></script>
 <script>
 // ── Состояние ────────────────────────────────────────────────────────────
 let catalogState = {
@@ -319,7 +319,7 @@ async function loadCatalog(){
         const catName = chip ? chip.dataset.name : catalogState.cat;
         header.innerHTML = `<p class="eyebrow">КАТАЛОГ</p><h1>${catName}</h1>`;
       } else {
-        header.innerHTML = `<p class="eyebrow">LUKA OUTDOOR</p><h1>Весь каталог</h1><p>Костровые системы, аксессуары и outdoor снаряжение.</p>`;
+        header.innerHTML = `<p class="eyebrow">Фанера63.рф</p><h1>Весь каталог</h1><p>Фанера ФК, ФСФ, ламинированная фанера и ОСБ-плиты — опт и розница в Тольятти.</p>`;
       }
     }
 

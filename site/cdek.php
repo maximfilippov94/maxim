@@ -1,6 +1,6 @@
 <?php
 /**
- * cdek.php — LUKA OUTDOOR
+ * cdek.php — Фанера63.рф
  * Прокси для СДЭК API v2
  * Загрузи в корень сайта рядом с index.php
  */
@@ -146,7 +146,7 @@ if ($action === 'tariff') {
     $deliveryType = $_GET['delivery_type'] ?? 'pvz'; // pvz | courier
     if (!$toCityCode) { echo json_encode(['error' => 'Не указан город']); exit; }
 
-    // Вес и размеры — примерные для костровой чаши
+    // Вес и размеры — примерные для листа фанеры/ОСБ
     $tariffCode = $deliveryType === 'courier' ? 137 : 136; // 136=посылка склад-склад, 137=склад-дверь
 
     $body = [

@@ -19,8 +19,8 @@ $subcategories = $pdo->query("SELECT * FROM categories WHERE is_active=1 AND par
 $cityName   = $city['name'];
 $cityNameIn = $city['name_in'] ?? $cityName;
 
-$title = "Костровые чаши и outdoor снаряжение с доставкой {$cityNameIn} — LUKA OUTDOOR";
-$desc  = "Купить костровые чаши, outdoor одежду и снаряжение с доставкой {$cityNameIn}. Пункты выдачи СДЭК, быстрая доставка по России.";
+$title = "Фанера и ОСБ с доставкой {$cityNameIn} — Фанера63.рф";
+$desc  = "Купить фанеру, ламинированную фанеру и ОСБ-плиты с доставкой {$cityNameIn}. Пункты выдачи СДЭК, отгрузка со склада в Самаре.";
 ?>
 <!doctype html>
 <html lang="ru">
@@ -28,12 +28,12 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title><?=h($title)?></title>
 <meta name="description" content="<?=h($desc)?>">
-<link rel="canonical" href="https://lukaoutdoor.com/city/<?=h($slug)?>">
+<link rel="canonical" href="https://fanera63.ru/city/<?=h($slug)?>">
 <link rel="icon" type="image/png" href="/assets/images/favicon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=6.2.0">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css?v=8.0.0">
 <style>
 .cityPage { width: min(var(--max), calc(100vw - 120px)); margin: 0 auto; padding: 120px 0 100px; }
 .cityHero { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(243,241,236,.08); }
@@ -186,8 +186,8 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
 
   <div class="cityHero">
     <p class="eyebrow">ДОСТАВКА <?=h(mb_strtoupper($cityNameIn))?></p>
-    <h1>LUKA OUTDOOR — <?=h($cityName)?></h1>
-    <p>Костровые чаши и outdoor снаряжение с доставкой <?=h($cityNameIn)?> через СДЭК.</p>
+    <h1>Фанера63.рф — <?=h($cityName)?></h1>
+    <p>Фанера, ламинированная фанера и ОСБ-плиты с доставкой <?=h($cityNameIn)?> через СДЭК.</p>
   </div>
 
   <!-- ПВЗ + доставка -->
@@ -284,7 +284,7 @@ $desc  = "Купить костровые чаши, outdoor одежду и сн
 
 <?php render_footer($pdo); ?>
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="/assets/script.js?v=6.2.0"></script>
+<script src="/assets/script.js?v=8.0.0"></script>
 <script>
 (async function(){
   const cityCode = <?=(int)($city['cdek_code'] ?? 0)?>;

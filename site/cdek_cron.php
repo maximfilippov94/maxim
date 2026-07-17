@@ -1,14 +1,14 @@
 <?php
 /**
- * cdek_cron.php — LUKA OUTDOOR
+ * cdek_cron.php — Фанера63.рф
  * Автообновление статусов СДЭК
  * Крон: добавь в Sweb -> Инструменты -> Cron
  * Минута: * /30  Команда: php /home/v/volgasmoke/public_html/cdek_cron.php
- * Или вручную: https://lukaoutdoor.com/cdek_cron.php?key=luka2026cdek
+ * Или вручную: https://fanera63.ru/cdek_cron.php?key=fanera632026cdek
  */
 
 // Защита от случайного запуска в браузере
-$secret = 'luka2026cdek'; // можно поменять
+$secret = 'fanera632026cdek'; // можно поменять
 $isCli  = php_sapi_name() === 'cli';
 if (!$isCli) {
     $key = $_GET['key'] ?? '';

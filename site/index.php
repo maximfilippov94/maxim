@@ -13,8 +13,8 @@ foreach($pdo->query("SELECT * FROM page_blocks WHERE code<>''")->fetchAll(PDO::F
 function block_data($code){ global $coreBlockMap; return $coreBlockMap[$code] ?? []; }
 function block_text($code,$field,$fallback=''){ $b=block_data($code); return ($b[$field]??'')!=='' ? $b[$field] : $fallback; }
 function block_image($code,$fallback='assets/images/hero.webp'){ $b=block_data($code); return !empty($b['image']) ? $b['image'] : $fallback; }
-$title     = setting('site_title','LUKA OUTDOOR');
-$desc      = setting('site_description','Premium outdoor fire culture.');
+$title     = setting('site_title','Фанера63.рф');
+$desc      = setting('site_description','Фанера, ОСБ и плитные материалы в Тольятти — опт и розница, доставка по городу.');
 $heroImage = block_image('hero','assets/images/hero.webp');
 
 // Все активные блоки кроме системных (hero рендерится отдельно)
@@ -27,43 +27,43 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
 <title><?=h($title)?></title>
 <meta name="description" content="<?=h($desc)?>">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://lukaoutdoor.com/">
+<link rel="canonical" href="https://fanera63.ru/">
 <meta property="og:title" content="<?=h($title)?>">
 <meta property="og:description" content="<?=h($desc)?>">
-<meta property="og:image" content="https://lukaoutdoor.com/<?=h($heroImage)?>">
+<meta property="og:image" content="https://fanera63.ru/<?=h($heroImage)?>">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:url" content="https://lukaoutdoor.com/">
+<meta property="og:url" content="https://fanera63.ru/">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="LUKA OUTDOOR">
+<meta property="og:site_name" content="Фанера63.рф">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json"><?=json_encode([
   '@context'  => 'https://schema.org',
   '@graph'    => [
     [
       '@type'        => 'Organization',
-      '@id'          => 'https://lukaoutdoor.com/#organization',
-      'name'         => 'LUKA OUTDOOR',
-      'url'          => 'https://lukaoutdoor.com',
-      'logo'         => ['@type'=>'ImageObject','url'=>'https://lukaoutdoor.com/assets/images/logo_luka_new.png'],
+      '@id'          => 'https://fanera63.ru/#organization',
+      'name'         => 'Фанера63.рф',
+      'url'          => 'https://fanera63.ru',
+      'logo'         => ['@type'=>'ImageObject','url'=>'https://fanera63.ru/assets/images/fanera63-logo.svg'],
       'description'  => $desc,
       'contactPoint' => ['@type'=>'ContactPoint','telephone'=>setting('phone'),'contactType'=>'sales','areaServed'=>'RU','availableLanguage'=>'Russian'],
     ],
     [
       '@type'          => 'WebSite',
-      '@id'            => 'https://lukaoutdoor.com/#website',
-      'name'           => 'LUKA OUTDOOR',
-      'url'            => 'https://lukaoutdoor.com',
-      'publisher'      => ['@id'=>'https://lukaoutdoor.com/#organization'],
-      'potentialAction'=> ['@type'=>'SearchAction','target'=>['@type'=>'EntryPoint','urlTemplate'=>'https://lukaoutdoor.com/catalog.php?q={search_term_string}'],'query-input'=>'required name=search_term_string'],
+      '@id'            => 'https://fanera63.ru/#website',
+      'name'           => 'Фанера63.рф',
+      'url'            => 'https://fanera63.ru',
+      'publisher'      => ['@id'=>'https://fanera63.ru/#organization'],
+      'potentialAction'=> ['@type'=>'SearchAction','target'=>['@type'=>'EntryPoint','urlTemplate'=>'https://fanera63.ru/catalog.php?q={search_term_string}'],'query-input'=>'required name=search_term_string'],
     ],
   ],
 ],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script>
 <link rel="icon" type="image/png" href="/assets/images/favicon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=6.2.0">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css?v=8.0.0">
 </head>
 
 <body>
@@ -85,18 +85,18 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
 <section id="top" class="heroV2" style="background-image:url('<?=h($heroImage)?>?v=<?=time()?>')">
   <div class="heroShade"></div><div class="emberLayer"><i></i><i></i><i></i><i></i><i></i></div>
   <div class="heroInner">
-    <p class="eyebrow"><?=h(block_text('hero','eyebrow','PREMIUM OUTDOOR FIRE CULTURE'))?></p>
-    <h1><?=nl2br(h(block_text('hero','title','ОГОНЬ\nДЛЯ НАСТОЯЩИХ\nВСТРЕЧ')))?></h1>
-    <p class="heroLead"><?=h(block_text('hero','text','Костровые системы и outdoor аксессуары для живого огня, кухни на природе и атмосферных вечеров.'))?></p>
-    <div class="heroSocProof">★ 4.9 &nbsp;·&nbsp; Более 500 заказов &nbsp;·&nbsp; Ручная работа</div>
-    <div class="actions"><a class="btn primary" href="#catalog"><?=h(block_text('hero','cta_text','ВЫБРАТЬ СИСТЕМУ'))?></a><a class="btn ghost" href="#craft">Узнать больше</a></div>
+    <p class="eyebrow"><?=h(block_text('hero','eyebrow','СКЛАД В САМАРЕ · ДОСТАВКА В ТОЛЬЯТТИ'))?></p>
+    <h1><?=nl2br(h(block_text('hero','title','ФАНЕРА И ОСБ\nБЕЗ ПЕРЕПЛАТ\nПОСРЕДНИКАМ')))?></h1>
+    <p class="heroLead"><?=h(block_text('hero','text','Берёзовая фанера ФК, ФСФ, ламинированная фанера и ОСБ-плиты — оптом и в розницу, с доставкой по Тольятти.'))?></p>
+    <div class="heroSocProof">★ Сертифицированный товар &nbsp;·&nbsp; Опт и розница &nbsp;·&nbsp; Работаем с юрлицами</div>
+    <div class="actions"><a class="btn primary" href="#catalog"><?=h(block_text('hero','cta_text','СМОТРЕТЬ КАТАЛОГ'))?></a><a class="btn ghost" href="#craft">Узнать больше</a></div>
   </div>
-  <div class="heroMeta"><span>STEEL</span><span>FIRE COOKING</span><span>SLOW OUTDOOR</span></div>
+  <div class="heroMeta"><span>ФАНЕРА</span><span>ОСБ</span><span>ДОСТАВКА В ТОЛЬЯТТИ</span></div>
 </section>
 
 <!-- КАТАЛОГ — категории + популярные товары -->
 <section id="catalog" class="sectionV2">
-  <div class="sectionHeadV2"><p class="eyebrow">COLLECTION</p><h2>Каталог</h2><p>Весь outdoor в одном месте — снаряжение, одежда, аксессуары для природы и путешествий.</p></div>
+  <div class="sectionHeadV2"><p class="eyebrow">КАТАЛОГ</p><h2>Каталог</h2><p>Фанера, ламинированная фанера и ОСБ-плиты разных толщин и размеров — для стройки, мебели и отделки.</p></div>
 
   <!-- Карточки категорий -->
   <div class="catGrid">
@@ -106,7 +106,7 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
       <img src="/<?=h($cat['image'])?>" alt="<?=h($cat['name'])?>">
       <?php else: ?>
       <div class="catCardPlaceholder">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" color="#c9792b"><path d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/><path d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" width="52" height="52"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#f3f1ec"/></svg>
       </div>
       <?php endif; ?>
       <div class="catCardOverlay"></div>
@@ -353,7 +353,7 @@ foreach($dynamicBlocks as $db_block):
   </div>
   <?php if($bimage): ?>
   <div class="editorialGrid">
-    <img src="<?=$bimage?>" alt="<?=$btitle ? h($btitle) : 'LUKA OUTDOOR'?>">
+    <img src="<?=$bimage?>" alt="<?=$btitle ? h($btitle) : 'Фанера63.рф'?>">
   </div>
   <?php endif; ?>
 </section>
@@ -370,5 +370,5 @@ foreach($dynamicBlocks as $db_block):
 <?php render_footer($pdo); ?>
 
 <?php include __DIR__.'/includes/cart.php'; ?>
-<script src="assets/script.js?v=6.2.0"></script>
+<script src="assets/script.js?v=8.0.0"></script>
 </body></html>

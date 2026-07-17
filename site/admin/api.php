@@ -1,6 +1,6 @@
 <?php
 /**
- * admin/api.php — LUKA OUTDOOR
+ * admin/api.php — Фанера63.рф
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();

@@ -1,0 +1,5 @@
+Options -Indexes
+RewriteEngine On
+
+# Города доставки: /city/moskva → city.php?slug=moskva
+RewriteRule ^city/([a-z0-9\-]+)/?$ city.php?slug=$1 [L,QSA]

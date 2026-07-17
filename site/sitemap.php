@@ -1,13 +1,13 @@
 <?php
 /**
- * sitemap.php — LUKA OUTDOOR
+ * sitemap.php — Фанера63.рф
  * Динамический XML-sitemap из БД (товары, категории, CMS-страницы)
  * Загрузи этот файл в корень сайта (рядом с index.php)
  */
 require __DIR__ . '/includes/db.php';
 $pdo = db();
 
-$BASE = 'https://lukaoutdoor.com';
+$BASE = 'https://fanera63.ru';
 
 // Текущая дата для статических страниц
 $today = date('Y-m-d');

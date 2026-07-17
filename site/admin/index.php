@@ -7,7 +7,7 @@ foreach(['cost_price INTEGER DEFAULT 0','weight_g INTEGER DEFAULT 12000','length
 }
 if(!is_admin()){
   $err=''; if($_SERVER['REQUEST_METHOD']==='POST'){ $pass=$_POST['password']??''; if(password_verify($pass, ADMIN_PASSWORD_HASH)){$_SESSION['admin']=true; header('Location:/admin'); exit;} else $err='Неверный пароль'; }
-  ?><!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Вход в кабинет LUKA OUTDOOR</title><link rel="stylesheet" href="admin.css"></head><body class="loginPage"><form method="post" class="loginBox"><img src="../assets/images/luka-logo.svg" alt=""><b>LUKA OUTDOOR / ADMIN</b><h1>Вход в кабинет</h1><?php if($err):?><p class="alert"><?=$err?></p><?php endif;?><input type="password" name="password" placeholder="Пароль" required autofocus><button>Войти</button><a href="/">← Вернуться на сайт</a></form></body></html><?php exit;
+  ?><!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Вход в кабинет Фанера63.рф</title><link rel="stylesheet" href="admin.css"></head><body class="loginPage"><form method="post" class="loginBox"><img src="../assets/images/fanera63-logo.svg" alt=""><b>Фанера63.рф / ADMIN</b><h1>Вход в кабинет</h1><?php if($err):?><p class="alert"><?=$err?></p><?php endif;?><input type="password" name="password" placeholder="Пароль" required autofocus><button>Войти</button><a href="/">← Вернуться на сайт</a></form></body></html><?php exit;
 }
 function upload_file($field){
   if(empty($_FILES[$field]['tmp_name'])) return '';
@@ -181,7 +181,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
     $desc    = trim($_POST['description'] ?? '');
     $specs   = trim($_POST['specs'] ?? '');
     $cat     = trim($_POST['category'] ?? '');
-    $prompt  = "Ты SEO-специалист для российского интернет-магазина премиального outdoor оборудования LUKA OUTDOOR (костровые системы, сталь, живой огонь).\n\nТовар: {$name}\nКатегория: {$cat}\nОписание: {$desc}\nХарактеристики: {$specs}\n\nСгенерируй SEO-данные для Яндекса. Верни ТОЛЬКО JSON без лишнего текста:\n{\"seo_title\":\"заголовок до 60 символов\",\"seo_description\":\"описание 140-160 символов\",\"keywords\":\"5-7 ключевых слов через запятую\"}";
+    $prompt  = "Ты SEO-специалист интернет-магазина фанеры и плитных материалов Фанера63.рф в Тольятти (фанера ФК/ФСФ, ламинированная фанера, OSB-плиты, опт и розница).\n\nТовар: {$name}\nКатегория: {$cat}\nОписание: {$desc}\nХарактеристики: {$specs}\n\nСгенерируй SEO-данные для Яндекса. Верни ТОЛЬКО JSON без лишнего текста:\n{\"seo_title\":\"заголовок до 60 символов\",\"seo_description\":\"описание 140-160 символов\",\"keywords\":\"5-7 ключевых слов через запятую\"}";
     $ch = curl_init('https://llm.api.cloud.yandex.net/foundationModels/v1/completion');
     curl_setopt_array($ch,[
       CURLOPT_RETURNTRANSFER=>true,
@@ -232,7 +232,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
       // Офлайн-конверсия в Яндекс.Метрику при переводе в "Готово"
       if($newStatus==='done' && ($oldOrder['status']??'')!=='done' && !empty($oldOrder['ym_uid'])){
         try {
-          $ymData = ['id'=>'luka-order-'.$orderId, 'date_time'=>date('Y-m-d\TH:i:s'), 'client_id'=>$oldOrder['ym_uid'], 'target'=>'purchase', 'price'=>(float)($oldOrder['total']??0), 'currency'=>'RUB'];
+          $ymData = ['id'=>'fanera63-order-'.$orderId, 'date_time'=>date('Y-m-d\TH:i:s'), 'client_id'=>$oldOrder['ym_uid'], 'target'=>'purchase', 'price'=>(float)($oldOrder['total']??0), 'currency'=>'RUB'];
           $ch=curl_init('https://api-metrika.yandex.net/management/v1/counter/109475188/offline_conversions/upload');
           curl_setopt_array($ch,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>json_encode(['conversions'=>[$ymData]]),CURLOPT_HTTPHEADER=>['Authorization: OAuth y0__wgBEKW57BcYz9BCILD7uNkXkiUmFv4ceEovyav43JHemXdvGIQ','Content-Type: application/json'],CURLOPT_TIMEOUT=>5,CURLOPT_SSL_VERIFYPEER=>false]);
           curl_exec($ch); curl_close($ch);
@@ -369,7 +369,7 @@ function product_media_list($product_id){
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>LUKA / ADMIN</title>
+<title>Фанера63 / АДМИН</title>
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('adminTheme')||'dark')</script>
 <link rel="stylesheet" href="admin.css">
 </head>
@@ -386,8 +386,8 @@ $blocks=$pdo->query('SELECT * FROM page_blocks ORDER BY sort_order,id')->fetchAl
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebarLogo">
-    <div class="sidebarLogoMark">L</div>
-    <span>LUKA<br>OUTDOOR<br>ADMIN</span>
+    <div class="sidebarLogoMark">Ф</div>
+    <span>ФАНЕРА63<br>.РФ<br>АДМИН</span>
   </div>
   <nav class="sidebarNav">
     <a href="crm.php" style="border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:6px;padding-bottom:10px">

@@ -1,4 +1,4 @@
-LUKA OUTDOOR — PHP premium e-commerce engine + CMS blocks
+Фанера63.рф — PHP premium e-commerce engine + CMS blocks
 
 Админка: /admin
 Пароль: admin123

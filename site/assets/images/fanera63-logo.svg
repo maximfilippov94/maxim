@@ -1,0 +1,10 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- стопка листов фанеры -->
+  <g>
+    <rect x="46" y="60" width="46" height="10" rx="2" fill="#C9792B"/>
+    <rect x="42" y="48" width="46" height="10" rx="2" fill="#E89A42"/>
+    <rect x="46" y="36" width="46" height="10" rx="2" fill="#F3F1EC"/>
+  </g>
+  <text x="150" y="60" font-family="Montserrat, Arial, sans-serif" font-weight="700" font-size="34" letter-spacing="2" fill="#F3F1EC">ФАНЕРА</text>
+  <text x="150" y="90" font-family="Montserrat, Arial, sans-serif" font-weight="700" font-size="34" letter-spacing="2" fill="#C9792B">63.РФ</text>
+</svg>

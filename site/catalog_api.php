@@ -1,6 +1,6 @@
 <?php
 /**
- * catalog_api.php — LUKA OUTDOOR
+ * catalog_api.php — Фанера63.рф
  * AJAX эндпоинт для каталога
  */
 require __DIR__.'/includes/db.php';

@@ -1,6 +1,6 @@
 <?php
 /**
- * admin/cdek_order.php — LUKA OUTDOOR
+ * admin/cdek_order.php — Фанера63.рф
  * Создание заказов СДЭК, получение треков, печать накладных
  */
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -176,7 +176,7 @@ if ($action === 'create') {
         $maxWidth  = max($maxWidth,  (int)($_POST['width']  ?? $prodDims['width_cm']  ?? 60));
         $maxHeight = max($maxHeight, (int)($_POST['height'] ?? $prodDims['height_cm'] ?? 40));
         $pkgItems[] = [
-            'name'     => $oi['product_name'] ?: 'Товар LUKA OUTDOOR',
+            'name'     => $oi['product_name'] ?: 'Товар Фанера63.рф',
             'ware_key' => 'SKU-'.(int)($oi['product_id'] ?? 0),
             'payment'  => ['value' => 0],
             'cost'     => (int)($oi['price'] ?? 0),
@@ -187,7 +187,7 @@ if ($action === 'create') {
     // Если items пустые — добавляем один дефолтный
     if (empty($pkgItems)) {
         $pkgItems[] = [
-            'name'    => $order['items_str'] ?: 'LUKA OUTDOOR товар',
+            'name'    => $order['items_str'] ?: 'Фанера63.рф товар',
             'ware_key'=> 'SKU-0',
             'payment' => ['value' => 0],
             'cost'    => (int)($order['total'] ?? 0),
@@ -200,7 +200,7 @@ if ($action === 'create') {
         'tariff_code'   => $tariff,
         'from_location' => ['code' => 431],
         'sender'        => [
-            'name'   => 'LUKA OUTDOOR',
+            'name'   => 'Фанера63.рф',
             'phones' => [['number' => setting('phone') ?: '+79000000000']],
         ],
         'recipient' => [
@@ -213,11 +213,11 @@ if ($action === 'create') {
             'length' => $maxLength,
             'width'  => $maxWidth,
             'height' => $maxHeight,
-            'comment'=> $order['items_str'] ?: 'LUKA OUTDOOR',
+            'comment'=> $order['items_str'] ?: 'Фанера63.рф',
             'items'  => $pkgItems,
         ]],
         'services'  => [],
-        'comment'   => 'Заказ #'.$orderId.' LUKA OUTDOOR',
+        'comment'   => 'Заказ #'.$orderId.' Фанера63.рф',
     ];
 
     // Доставка до ПВЗ или курьером

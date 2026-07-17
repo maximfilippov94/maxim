@@ -20,8 +20,8 @@ $pblocks=$pdo->prepare("SELECT * FROM product_blocks WHERE product_id=? AND is_a
 try{$pdo->exec("CREATE TABLE IF NOT EXISTS reviews (id INTEGER PRIMARY KEY AUTOINCREMENT, product_id INTEGER NOT NULL, author TEXT NOT NULL, rating INTEGER DEFAULT 5, text TEXT NOT NULL, is_active INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE)");}catch(Exception $e){}
 $reviews=$pdo->prepare("SELECT * FROM reviews WHERE product_id=? AND is_active=1 ORDER BY id DESC"); $reviews->execute([$p['id']]); $reviews=$reviews->fetchAll(PDO::FETCH_ASSOC);
 $avgRating = count($reviews) ? round(array_sum(array_column($reviews,'rating'))/count($reviews),1) : 0;
-$title=$p['seo_title'] ?: $p['name'].' — LUKA OUTDOOR'; $desc=$p['seo_description'] ?: $p['description']; $payload=["id"=>(int)$p["id"],"name"=>$p["name"],"price"=>(int)$p["price"],"image"=>$gallery[0] ?? $p["image"]];
-$baseUrl = 'https://lukaoutdoor.com';
+$title=$p['seo_title'] ?: $p['name'].' — Фанера63.рф'; $desc=$p['seo_description'] ?: $p['description']; $payload=["id"=>(int)$p["id"],"name"=>$p["name"],"price"=>(int)$p["price"],"image"=>$gallery[0] ?? $p["image"]];
+$baseUrl = 'https://fanera63.ru';
 $ogImage = $p['image'] ? $baseUrl.'/'.$p['image'] : $baseUrl.'/assets/images/hero.webp';
 $ogUrl   = $baseUrl.'/product.php?slug='.urlencode($p['slug'] ?: $p['id']);
 ?>
@@ -33,7 +33,7 @@ $ldJson = [
   'name'        => $p['name'],
   'description' => strip_tags($desc),
   'image'       => json_decode($imagesJson),
-  'brand'       => ['@type'=>'Brand','name'=>'LUKA OUTDOOR'],
+  'brand'       => ['@type'=>'Brand','name'=>'Фанера63.рф'],
   'sku'         => 'LO-'.$p['id'],
   'offers'      => [
     '@type'           => 'Offer',
@@ -41,7 +41,7 @@ $ldJson = [
     'priceCurrency'   => 'RUB',
     'availability'    => 'https://schema.org/InStock',
     'url'             => $ogUrl,
-    'seller'          => ['@type'=>'Organization','name'=>'LUKA OUTDOOR'],
+    'seller'          => ['@type'=>'Organization','name'=>'Фанера63.рф'],
   ],
 ];
 if($avgRating > 0 && count($reviews) > 0){
@@ -54,9 +54,9 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
   ['@type'=>'ListItem','position'=>3,'name'=>$p['name'],'item'=>$ogUrl],
 ]];
 ?>
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="<?=csrf_token()?>"><title><?=h($title)?></title><meta name="description" content="<?=h($desc)?>"><meta name="robots" content="index, follow"><meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($ogImage)?>"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:url" content="<?=h($ogUrl)?>"><meta property="og:type" content="product"><meta property="og:site_name" content="LUKA OUTDOOR"><meta name="twitter:card" content="summary_large_image"><link rel="canonical" href="<?=h($ogUrl)?>"><link rel="icon" type="image/png" href="/assets/images/favicon.png">
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="csrf-token" content="<?=csrf_token()?>"><title><?=h($title)?></title><meta name="description" content="<?=h($desc)?>"><meta name="robots" content="index, follow"><meta property="og:title" content="<?=h($title)?>"><meta property="og:description" content="<?=h($desc)?>"><meta property="og:image" content="<?=h($ogImage)?>"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:url" content="<?=h($ogUrl)?>"><meta property="og:type" content="product"><meta property="og:site_name" content="Фанера63.рф"><meta name="twitter:card" content="summary_large_image"><link rel="canonical" href="<?=h($ogUrl)?>"><link rel="icon" type="image/png" href="/assets/images/favicon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/style.css?v=6.4.0"><script type="application/ld+json"><?=json_encode($ldJson,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT)?></script><script type="application/ld+json"><?=json_encode($breadcrumbLd,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script></head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="assets/style.css?v=8.0.0"><script type="application/ld+json"><?=json_encode($ldJson,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT)?></script><script type="application/ld+json"><?=json_encode($breadcrumbLd,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?></script></head><body>
 <!-- Yandex.Metrika counter -->
 <script type="text/javascript">
    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -127,7 +127,7 @@ if($hasSpecs): ?>
 <?php if($p['video']): ?><section class="videoBlock"><div><p class="eyebrow">Video</p><h2>Видео товара</h2></div><video controls poster="<?=h($p['image'])?>"><source src="<?=h($p['video'])?>" type="video/mp4"></video></section><?php endif; ?>
 <?php if($related): ?>
 <section class="sectionV2 relatedProducts">
-  <div class="sectionHeadV2"><div><p class="eyebrow">Related</p><h2>Похожие товары</h2></div><p>Товары в той же стилистике LUKA OUTDOOR.</p></div>
+  <div class="sectionHeadV2"><div><p class="eyebrow">Related</p><h2>Похожие товары</h2></div><p>Другие материалы из этой категории на Фанера63.рф.</p></div>
   <div class="productsGrid v2Grid">
     <?php foreach($related as $r): $relatedPayload=["id"=>(int)$r["id"],"name"=>$r["name"],"price"=>(int)$r["price"],"image"=>$r["image"] ?: 'assets/images/hero.webp']; ?>
     <article class="product cardV2 reveal">
@@ -216,7 +216,7 @@ if($hasSpecs): ?>
 </div>
 <div class="stickyBuy"><button id="stickyBuyBtn" class="btn primary" onclick='addToCart(<?=json_encode($payload, JSON_UNESCAPED_UNICODE)?>,this)'>В корзину — <?=money($p['price'])?></button><button class="btn ghost" onclick="openOneClick('<?=h($p['name'])?>','<?=money($p['price'])?>')">1 клик</button></div>
 <?php render_footer($pdo); ?>
-<?php include __DIR__.'/includes/cart.php'; ?><script src="assets/script.js?v=6.2.0"></script><script>
+<?php include __DIR__.'/includes/cart.php'; ?><script src="assets/script.js?v=8.0.0"></script><script>
 const _slides = document.querySelectorAll(".gallerySlide");
 const _tb = document.querySelectorAll(".thumbs button");
 let _autoTimer = null;
@@ -308,8 +308,8 @@ _startAuto();
   const p = new URLSearchParams(location.search);
   const utm = {source:p.get('utm_source')||'',medium:p.get('utm_medium')||'',campaign:p.get('utm_campaign')||'',content:p.get('utm_content')||'',term:p.get('utm_term')||''};
   // Сохраняем в sessionStorage чтобы не терять при переходе
-  if(utm.source) sessionStorage.setItem('luka_utm', JSON.stringify(utm));
-  const saved = JSON.parse(sessionStorage.getItem('luka_utm')||'{}');
+  if(utm.source) sessionStorage.setItem('fanera63_utm', JSON.stringify(utm));
+  const saved = JSON.parse(sessionStorage.getItem('fanera63_utm')||'{}');
   document.getElementById('oc_utm_source').value   = saved.source   || '';
   document.getElementById('oc_utm_medium').value   = saved.medium   || '';
   document.getElementById('oc_utm_campaign').value = saved.campaign || '';
@@ -324,7 +324,7 @@ function openOneClick(name, price) {
   document.getElementById('oneClickResult').textContent = '';
   document.getElementById('oneClickForm').reset();
   // Восстановим скрытые поля после reset
-  const saved = JSON.parse(sessionStorage.getItem('luka_utm')||'{}');
+  const saved = JSON.parse(sessionStorage.getItem('fanera63_utm')||'{}');
   document.getElementById('oc_utm_source').value   = saved.source   || '';
   document.getElementById('oc_utm_medium').value   = saved.medium   || '';
   document.getElementById('oc_utm_campaign').value = saved.campaign || '';

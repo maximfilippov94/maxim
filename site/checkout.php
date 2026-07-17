@@ -3,7 +3,7 @@ require __DIR__.'/includes/db.php';
 require __DIR__.'/includes/nav.php';
 $pdo = db();
 
-$title = 'Оформление заказа — LUKA OUTDOOR';
+$title = 'Оформление заказа — Фанера63.рф';
 
 // Город по умолчанию для СДЭК — Москва (270)
 // При подключении СДЭК API: https://api.cdek.ru/v2/
@@ -66,14 +66,14 @@ $CDEK_CITIES = [
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="csrf-token" content="<?=csrf_token()?>">
 <title><?=h($title)?></title>
-<link rel="canonical" href="https://lukaoutdoor.com/checkout.php">
+<link rel="canonical" href="https://fanera63.ru/checkout.php">
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" type="image/png" href="/assets/images/favicon.png">
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/style.css?v=6.2.0">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css?v=8.0.0">
 <style>
 .checkoutPage{width:min(1100px,calc(100vw - 48px));margin:0 auto;padding:100px 0 80px}
 .checkoutGrid{display:grid;grid-template-columns:1fr 400px;gap:40px;align-items:start}
@@ -371,7 +371,7 @@ select.checkoutInput{cursor:pointer}
 <?php render_footer($pdo); ?>
 
 <div id="cartToast" class="cartToast">Добавлено в корзину</div>
-<script src="/assets/script.js?v=6.2.0"></script>
+<script src="/assets/script.js?v=8.0.0"></script>
 <script>
 // ── Инициализация ──────────────────────────────────────────────────────
 let selectedDelivery = 'cdek_pvz';
@@ -662,7 +662,7 @@ async function placeOrder(){
   result.textContent = ''; result.style.color = 'var(--copper2)';
 
   // UTM
-  const utm = JSON.parse(sessionStorage.getItem('luka_utm')||'{}');
+  const utm = JSON.parse(sessionStorage.getItem('fanera63_utm')||'{}');
   const fd = new FormData();
   fd.append('customer_name', name);
   fd.append('phone', phone);
@@ -682,7 +682,7 @@ async function placeOrder(){
     const d = await r.json();
     if(d.ok){
       // Очищаем корзину
-      localStorage.removeItem('luka_cart');
+      localStorage.removeItem('fanera63_cart');
       location.href = '/thanks.php';
     } else {
       result.textContent = d.message || 'Ошибка';

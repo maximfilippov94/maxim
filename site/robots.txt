@@ -8,4 +8,4 @@ Disallow: /thanks.php
 Disallow: /data/
 Disallow: /includes/
 
-Sitemap: https://lukaoutdoor.com/sitemap.php
+Sitemap: https://fanera63.ru/sitemap.php
