@@ -36,7 +36,7 @@ $desc  = "Купить фанеру, ламинированную фанеру �
 <link rel="stylesheet" href="/assets/style.css?v=8.0.0">
 <style>
 .cityPage { width: min(var(--max), calc(100vw - 120px)); margin: 0 auto; padding: 120px 0 100px; }
-.cityHero { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(243,241,236,.08); }
+.cityHero { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(26,20,12,.08); }
 .cityHero h1 { font-family: var(--head); font-size: clamp(42px,7vw,80px); text-transform: uppercase; line-height: .9; margin: 0 0 12px; }
 .cityHero p { font-size: 16px; color: var(--muted); max-width: 520px; line-height: 1.55; margin: 0; }
 
@@ -50,8 +50,8 @@ $desc  = "Купить фанеру, ламинированную фанеру �
 .pvzSection {}
 .pvzList { display: grid; gap: 10px; margin-top: 14px; }
 .pvzCard {
-  background: rgba(255,255,255,.02);
-  border: 1px solid rgba(243,241,236,.08);
+  background: var(--surface);
+  border: 1px solid rgba(26,20,12,.08);
   border-radius: var(--radius-md);
   padding: 16px 18px;
   transition: border-color 200ms ease;
@@ -61,12 +61,12 @@ $desc  = "Купить фанеру, ламинированную фанеру �
 .pvzCard small { font-size: 12px; color: var(--muted); }
 
 .deliveryInfoCard {
-  background: rgba(255,255,255,.02);
-  border: 1px solid rgba(243,241,236,.08);
+  background: var(--surface);
+  border: 1px solid rgba(26,20,12,.08);
   border-radius: var(--radius-lg);
   padding: 28px;
 }
-.deliveryStep { padding: 14px 0; border-bottom: 1px solid rgba(243,241,236,.06); }
+.deliveryStep { padding: 14px 0; border-bottom: 1px solid rgba(26,20,12,.06); }
 .deliveryStep:last-child { border-bottom: none; padding-bottom: 0; }
 .deliveryStep strong { display: block; font-size: 13px; font-weight: 700; color: var(--copper2); margin-bottom: 4px; }
 .deliveryStep p { font-size: 13px; color: var(--muted); line-height: 1.45; margin: 0; }
@@ -84,8 +84,8 @@ $desc  = "Купить фанеру, ламинированную фанеру �
   border-radius: var(--radius-md);
   overflow: hidden;
   aspect-ratio: 3 / 2;
-  background: #0d0d0d;
-  border: 1px solid rgba(243,241,236,.08);
+  background: var(--surface2);
+  border: 1px solid rgba(26,20,12,.08);
   text-decoration: none;
   display: block;
   transition: border-color 250ms ease, transform 250ms ease;
@@ -94,6 +94,9 @@ $desc  = "Купить фанеру, ламинированную фанеру �
 .cityCatCard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .cityCatCard .overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.82), transparent 60%); z-index: 1; }
 .cityCatCard .label { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 12px; z-index: 2; font-family: var(--head); font-size: 17px; text-transform: uppercase; color: #fff; line-height: 1; }
+/* Карточки без фото (placeholder) — светлый оверлей + тёмный текст */
+.cityCatPlaceholder ~ .overlay { background: linear-gradient(to top, rgba(247,241,230,.94), rgba(247,241,230,.3) 45%, transparent 70%); }
+.cityCatPlaceholder ~ .label { color: var(--text); }
 .cityCatPlaceholder {
   position: absolute;
   inset: 0;
@@ -104,7 +107,7 @@ $desc  = "Купить фанеру, ламинированную фанеру �
   gap: 8px;
   background:
     radial-gradient(ellipse 80% 60% at 50% 110%, rgba(201,121,43,.2) 0%, transparent 70%),
-    linear-gradient(160deg, #0f0f0d 0%, #050505 100%);
+    linear-gradient(160deg, #f7f1e6 0%, #ffffff 100%);
 }
 .cityCatPlaceholder::before {
   content: "";
@@ -142,12 +145,12 @@ $desc  = "Купить фанеру, ламинированную фанеру �
   align-items: center;
   gap: 5px;
   padding: 7px 14px;
-  border: 1px solid rgba(243,241,236,.09);
+  border: 1px solid rgba(26,20,12,.12);
   border-radius: var(--radius-pill);
   font-size: 13px;
   color: var(--muted);
   text-decoration: none;
-  background: rgba(255,255,255,.02);
+  background: var(--surface);
   transition: border-color 200ms ease, color 200ms ease, background 200ms ease;
   white-space: nowrap;
 }
@@ -269,7 +272,7 @@ $desc  = "Купить фанеру, ламинированную фанеру �
   <?php
   $allSeoItems = array_merge($categories, $subcategories);
   if(!empty($allSeoItems)): ?>
-  <div class="citySection" style="margin-top:48px;padding-top:32px;border-top:1px solid rgba(243,241,236,.08)">
+  <div class="citySection" style="margin-top:48px;padding-top:32px;border-top:1px solid rgba(26,20,12,.08)">
     <p class="eyebrow">КУПИТЬ <?=h(mb_strtoupper($cityNameIn))?></p>
     <div class="citySeoList">
       <?php foreach($allSeoItems as $cat): ?>

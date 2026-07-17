@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 function highlightStars(n){
   document.querySelectorAll('.starRating span').forEach((s,i)=>{
-    s.style.color = i < n ? '#f5a623' : 'rgba(243,241,236,.2)';
+    s.style.color = i < n ? '#f5a623' : 'rgba(26,20,12,.18)';
   });
 }
 function selectStar(n){

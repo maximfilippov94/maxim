@@ -56,7 +56,7 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
 <style>
 .customPage{width:min(var(--max),calc(100vw - 120px));margin:0 auto;padding:120px 0 100px}
 .pageSectionWrap:first-of-type{padding-top:0}
-.pageHeroSimple{padding:60px 0 48px;border-bottom:1px solid rgba(243,241,236,.08);margin-bottom:52px}
+.pageHeroSimple{padding:60px 0 48px;border-bottom:1px solid rgba(26,20,12,.08);margin-bottom:52px}
 .pageHeroSimple h1{font-family:var(--head);font-size:clamp(48px,9vw,88px);line-height:.9;text-transform:uppercase;margin:0 0 16px}
 .pageHeroSimple p{color:var(--muted);font-size:17px;max-width:520px;line-height:1.6;margin:0}
 .pageSectionWrap{margin-bottom:56px}
@@ -65,8 +65,8 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
 .contactsGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:24px}
 .contactItem{
   display:flex;align-items:center;gap:16px;
-  background:rgba(255,255,255,.03);
-  border:1px solid rgba(243,241,236,.09);
+  background:var(--surface);
+  border:1px solid rgba(26,20,12,.09);
   border-left:2px solid var(--copper);
   border-radius:var(--radius-md);
   padding:18px 20px;
@@ -90,8 +90,8 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
 
 /* ── Legal block ──────────────────────────────────────────────── */
 .legalBlock{
-  background:rgba(255,255,255,.02);
-  border:1px solid rgba(243,241,236,.07);
+  background:var(--surface);
+  border:1px solid rgba(26,20,12,.07);
   border-radius:var(--radius-md);
   padding:20px 24px;
   margin-top:16px;
@@ -110,7 +110,7 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
 
 /* ── Cards ────────────────────────────────────────────────────── */
 .pageCardsBlock{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:24px}
-.pageCard{background:rgba(255,255,255,.04);border:1px solid rgba(243,241,236,.1);border-radius:20px;padding:24px}
+.pageCard{background:var(--surface);border:1px solid rgba(26,20,12,.1);border-radius:20px;padding:24px}
 .pageCard h3{font-family:var(--head);font-size:28px;text-transform:uppercase;margin:0 0 10px}
 .pageCard p{color:var(--muted);font-size:14px;line-height:1.6;margin:0}
 
@@ -239,10 +239,10 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
   <?php if($sey): ?><p class="eyebrow"><?=$sey?></p><?php endif; ?>
   <?php if($stitle): ?><h2 style="font-family:var(--head);font-size:clamp(40px,7vw,72px);text-transform:uppercase;line-height:.9;margin:0 0 32px"><?=$stitle?></h2><?php endif; ?>
   <form id="pageLeadForm" style="max-width:560px;display:grid;gap:14px">
-    <input name="customer_name" required placeholder="Ваше имя" style="background:rgba(255,255,255,.05);border:1px solid rgba(243,241,236,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none">
-    <input name="phone" required placeholder="Телефон" style="background:rgba(255,255,255,.05);border:1px solid rgba(243,241,236,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none">
-    <input name="city" placeholder="Город" style="background:rgba(255,255,255,.05);border:1px solid rgba(243,241,236,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none">
-    <textarea name="comment" placeholder="Ваш вопрос или что хотите подобрать" rows="4" style="background:rgba(255,255,255,.05);border:1px solid rgba(243,241,236,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none;resize:vertical"></textarea>
+    <input name="customer_name" required placeholder="Ваше имя" style="background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none">
+    <input name="phone" required placeholder="Телефон" style="background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none">
+    <input name="city" placeholder="Город" style="background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none">
+    <textarea name="comment" placeholder="Ваш вопрос или что хотите подобрать" rows="4" style="background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:14px;color:var(--text);padding:16px 18px;font:inherit;font-size:15px;outline:none;resize:vertical"></textarea>
     <button class="btn primary" type="submit" style="justify-content:center">Отправить заявку</button>
     <p id="pageLeadResult" style="color:var(--copper2);font-size:14px;margin:0"></p>
   </form>

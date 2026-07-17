@@ -22,7 +22,7 @@ $desc  = 'Доставляем фанеру, ОСБ и плитные матер
 <link rel="stylesheet" href="/assets/style.css?v=8.0.0">
 <style>
 .citiesPage { width: min(var(--max), calc(100vw - 120px)); margin: 0 auto; padding: 120px 0 100px; }
-.citiesHeader { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(243,241,236,.08); }
+.citiesHeader { margin-bottom: 48px; padding-bottom: 32px; border-bottom: 1px solid rgba(26,20,12,.08); }
 .citiesHeader h1 { font-family: var(--head); font-size: clamp(48px,8vw,88px); text-transform: uppercase; line-height: .9; margin: 0 0 12px; }
 .citiesHeader p { font-size: 16px; color: var(--muted); max-width: 480px; line-height: 1.55; margin: 0; }
 
@@ -45,7 +45,7 @@ $desc  = 'Доставляем фанеру, ОСБ и плитные матер
 .alphaBtn {
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
-  border: 1px solid rgba(243,241,236,.1);
+  border: 1px solid rgba(26,20,12,.1);
   border-radius: 8px;
   font-size: 13px; font-weight: 700;
   color: var(--muted);
@@ -59,12 +59,12 @@ $desc  = 'Доставляем фанеру, ОСБ и плитные матер
 .cityLinks { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
 .cityLink {
   padding: 9px 14px;
-  border: 1px solid rgba(243,241,236,.07);
+  border: 1px solid rgba(26,20,12,.07);
   border-radius: var(--radius-sm);
   font-size: 13px;
   color: var(--text);
   text-decoration: none;
-  background: rgba(255,255,255,.02);
+  background: var(--surface);
   transition: border-color 200ms ease, color 200ms ease;
 }
 .cityLink:hover { border-color: rgba(201,121,43,.35); color: var(--copper2); }

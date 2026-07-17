@@ -81,39 +81,39 @@ $CDEK_CITIES = [
 .checkoutSteps{display:flex;gap:8px;margin-bottom:32px;align-items:center;overflow:hidden}
 .checkoutStep{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;flex-shrink:0}
 .checkoutStep.active{color:var(--copper2)}
-.checkoutStep span{width:24px;height:24px;border-radius:50%;border:1px solid rgba(243,241,236,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900}
+.checkoutStep span{width:24px;height:24px;border-radius:50%;border:1px solid rgba(26,20,12,.2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900}
 .checkoutStep.active span{background:var(--accent);border-color:var(--accent);color:#0d0704}
 .checkoutStep.done span{background:rgba(76,175,80,.2);border-color:#4caf50;color:#4caf50}
-.stepDivider{flex:1;height:1px;background:rgba(243,241,236,.1)}
+.stepDivider{flex:1;height:1px;background:rgba(26,20,12,.1)}
 
 /* Form */
-.checkoutSection{background:rgba(255,255,255,.03);border:1px solid rgba(243,241,236,.08);border-radius:20px;padding:24px;margin-bottom:16px}
+.checkoutSection{background:var(--surface);border:1px solid rgba(26,20,12,.08);border-radius:20px;padding:24px;margin-bottom:16px}
 .checkoutSection h2{font-family:var(--head);font-size:24px;text-transform:uppercase;margin:0 0 20px;color:var(--text)}
 .formRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .formRow.single{grid-template-columns:1fr}
-.checkoutInput{background:rgba(255,255,255,.05);border:1px solid rgba(243,241,236,.12);border-radius:12px;color:var(--text);padding:14px 16px;font:inherit;font-size:15px;outline:none;width:100%;transition:.15s}
+.checkoutInput{background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:12px;color:var(--text);padding:14px 16px;font:inherit;font-size:15px;outline:none;width:100%;transition:.15s}
 .checkoutInput:focus{border-color:rgba(201,121,43,.5)}
-.checkoutInput::placeholder{color:rgba(243,241,236,.3)}
+.checkoutInput::placeholder{color:rgba(26,20,12,.3)}
 .checkoutLabel{display:grid;gap:6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
 select.checkoutInput{cursor:pointer}
 
 /* Delivery options */
 .deliveryOptions{display:grid;gap:10px}
-.deliveryOption{border:1px solid rgba(243,241,236,.1);border-radius:14px;padding:16px;cursor:pointer;transition:.2s;position:relative}
+.deliveryOption{border:1px solid rgba(26,20,12,.1);border-radius:14px;padding:16px;cursor:pointer;transition:.2s;position:relative}
 .deliveryOption:hover{border-color:rgba(201,121,43,.3)}
 .deliveryOption.selected{border-color:var(--accent);background:rgba(201,121,43,.06)}
 .deliveryOption input[type=radio]{position:absolute;opacity:0;width:0;height:0}
 .deliveryOption .optHead{display:flex;align-items:center;gap:12px}
-.deliveryOption .optIcon{width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.deliveryOption .optIcon{width:40px;height:40px;border-radius:10px;background:rgba(26,20,12,.05);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .deliveryOption .optTitle{font-weight:700;font-size:15px}
 .deliveryOption .optDesc{font-size:12px;color:var(--muted);margin-top:3px}
 .deliveryOption .optPrice{margin-left:auto;font-weight:900;font-size:15px;color:var(--copper2)}
-.deliveryOption .optBody{display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(243,241,236,.07)}
+.deliveryOption .optBody{display:none;margin-top:14px;padding-top:14px;border-top:1px solid rgba(26,20,12,.07)}
 .deliveryOption.selected .optBody{display:block}
 
 /* Payment options */
 .paymentOptions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.paymentOption{border:1px solid rgba(243,241,236,.1);border-radius:14px;padding:16px;cursor:pointer;transition:.2s;text-align:center;position:relative}
+.paymentOption{border:1px solid rgba(26,20,12,.1);border-radius:14px;padding:16px;cursor:pointer;transition:.2s;text-align:center;position:relative}
 .paymentOption:hover{border-color:rgba(201,121,43,.3)}
 .paymentOption.selected{border-color:var(--accent);background:rgba(201,121,43,.06)}
 .paymentOption input[type=radio]{position:absolute;opacity:0}
@@ -123,17 +123,17 @@ select.checkoutInput{cursor:pointer}
 .paymentBadge{display:inline-block;background:rgba(201,121,43,.15);color:var(--copper2);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:900;text-transform:uppercase;margin-top:6px}
 
 /* Order summary */
-.orderSummary{background:rgba(255,255,255,.03);border:1px solid rgba(243,241,236,.08);border-radius:20px;padding:24px;position:sticky;top:100px}
+.orderSummary{background:var(--surface);border:1px solid rgba(26,20,12,.08);border-radius:20px;padding:24px;position:sticky;top:100px}
 .orderSummary h2{font-family:var(--head);font-size:22px;text-transform:uppercase;margin:0 0 20px}
 .summaryItems{margin-bottom:20px}
-.summaryItem{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(243,241,236,.06)}
+.summaryItem{display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(26,20,12,.06)}
 .summaryItem:last-child{border-bottom:none}
 .summaryItem img{width:52px;height:52px;border-radius:10px;object-fit:cover;flex-shrink:0}
 .summaryItem .itemName{font-size:13px;font-weight:600;line-height:1.3;flex:1}
 .summaryItem .itemQty{font-size:12px;color:var(--muted)}
 .summaryItem .itemPrice{font-size:14px;font-weight:900;white-space:nowrap}
 .summaryEmpty{text-align:center;padding:32px 0;color:var(--muted);font-size:14px}
-.summaryTotal{padding-top:16px;border-top:1px solid rgba(243,241,236,.1)}
+.summaryTotal{padding-top:16px;border-top:1px solid rgba(26,20,12,.1)}
 .summaryRow{display:flex;justify-content:space-between;font-size:14px;margin-bottom:10px;color:var(--muted)}
 .summaryRow.total{color:var(--text);font-size:18px;font-weight:900;margin-bottom:0}
 .summaryRow span:last-child{color:var(--copper2)}
@@ -144,16 +144,16 @@ select.checkoutInput{cursor:pointer}
 .emptyCartMsg a{color:var(--copper2)}
 
 /* CDEK pvz selector */
-.cdekMap{background:rgba(255,255,255,.04);border:1px solid rgba(243,241,236,.1);border-radius:12px;padding:14px;margin-top:12px}
+.cdekMap{background:#ffffff;border:1px solid rgba(26,20,12,.1);border-radius:12px;padding:14px;margin-top:12px}
 .cdekPvzList{max-height:200px;overflow-y:auto;margin-top:10px}
 .cdekPvz{padding:10px 12px;border-radius:8px;cursor:pointer;transition:.15s;font-size:13px;border:1px solid transparent}
-.cdekPvz:hover{background:rgba(255,255,255,.05)}
+.cdekPvz:hover{background:rgba(26,20,12,.04)}
 .cdekPvz.selected{border-color:rgba(201,121,43,.4);background:rgba(201,121,43,.06)}
 .cdekPvz .pvzName{font-weight:700;margin-bottom:2px}
 .cdekPvz .pvzAddr{color:var(--muted);font-size:12px}
 
 /* Notice */
-.cdekNotice{background:rgba(201,121,43,.08);border:1px solid rgba(201,121,43,.2);border-radius:12px;padding:14px 16px;font-size:13px;color:rgba(243,241,236,.7);line-height:1.6;margin-top:10px}
+.cdekNotice{background:rgba(201,121,43,.08);border:1px solid rgba(201,121,43,.2);border-radius:12px;padding:14px 16px;font-size:13px;color:rgba(26,20,12,.7);line-height:1.6;margin-top:10px}
 .cdekNotice strong{color:var(--copper2)}
 
 @media(max-width:900px){
@@ -242,7 +242,7 @@ select.checkoutInput{cursor:pointer}
                 <div style="position:relative">
                   <input class="checkoutInput" id="co_city_cdek_input" placeholder="Начните вводить город..." autocomplete="off" oninput="cdekCitySearch(this.value)">
                   <input type="hidden" id="co_city_cdek" value="">
-                  <div id="cdekCitySuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#1a1208;border:1px solid rgba(201,121,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
+                  <div id="cdekCitySuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#ffffff;border:1px solid rgba(201,121,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(32,28,22,.18)"></div>
                 </div>
               </label>
               <div class="cdekMap" id="cdekPvzBlock" style="display:none">
@@ -271,7 +271,7 @@ select.checkoutInput{cursor:pointer}
                 <div style="position:relative">
                   <input class="checkoutInput" id="co_city_courier_input" placeholder="Начните вводить город..." autocomplete="off" oninput="cdekCourierCitySearch(this.value)">
                   <input type="hidden" id="co_city_courier" value="">
-                  <div id="cdekCourierSuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#1a1208;border:1px solid rgba(201,121,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.5)"></div>
+                  <div id="cdekCourierSuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#ffffff;border:1px solid rgba(201,121,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(32,28,22,.18)"></div>
                 </div>
               </label>
               <label class="checkoutLabel">Адрес доставки
@@ -356,11 +356,11 @@ select.checkoutInput{cursor:pointer}
           <span>🚚 СДЭК</span>
           <span>↩ Возврат 14 дней</span>
         </div>
-        <button id="placeOrderBtn" onclick="placeOrder()" style="width:100%;background:linear-gradient(180deg,#e8943a,#c9792b);color:#fff;border:none;border-radius:14px;padding:18px;font:900 16px/1 Manrope,sans-serif;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;margin-top:16px;transition:.2s;display:block">
+        <button id="placeOrderBtn" onclick="placeOrder()" style="width:100%;background:linear-gradient(180deg,#e8943a,#c9792b);color:#0d0704;border:none;border-radius:14px;padding:18px;font:900 16px/1 Manrope,sans-serif;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;margin-top:16px;transition:.2s;display:block">
           Оформить заказ →
         </button>
         <p id="checkoutResult" style="text-align:center;font-size:13px;margin-top:12px;color:var(--copper2)"></p>
-        <p style="text-align:center;font-size:11px;color:rgba(243,241,236,.25);margin-top:12px">
+        <p style="text-align:center;font-size:11px;color:rgba(26,20,12,.25);margin-top:12px">
           Нажимая «Оформить заказ», вы соглашаетесь с условиями продажи
         </p>
       </div>
@@ -469,9 +469,9 @@ function renderCitySuggest(cities, suggestEl, type) {
   }).slice(0, 8);
   if (!unique.length) { suggestEl.style.display = 'none'; return; }
   suggestEl.innerHTML = unique.map((c,i) =>
-    `<div data-idx="${i}" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid rgba(243,241,236,.06);display:flex;justify-content:space-between;align-items:center"
+    `<div data-idx="${i}" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid rgba(26,20,12,.06);display:flex;justify-content:space-between;align-items:center"
       onmouseover="this.style.background='rgba(201,121,43,.12)'" onmouseout="this.style.background=''"
-    ><span style="font-weight:500">${c.name}</span><span style="color:rgba(243,241,236,.35);font-size:12px">${c.region||''}</span></div>`
+    ><span style="font-weight:500">${c.name}</span><span style="color:rgba(26,20,12,.45);font-size:12px">${c.region||''}</span></div>`
   ).join('');
   suggestEl.querySelectorAll('[data-idx]').forEach((el, i) => {
     el.addEventListener('mousedown', (e) => {

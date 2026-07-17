@@ -90,13 +90,13 @@ $totalCount = (int)$pdo->query("SELECT COUNT(*) FROM products WHERE is_active=1"
 .catalogHeader h1{font-family:var(--head);font-size:clamp(52px,9vw,96px);line-height:.9;text-transform:uppercase;margin:0 0 14px}
 .catalogHeader p{color:var(--muted);font-size:17px;max-width:500px}
 .catChips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
-.catChip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(243,241,236,.12);border-radius:10px;background:transparent;color:var(--text);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:.2s;white-space:nowrap;font-family:inherit}
+.catChip{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(26,20,12,.12);border-radius:10px;background:transparent;color:var(--text);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:.2s;white-space:nowrap;font-family:inherit}
 .catChip:hover,.catChip.active{background:rgba(201,121,43,.15);border-color:var(--copper);color:var(--copper2)}
 .catChip small{color:var(--muted);font-size:11px}
-.catalogToolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid rgba(243,241,236,.08)}
-.catalogSearch{flex:1;min-width:200px;max-width:340px;background:rgba(255,255,255,.05);border:1px solid rgba(243,241,236,.12);border-radius:12px;color:var(--text);padding:12px 16px;font:inherit;font-size:14px;outline:none}
+.catalogToolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid rgba(26,20,12,.08)}
+.catalogSearch{flex:1;min-width:200px;max-width:340px;background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:12px;color:var(--text);padding:12px 16px;font:inherit;font-size:14px;outline:none}
 .catalogSearch:focus{border-color:rgba(201,121,43,.5)}
-.sortSelect{background:rgba(255,255,255,.05);border:1px solid rgba(243,241,236,.12);border-radius:12px;color:var(--text);padding:12px 16px;font:inherit;font-size:13px;cursor:pointer;outline:none}
+.sortSelect{background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:12px;color:var(--text);padding:12px 16px;font:inherit;font-size:13px;cursor:pointer;outline:none}
 .catalogCount{color:var(--muted);font-size:13px;margin-left:auto}
 .catalogGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px}
 .catalogEmpty{text-align:center;padding:80px 20px;color:var(--muted)}
@@ -156,7 +156,7 @@ echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','it
       <?php if(!empty($cat['image'])): ?>
         <img src="/<?=h($cat['image'])?>" alt="<?=h($cat['name'])?>">
       <?php else: ?>
-        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" width="52" height="52"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#f3f1ec"/></svg></div>
+        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" width="52" height="52"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#4a4237"/></svg></div>
       <?php endif; ?>
       <div class="catCardOverlay"></div>
       <div class="catCardBody">
@@ -188,7 +188,7 @@ echo json_encode(['@context'=>'https://schema.org','@type'=>'BreadcrumbList','it
       <?php if(!empty($sub['image'])): ?>
         <img src="/<?=h($sub['image'])?>" alt="<?=h($sub['name'])?>">
       <?php else: ?>
-        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" width="44" height="44"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#f3f1ec"/></svg></div>
+        <div class="catCardPlaceholder"><svg viewBox="0 0 24 24" fill="none" width="44" height="44"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#4a4237"/></svg></div>
       <?php endif; ?>
       <div class="catCardOverlay"></div>
       <div class="catCardBody">

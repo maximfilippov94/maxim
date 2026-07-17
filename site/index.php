@@ -106,7 +106,7 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
       <img src="/<?=h($cat['image'])?>" alt="<?=h($cat['name'])?>">
       <?php else: ?>
       <div class="catCardPlaceholder">
-        <svg viewBox="0 0 24 24" fill="none" width="52" height="52"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#f3f1ec"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" width="52" height="52"><rect x="3" y="15" width="18" height="4" rx="1" fill="#c9792b"/><rect x="4" y="10" width="16" height="4" rx="1" fill="#e89a42"/><rect x="3" y="5" width="18" height="4" rx="1" fill="#4a4237"/></svg>
       </div>
       <?php endif; ?>
       <div class="catCardOverlay"></div>
