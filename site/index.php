@@ -15,7 +15,8 @@ function block_text($code,$field,$fallback=''){ $b=block_data($code); return ($b
 function block_image($code,$fallback='assets/images/hero.webp'){ $b=block_data($code); return !empty($b['image']) ? $b['image'] : $fallback; }
 $title     = setting('site_title','Фанера63.рф');
 $desc      = setting('site_description','Фанера, ОСБ и плитные материалы в Тольятти — опт и розница, доставка по городу.');
-$heroImage = block_image('hero','assets/images/hero.webp');
+// Hero всегда берём локально из папки (внешние URL из БД игнорируем)
+$heroImage = 'assets/images/hero.webp';
 
 // Все активные блоки кроме системных (hero рендерится отдельно)
 $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code NOT IN ('hero','culture') ORDER BY sort_order,id")->fetchAll(PDO::FETCH_ASSOC);
@@ -82,7 +83,7 @@ $allBlocks = $pdo->query("SELECT * FROM page_blocks WHERE is_active=1 AND code N
 <!-- /Yandex.Metrika counter -->
 <?php render_topbar($pdo); ?>
 
-<section id="top" class="heroV2" style="background-image:url('<?=h($heroImage)?>?v=<?=time()?>')">
+<section id="top" class="heroV2" style="background-image:url('<?=h($heroImage)?>?v=<?=@filemtime(__DIR__.'/'.$heroImage) ?: '8'?>')">
   <div class="heroShade"></div><div class="emberLayer"><i></i><i></i><i></i><i></i><i></i></div>
   <div class="heroInner">
     <p class="eyebrow"><?=h(block_text('hero','eyebrow','СКЛАД В САМАРЕ · ДОСТАВКА В ТОЛЬЯТТИ'))?></p>
