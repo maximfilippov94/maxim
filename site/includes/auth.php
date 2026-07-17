@@ -1,9 +1,15 @@
 <?php
-// Secure session cookie settings (HTTPS-only, no JS access)
+// Определяем, работает ли сайт по HTTPS (учитываем прокси/балансировщик)
+$__isHttps = (!empty($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off')
+    || (strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')
+    || (($_SERVER['SERVER_PORT'] ?? '') == 443);
+
+// Secure session cookie settings (no JS access).
+// secure=true только по HTTPS — иначе на HTTP кука не сохраняется и вход не работает.
 session_set_cookie_params([
     'lifetime' => 0,
     'path'     => '/',
-    'secure'   => true,
+    'secure'   => $__isHttps,
     'httponly' => true,
     'samesite' => 'Strict',
 ]);
