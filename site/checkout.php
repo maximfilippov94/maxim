@@ -92,7 +92,7 @@ $CDEK_CITIES = [
 .formRow{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
 .formRow.single{grid-template-columns:1fr}
 .checkoutInput{background:#ffffff;border:1px solid rgba(26,20,12,.12);border-radius:12px;color:var(--text);padding:14px 16px;font:inherit;font-size:15px;outline:none;width:100%;transition:.15s}
-.checkoutInput:focus{border-color:rgba(201,121,43,.5)}
+.checkoutInput:focus{border-color:rgba(191,127,43,.5)}
 .checkoutInput::placeholder{color:rgba(26,20,12,.3)}
 .checkoutLabel{display:grid;gap:6px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
 select.checkoutInput{cursor:pointer}
@@ -100,8 +100,8 @@ select.checkoutInput{cursor:pointer}
 /* Delivery options */
 .deliveryOptions{display:grid;gap:10px}
 .deliveryOption{border:1px solid rgba(26,20,12,.1);border-radius:14px;padding:16px;cursor:pointer;transition:.2s;position:relative}
-.deliveryOption:hover{border-color:rgba(201,121,43,.3)}
-.deliveryOption.selected{border-color:var(--accent);background:rgba(201,121,43,.06)}
+.deliveryOption:hover{border-color:rgba(191,127,43,.3)}
+.deliveryOption.selected{border-color:var(--accent);background:rgba(191,127,43,.06)}
 .deliveryOption input[type=radio]{position:absolute;opacity:0;width:0;height:0}
 .deliveryOption .optHead{display:flex;align-items:center;gap:12px}
 .deliveryOption .optIcon{width:40px;height:40px;border-radius:10px;background:rgba(26,20,12,.05);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
@@ -114,13 +114,13 @@ select.checkoutInput{cursor:pointer}
 /* Payment options */
 .paymentOptions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .paymentOption{border:1px solid rgba(26,20,12,.1);border-radius:14px;padding:16px;cursor:pointer;transition:.2s;text-align:center;position:relative}
-.paymentOption:hover{border-color:rgba(201,121,43,.3)}
-.paymentOption.selected{border-color:var(--accent);background:rgba(201,121,43,.06)}
+.paymentOption:hover{border-color:rgba(191,127,43,.3)}
+.paymentOption.selected{border-color:var(--accent);background:rgba(191,127,43,.06)}
 .paymentOption input[type=radio]{position:absolute;opacity:0}
 .paymentOption .payIcon{font-size:28px;margin-bottom:8px}
 .paymentOption .payTitle{font-weight:700;font-size:13px}
 .paymentOption .payDesc{font-size:11px;color:var(--muted);margin-top:4px}
-.paymentBadge{display:inline-block;background:rgba(201,121,43,.15);color:var(--copper2);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:900;text-transform:uppercase;margin-top:6px}
+.paymentBadge{display:inline-block;background:rgba(191,127,43,.15);color:var(--copper2);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:900;text-transform:uppercase;margin-top:6px}
 
 /* Order summary */
 .orderSummary{background:var(--surface);border:1px solid rgba(26,20,12,.08);border-radius:20px;padding:24px;position:sticky;top:100px}
@@ -138,7 +138,7 @@ select.checkoutInput{cursor:pointer}
 .summaryRow.total{color:var(--text);font-size:18px;font-weight:900;margin-bottom:0}
 .summaryRow span:last-child{color:var(--copper2)}
 .checkoutBtn{width:100%;background:linear-gradient(180deg,var(--copper2),var(--accent));color:#0d0704;border:none;border-radius:14px;padding:18px;font:900 15px/1 inherit;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;margin-top:16px;transition:.2s}
-.checkoutBtn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(201,121,43,.4)}
+.checkoutBtn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(191,127,43,.4)}
 .checkoutBtn:disabled{opacity:.5;cursor:default;transform:none}
 .emptyCartMsg{text-align:center;padding:40px 20px;color:var(--muted)}
 .emptyCartMsg a{color:var(--copper2)}
@@ -148,12 +148,12 @@ select.checkoutInput{cursor:pointer}
 .cdekPvzList{max-height:200px;overflow-y:auto;margin-top:10px}
 .cdekPvz{padding:10px 12px;border-radius:8px;cursor:pointer;transition:.15s;font-size:13px;border:1px solid transparent}
 .cdekPvz:hover{background:rgba(26,20,12,.04)}
-.cdekPvz.selected{border-color:rgba(201,121,43,.4);background:rgba(201,121,43,.06)}
+.cdekPvz.selected{border-color:rgba(191,127,43,.4);background:rgba(191,127,43,.06)}
 .cdekPvz .pvzName{font-weight:700;margin-bottom:2px}
 .cdekPvz .pvzAddr{color:var(--muted);font-size:12px}
 
 /* Notice */
-.cdekNotice{background:rgba(201,121,43,.08);border:1px solid rgba(201,121,43,.2);border-radius:12px;padding:14px 16px;font-size:13px;color:rgba(26,20,12,.7);line-height:1.6;margin-top:10px}
+.cdekNotice{background:rgba(191,127,43,.08);border:1px solid rgba(191,127,43,.2);border-radius:12px;padding:14px 16px;font-size:13px;color:rgba(26,20,12,.7);line-height:1.6;margin-top:10px}
 .cdekNotice strong{color:var(--copper2)}
 
 @media(max-width:900px){
@@ -242,7 +242,7 @@ select.checkoutInput{cursor:pointer}
                 <div style="position:relative">
                   <input class="checkoutInput" id="co_city_cdek_input" placeholder="Начните вводить город..." autocomplete="off" oninput="cdekCitySearch(this.value)">
                   <input type="hidden" id="co_city_cdek" value="">
-                  <div id="cdekCitySuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#ffffff;border:1px solid rgba(201,121,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(32,28,22,.18)"></div>
+                  <div id="cdekCitySuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#ffffff;border:1px solid rgba(191,127,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(32,28,22,.18)"></div>
                 </div>
               </label>
               <div class="cdekMap" id="cdekPvzBlock" style="display:none">
@@ -271,7 +271,7 @@ select.checkoutInput{cursor:pointer}
                 <div style="position:relative">
                   <input class="checkoutInput" id="co_city_courier_input" placeholder="Начните вводить город..." autocomplete="off" oninput="cdekCourierCitySearch(this.value)">
                   <input type="hidden" id="co_city_courier" value="">
-                  <div id="cdekCourierSuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#ffffff;border:1px solid rgba(201,121,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(32,28,22,.18)"></div>
+                  <div id="cdekCourierSuggest" style="display:none;position:absolute;z-index:99;top:calc(100% + 4px);left:0;right:0;background:#ffffff;border:1px solid rgba(191,127,43,.35);border-radius:10px;overflow:hidden;max-height:240px;overflow-y:auto;box-shadow:0 8px 24px rgba(32,28,22,.18)"></div>
                 </div>
               </label>
               <label class="checkoutLabel">Адрес доставки
@@ -356,7 +356,7 @@ select.checkoutInput{cursor:pointer}
           <span>🚚 СДЭК</span>
           <span>↩ Возврат 14 дней</span>
         </div>
-        <button id="placeOrderBtn" onclick="placeOrder()" style="width:100%;background:linear-gradient(180deg,#e8943a,#c9792b);color:#0d0704;border:none;border-radius:14px;padding:18px;font:900 16px/1 Manrope,sans-serif;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;margin-top:16px;transition:.2s;display:block">
+        <button id="placeOrderBtn" onclick="placeOrder()" style="width:100%;background:linear-gradient(180deg,#cd8f3e,#bf7f2b);color:#0d0704;border:none;border-radius:14px;padding:18px;font:900 16px/1 Manrope,sans-serif;text-transform:uppercase;letter-spacing:.08em;cursor:pointer;margin-top:16px;transition:.2s;display:block">
           Оформить заказ →
         </button>
         <p id="checkoutResult" style="text-align:center;font-size:13px;margin-top:12px;color:var(--copper2)"></p>
@@ -470,7 +470,7 @@ function renderCitySuggest(cities, suggestEl, type) {
   if (!unique.length) { suggestEl.style.display = 'none'; return; }
   suggestEl.innerHTML = unique.map((c,i) =>
     `<div data-idx="${i}" style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid rgba(26,20,12,.06);display:flex;justify-content:space-between;align-items:center"
-      onmouseover="this.style.background='rgba(201,121,43,.12)'" onmouseout="this.style.background=''"
+      onmouseover="this.style.background='rgba(191,127,43,.12)'" onmouseout="this.style.background=''"
     ><span style="font-weight:500">${c.name}</span><span style="color:rgba(26,20,12,.45);font-size:12px">${c.region||''}</span></div>`
   ).join('');
   suggestEl.querySelectorAll('[data-idx]').forEach((el, i) => {

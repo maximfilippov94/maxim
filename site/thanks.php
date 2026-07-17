@@ -20,7 +20,7 @@ $title = 'Спасибо за заявку — Фанера63.рф';
 <style>
 .thanksPage{min-height:80vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:80px 24px}
 .thanksInner{max-width:600px}
-.thanksIcon{width:72px;height:72px;border-radius:50%;background:rgba(201,121,43,.15);border:1px solid rgba(201,121,43,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 32px;font-size:32px}
+.thanksIcon{width:72px;height:72px;border-radius:50%;background:rgba(191,127,43,.15);border:1px solid rgba(191,127,43,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 32px;font-size:32px}
 .thanksPage h1{font-family:var(--head);font-size:clamp(52px,9vw,96px);line-height:.9;text-transform:uppercase;margin:0 0 20px}
 .thanksPage p{color:var(--muted);font-size:18px;line-height:1.6;margin:0 0 40px;max-width:460px;margin-left:auto;margin-right:auto}
 .thanksActions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}

@@ -73,12 +73,12 @@ $breadcrumbLd = ['@context'=>'https://schema.org','@type'=>'BreadcrumbList','ite
   text-decoration:none;
   transition:border-color 200ms ease,background 200ms ease,transform 200ms ease;
 }
-.contactItem:hover{border-color:rgba(201,121,43,.5);background:rgba(201,121,43,.05);transform:translateY(-1px)}
+.contactItem:hover{border-color:rgba(191,127,43,.5);background:rgba(191,127,43,.05);transform:translateY(-1px)}
 .contactItem:hover .contactIcon{color:var(--copper2)}
 .contactIcon{
   width:40px;height:40px;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  background:rgba(201,121,43,.1);
+  background:rgba(191,127,43,.1);
   border-radius:10px;
   color:var(--copper);
   transition:color 200ms ease;

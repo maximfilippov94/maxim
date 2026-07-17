@@ -29,17 +29,17 @@ $desc  = 'Доставляем фанеру, ОСБ и плитные матер
 .popularSection { margin-bottom: 40px; }
 .popularChips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .popularChip {
-  border: 1px solid rgba(201,121,43,.3);
+  border: 1px solid rgba(191,127,43,.3);
   border-radius: var(--radius-pill);
   padding: 8px 18px;
   font-size: 13px;
   font-weight: 600;
   color: var(--copper2);
   text-decoration: none;
-  background: rgba(201,121,43,.06);
+  background: rgba(191,127,43,.06);
   transition: background 200ms ease, border-color 200ms ease;
 }
-.popularChip:hover { background: rgba(201,121,43,.16); border-color: rgba(201,121,43,.6); }
+.popularChip:hover { background: rgba(191,127,43,.16); border-color: rgba(191,127,43,.6); }
 
 .alphaNav { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 24px; margin-top: 12px; }
 .alphaBtn {
@@ -52,7 +52,7 @@ $desc  = 'Доставляем фанеру, ОСБ и плитные матер
   text-decoration: none;
   transition: color 200ms ease, border-color 200ms ease;
 }
-.alphaBtn:hover { color: var(--copper2); border-color: rgba(201,121,43,.4); }
+.alphaBtn:hover { color: var(--copper2); border-color: rgba(191,127,43,.4); }
 
 .letterGroup { margin-bottom: 28px; }
 .letterHeading { font-family: var(--head); font-size: 32px; color: var(--copper2); line-height: 1; margin-bottom: 10px; }
@@ -67,7 +67,7 @@ $desc  = 'Доставляем фанеру, ОСБ и плитные матер
   background: var(--surface);
   transition: border-color 200ms ease, color 200ms ease;
 }
-.cityLink:hover { border-color: rgba(201,121,43,.35); color: var(--copper2); }
+.cityLink:hover { border-color: rgba(191,127,43,.35); color: var(--copper2); }
 
 @media(max-width:980px) {
   .citiesPage { width: calc(100vw - 48px); padding: 90px 0 80px; }
