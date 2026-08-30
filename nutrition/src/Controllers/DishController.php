@@ -31,7 +31,8 @@ class DishController extends Controller
             $where[] = 'dt.tag = ?';
             $params[] = $tag;
         }
-        if ($scope === 'favorites') {
+        $hasFavTable = $this->favoritesTableExists();
+        if ($scope === 'favorites' && $hasFavTable) {
             $sql .= ' JOIN dish_favorites df ON df.dish_id = d.id AND df.specialist_id = ?';
             $params[] = $auth['id'];
         }
@@ -53,10 +54,10 @@ class DishController extends Controller
         $dishes = Database::all($sql, $params);
 
         // Множество избранных для отметки is_favorite (один запрос).
-        $favs = array_column(
+        $favs = $hasFavTable ? array_column(
             Database::all('SELECT dish_id FROM dish_favorites WHERE specialist_id = ?', [$auth['id']]),
             'dish_id'
-        );
+        ) : [];
         $favSet = array_flip(array_map('intval', $favs));
 
         foreach ($dishes as &$d) {
@@ -68,6 +69,18 @@ class DishController extends Controller
         return ['items' => $dishes, 'favorites_count' => count($favs)];
     }
 
+    /** Есть ли таблица избранного (на случай не применённой миграции 005). */
+    private function favoritesTableExists(): bool
+    {
+        static $exists = null;
+        if ($exists === null) {
+            $exists = (bool)Database::one(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='dish_favorites'"
+            );
+        }
+        return $exists;
+    }
+
     /** Добавить блюдо в избранное. */
     public function favorite(Request $req, array $args): array
     {
@@ -75,6 +88,9 @@ class DishController extends Controller
         $id = (int)$args['id'];
         if (!Repo::dish($id)) {
             throw new HttpException('Блюдо не найдено', 404);
+        }
+        if (!$this->favoritesTableExists()) {
+            throw new HttpException('Избранное недоступно: обновите базу данных (миграция 005).', 503);
         }
         Database::exec(
             'INSERT OR IGNORE INTO dish_favorites (specialist_id, dish_id, created_at) VALUES (?, ?, ?)',
@@ -88,10 +104,12 @@ class DishController extends Controller
     {
         $auth = Auth::require($req, 'specialist');
         $id = (int)$args['id'];
-        Database::exec(
-            'DELETE FROM dish_favorites WHERE specialist_id = ? AND dish_id = ?',
-            [$auth['id'], $id]
-        );
+        if ($this->favoritesTableExists()) {
+            Database::exec(
+                'DELETE FROM dish_favorites WHERE specialist_id = ? AND dish_id = ?',
+                [$auth['id'], $id]
+            );
+        }
         return ['ok' => true, 'is_favorite' => false];
     }
 
