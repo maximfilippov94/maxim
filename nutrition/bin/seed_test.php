@@ -64,6 +64,37 @@ function pickDish(array $pool, string $meal, int $i): array {
     return $list[$i % count($list)];
 }
 
+/**
+ * Создаёт опубликованное меню на 7 дней для клиента.
+ * $startOffset — за сколько дней до сегодня начинается меню (для управления
+ * датой окончания в сценариях «Требуют внимания»). Возвращает [menuId, itemsDay1].
+ */
+function makePublishedMenu(int $clientId, int $specId, array $pool, int $startOffset): array {
+    $now = gmdate('c');
+    $menuId = Database::insert(
+        'INSERT INTO menus (client_id, specialist_id, title, start_date, days_count, status, published_at, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [$clientId, $specId, 'Меню на неделю', date('Y-m-d', time() - $startOffset * 86400), 7, 'published', $now, $now]
+    );
+    $mealPlan = ['breakfast', 'snack1', 'lunch', 'snack2', 'dinner'];
+    $day1 = [];
+    for ($d = 1; $d <= 7; $d++) {
+        $sort = 0;
+        foreach ($mealPlan as $mt) {
+            if ($mt === 'snack2' && $d % 2 === 0) continue;
+            $dish = pickDish($pool, $mt, $d + $sort);
+            $portion = (float)($dish['base_portion_g'] ?: 200);
+            $iid = Database::insert(
+                'INSERT INTO menu_items (menu_id, day_number, meal_type, dish_id, portion_g, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?)',
+                [$menuId, $d, $mt, (int)$dish['id'], $portion, $sort++]
+            );
+            if ($d === 1) $day1[$mt] = $iid;
+        }
+    }
+    return [$menuId, $day1];
+}
+
 // ---------- Клиенты ----------
 $fnamesF = ['Анна','Мария','Ольга','Ирина','Наталья','Татьяна','Екатерина','Юлия','Виктория'];
 $lnamesF = ['Смирнова','Иванова','Петрова','Соколова','Попова','Лебедева','Козлова','Новикова','Морозова'];
@@ -161,4 +192,58 @@ foreach ($msgs as [$who, $body]) {
     $t += 3600;
 }
 echo "Вес: 9 замеров, чат: " . count($msgs) . " сообщений\n";
+
+// ---------- Разные сценарии «Требуют внимания» для демо ----------
+// Каждому клиенту — свой правдоподобный статус, чтобы движок внимания и
+// список клиентов выглядели как реальная рабочая база.
+$logMeal = function (array $day1, int $clientId, int $daysAgo, string $status = 'eaten') {
+    $iid = $day1['breakfast'] ?? reset($day1);
+    if ($iid) {
+        Database::insert('INSERT INTO meal_logs (menu_item_id, client_id, status, logged_at) VALUES (?, ?, ?, ?)',
+            [$iid, $clientId, $status, tago($daysAgo)]);
+    }
+};
+$addWeight = function (int $clientId, float $kg, int $daysAgo) {
+    Database::exec('INSERT OR IGNORE INTO weight_logs (client_id, weight_kg, measured_on) VALUES (?, ?, ?)',
+        [$clientId, round($kg, 1), date('Y-m-d', time() - $daysAgo * 86400)]);
+};
+
+// Сценарий 1: меню заканчивается завтра + давно не отмечал питание.
+if (isset($clientIds[1])) {
+    $cid = $clientIds[1]['id'];
+    [$mid, $d1] = makePublishedMenu($cid, $specId, $pool, 5); // start = -5д → конец завтра
+    $logMeal($d1, $cid, 4);
+    $addWeight($cid, 71.5, 3); $addWeight($cid, 72.3, 10);
+}
+// Сценарий 2: вес стоит на месте (последний замер 6 дней назад).
+if (isset($clientIds[2])) {
+    $cid = $clientIds[2]['id'];
+    [$mid, $d1] = makePublishedMenu($cid, $specId, $pool, 2);
+    $logMeal($d1, $cid, 0);
+    $addWeight($cid, 68.1, 6); $addWeight($cid, 68.0, 13); $addWeight($cid, 68.2, 20);
+}
+// Сценарий 3: давно не вносил вес (последний замер 12 дней назад).
+if (isset($clientIds[3])) {
+    $cid = $clientIds[3]['id'];
+    [$mid, $d1] = makePublishedMenu($cid, $specId, $pool, 1);
+    $logMeal($d1, $cid, 1);
+    $addWeight($cid, 79.4, 12); $addWeight($cid, 80.2, 19);
+}
+// Сценарий 4: новое сообщение от клиента (непрочитанное).
+if (isset($clientIds[4])) {
+    $cid = $clientIds[4]['id'];
+    [$mid, $d1] = makePublishedMenu($cid, $specId, $pool, 3);
+    $logMeal($d1, $cid, 0);
+    $addWeight($cid, 64.8, 2); $addWeight($cid, 65.6, 9);
+    Database::insert('INSERT INTO messages (client_id, author_type, body, read_at, created_at) VALUES (?, ?, ?, ?, ?)',
+        [$cid, 'client', 'Здравствуйте! Можно заменить курицу на индейку?', null, tago(0)]);
+}
+// Сценарий 5: всё в норме — свежее меню, отметки и вес есть.
+if (isset($clientIds[5])) {
+    $cid = $clientIds[5]['id'];
+    [$mid, $d1] = makePublishedMenu($cid, $specId, $pool, 2);
+    $logMeal($d1, $cid, 0);
+    $addWeight($cid, 74.1, 1); $addWeight($cid, 75.0, 8);
+}
+echo "Сценарии внимания: клиенты 2–6 наполнены (меню/вес/питание/сообщение)\n";
 echo "Готово.\n";

@@ -4,7 +4,7 @@
    ========================================================================== */
 'use strict';
 
-const API = '/api/v1';
+const API = '/index.php?route=/api/v1';
 const MEAL_LABELS = {
   breakfast: 'Завтрак', snack1: 'Перекус', lunch: 'Обед', snack2: 'Полдник', dinner: 'Ужин'
 };
@@ -44,7 +44,7 @@ async function api(method, path, body) {
   if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
   let resp;
   try {
-    resp = await fetch(API + path, opts);
+    resp = await fetch(API + encodeURIComponent(path), opts);
   } catch (e) {
     throw { status: 0, message: 'Нет соединения' };
   }
@@ -89,6 +89,9 @@ function render(node) {
 
 /* ---------- SVG-иконки (Lucide-стиль, без эмодзи) ---------- */
 const ICONS = {
+  home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
+  chart: '<path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 15 3-4 3 2 4-6"/>',
+  settings: '<path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06A1.7 1.7 0 0 0 16.16 18a1.7 1.7 0 0 0-1 .96 1.7 1.7 0 0 0-.16.72V20H11v-.32a1.7 1.7 0 0 0-1.08-1.58 1.7 1.7 0 0 0-1.84.48l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 6.66 15a1.7 1.7 0 0 0-1.56-1H4v-2h1.1a1.7 1.7 0 0 0 1.56-1 1.7 1.7 0 0 0-.28-1.88l-.06-.06 1.7-1.7.06.06a1.7 1.7 0 0 0 1.84.48A1.7 1.7 0 0 0 11 6.32V6h4v.32a1.7 1.7 0 0 0 1.08 1.58 1.7 1.7 0 0 0 1.84-.48l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.34 11a1.7 1.7 0 0 0 1.56 1H22v2h-1.1a1.7 1.7 0 0 0-1.5 1Z"/>',
   users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
   user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
@@ -168,9 +171,9 @@ function macroLine(n, withPortion) {
 }
 
 /* Нижняя шторка (bottom sheet). Возвращает функцию закрытия. */
-function sheet(title, contentBuilder) {
-  const backdrop = h('div', { class: 'sheet-backdrop' });
-  const panel = h('div', { class: 'sheet' });
+function sheet(title, contentBuilder, opts = {}) {
+  const backdrop = h('div', { class: 'sheet-backdrop' + (opts.modal ? ' modal-backdrop' : '') });
+  const panel = h('div', { class: 'sheet' + (opts.modal ? ' sheet-modal' : '') });
   const close = () => backdrop.remove();
   backdrop.addEventListener('click', (e) => { if (e.target === backdrop) close(); });
   panel.appendChild(h('div', { class: 'grabber' }));
@@ -184,9 +187,14 @@ function sheet(title, contentBuilder) {
 /* Пункты навигации по роли — общие для нижней панели и sidebar. */
 function navItems() {
   return State.role === 'specialist'
-    ? [['clients', 'users', 'Клиенты', '#/clients'],
+    ? [['home', 'home', 'Главная', '#/home'],
+       ['clients', 'users', 'Клиенты', '#/clients'],
+       ['builder', 'layers', 'Конструктор меню', '#/menu-list'],
        ['base', 'book', 'База блюд', '#/base'],
-       ['profile', 'user', 'Профиль', '#/profile']]
+       ['analytics', 'chart', 'Аналитика', '#/analytics'],
+       ['chats', 'chat', 'Чаты', '#/chats'],
+       ['profile', 'user', 'Профиль', '#/profile'],
+       ['settings', 'settings', 'Настройки', '#/settings']]
     : [['today', 'utensils', 'Сегодня', '#/today'],
        ['week', 'calendar', 'Неделя', '#/week'],
        ['progress', 'trending', 'Прогресс', '#/progress'],
@@ -271,7 +279,11 @@ async function router() {
   // Закрываем висящие шторки/тосты при смене экрана.
   const ov = $overlay();
   if (ov) ov.innerHTML = '';
-  const hash = location.hash.replace(/^#/, '') || '/';
+  const raw = location.hash.replace(/^#/, '') || '/';
+  const qi = raw.indexOf('?');
+  const hash = qi >= 0 ? raw.slice(0, qi) : raw;
+  State.query = {};
+  if (qi >= 0) new URLSearchParams(raw.slice(qi + 1)).forEach((v, k) => State.query[k] = v);
   for (const r of routes) {
     const m = hash.match(r.rx);
     if (m) {
@@ -544,34 +556,197 @@ function checkRow(label, checked, onChange) {
 }
 
 /* ==========================================================================
+   СПЕЦИАЛИСТ: ГЛАВНАЯ / АНАЛИТИКА / ЧАТЫ / НАСТРОЙКИ
+   ========================================================================== */
+
+/* Иконки причин «Требуют внимания». */
+const ATTN_ICON = { message: 'chat', no_menu: 'layers', menu_ending: 'clock', no_logs: 'utensils', no_weight: 'scale', weight_stall: 'trending' };
+
+/* Кнопка быстрого действия. */
+function quickAction(icon, label, onclick) {
+  return h('button', { class: 'qa-btn', onclick }, h('span', { class: 'qa-ic' }, ic(icon, 'sm')), h('span', {}, label));
+}
+
+/* Строка «Требует внимания»: клиент + причины + переход. */
+function attentionItem(c) {
+  const hasMsg = c.attention.some(a => a.type === 'message');
+  return h('div', { class: 'attn-item', onclick: () => location.hash = (hasMsg ? '#/chat/' : '#/client/') + c.id },
+    h('div', { class: 'avatar' }, initials(c.name)),
+    h('div', { class: 'grow' },
+      h('div', { class: 'attn-name' }, c.name),
+      h('div', { class: 'attn-reasons' }, ...c.attention.map(a =>
+        h('span', { class: 'attn-pill ' + a.type }, ic(ATTN_ICON[a.type] || 'alert', 'xs'), a.text)))
+    ),
+    h('span', { class: 'attn-cta' }, hasMsg ? 'Открыть чат' : 'Открыть', ic('chevronRight', 'sm'))
+  );
+}
+
+/* Компактная строка клиента с метриками (Главная и список клиентов). */
+function clientRow(c) {
+  const delta = c.weight_delta;
+  const deltaEl = delta !== null && delta !== undefined
+    ? h('span', { class: 'metric-delta ' + (delta < 0 ? 'down' : delta > 0 ? 'up' : '') }, (delta > 0 ? '+' : '') + fmt(delta) + ' кг')
+    : null;
+  const statusText = c.attention && c.attention.length
+    ? c.attention[0].text
+    : (c.menu_status === 'published' ? 'В норме' : 'Меню не создано');
+  const statusTone = c.attention && c.attention.length ? 'warn' : (c.menu_status === 'published' ? 'ok' : 'muted');
+  const metric = (label, value, extra) => h('div', { class: 'cr-metric' }, h('span', {}, label), h('b', {}, value, extra || null));
+  return h('div', { class: 'client-row', onclick: () => location.hash = '#/client/' + c.id },
+    h('div', { class: 'avatar' }, initials(c.name)),
+    h('div', { class: 'cr-main' },
+      h('div', { class: 'cr-name' }, c.name),
+      h('div', { class: 'cr-goal' }, c.goal || 'Цель не задана')
+    ),
+    h('div', { class: 'cr-metrics' },
+      metric('Вес', c.last_weight_kg ? fmt(c.last_weight_kg) + ' кг' : (c.weight_kg ? fmt(c.weight_kg) + ' кг' : '—'), deltaEl ? h('span', {}, ' ', deltaEl) : null),
+      metric('Ккал', c.target_kcal ? fmt0(c.target_kcal) : '—'),
+      metric('Соблюдение', c.compliance_pct !== null && c.compliance_pct !== undefined ? c.compliance_pct + '%' : '—')
+    ),
+    h('div', { class: 'cr-status' }, h('span', { class: 'status-pill ' + statusTone }, statusText), ic('chevronRight', 'chevron sm'))
+  );
+}
+
+route('/home', async () => {
+  if (!requireRole('specialist')) return;
+  loading();
+  const { items = [] } = await GET('/clients');
+  const active = items.filter(x => x.status !== 'archived');
+  const published = active.filter(x => x.menu_status === 'published').length;
+  const unread = active.reduce((s, c) => s + (c.unread_messages || 0), 0);
+  const attn = active.filter(c => c.attention && c.attention.length)
+    .sort((a, b) => (a.attention_rank ?? 99) - (b.attention_rank ?? 99));
+  const complList = active.filter(c => c.compliance_pct !== null && c.compliance_pct !== undefined);
+  const avgCompl = complList.length ? Math.round(complList.reduce((s, c) => s + c.compliance_pct, 0) / complList.length) : 0;
+  const hour = new Date().getHours();
+  const greet = hour < 6 ? 'Доброй ночи' : hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер';
+
+  const attnCard = h('section', { class: 'card attn-card' },
+    h('div', { class: 'row-between' },
+      h('div', { class: 'attn-head' }, h('h3', {}, 'Требуют внимания'), attn.length ? h('span', { class: 'attn-count' }, String(attn.length)) : null),
+      attn.length ? h('a', { class: 'dash-link', href: '#/clients?filter=attention' }, 'Все') : null),
+    attn.length
+      ? h('div', { class: 'attn-list' }, ...attn.slice(0, 6).map(attentionItem))
+      : h('div', { class: 'empty dash-empty' }, ic('checkCircle'), h('div', {}, 'Всё под контролем'), h('div', { class: 'small' }, 'Ни один клиент не требует действий'))
+  );
+
+  const clientsCard = h('section', { class: 'card' },
+    h('div', { class: 'row-between' }, h('h3', {}, 'Мои клиенты'), h('a', { class: 'dash-link', href: '#/clients' }, 'Все клиенты')),
+    active.length
+      ? h('div', { class: 'client-rows' }, ...active.slice(0, 6).map(clientRow))
+      : h('div', { class: 'empty dash-empty' }, ic('users'), h('div', {}, 'Пока нет клиентов'), h('button', { class: 'btn small', style: 'margin-top:10px', onclick: () => location.hash = '#/client/new' }, ic('plus', 'sm'), 'Добавить клиента'))
+  );
+
+  const content = h('div', { class: 'content dashboard-page' },
+    h('div', { class: 'dash-head' },
+      h('div', {}, h('h2', {}, greet + ', ' + ((State.user && State.user.name) || 'Елена') + '! 👋'), h('p', {}, 'Вот что происходит с вашими клиентами')),
+      h('span', { class: 'date-chip' }, new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }))),
+
+    h('div', { class: 'quick-actions' },
+      quickAction('plus', 'Новый клиент', () => location.hash = '#/client/new'),
+      quickAction('layers', 'Создать меню', () => location.hash = '#/menu-list'),
+      quickAction('book', 'Добавить блюдо', () => location.hash = '#/dish/new')),
+
+    h('div', { class: 'kpi-row' },
+      h('div', { class: 'mini-kpi' }, h('b', {}, String(active.length)), h('span', {}, plural(active.length, 'Клиент', 'Клиента', 'Клиентов'))),
+      h('div', { class: 'mini-kpi' }, h('b', {}, String(published)), h('span', {}, 'Активных меню')),
+      h('div', { class: 'mini-kpi' + (unread ? ' accent' : '') }, h('b', {}, String(unread)), h('span', {}, 'Новых сообщений')),
+      h('div', { class: 'mini-kpi' }, h('b', {}, avgCompl + '%'), h('span', {}, 'Среднее соблюдение'))),
+
+    h('div', { class: 'home-grid' }, attnCard, clientsCard)
+  );
+  render(shell('home', content, { topbar: 'Главная' }));
+});
+
+/* Простое склонение существительных по числу. */
+function plural(n, one, few, many) {
+  const m100 = n % 100, m10 = n % 10;
+  if (m100 >= 11 && m100 <= 14) return many;
+  if (m10 === 1) return one;
+  if (m10 >= 2 && m10 <= 4) return few;
+  return many;
+}
+
+route('/menu-list', async () => {
+  if (!requireRole('specialist')) return;
+  const { items = [] } = await GET('/clients');
+  const content = h('div', { class:'content' }, h('div', { class:'section-intro' }, h('div', {}, h('h2', {}, 'Конструктор меню'), h('p', {}, 'Выберите клиента и откройте его меню')), h('a', { class:'btn small', href:'#/clients' }, 'Выбрать клиента')), h('div', { class:'grid-cards menu-list-grid' }, ...items.filter(c=>c.status!=='archived').map(c=>h('div',{class:'list-item',onclick:()=>location.hash='#/client/'+c.id},h('div',{class:'avatar'},initials(c.name)),h('div',{class:'grow'},h('h3',{},c.name),h('div',{class:'sub'},c.menu_status==='published'?'Меню опубликовано':'Меню не создано'),),ic('chevronRight','sm')))));
+  render(shell('builder', content, { topbar:'Конструктор меню' }));
+});
+
+route('/analytics', () => {
+  if (!requireRole('specialist')) return;
+  const content=h('div',{class:'content dashboard-page'},h('div',{class:'dash-head'},h('div',{},h('h2',{},'Аналитика'),h('p',{},'Динамика клиентов и меню'))),h('div',{class:'dashboard-grid analytics-grid'},h('div',{class:'card'},h('h3',{},'Соблюдение плана'),h('div',{class:'big-stat'},'78%'),h('div',{class:'fake-chart large'},h('span',{},'Пн'),h('span',{},'Вт'),h('span',{},'Ср'),h('span',{},'Чт'),h('span',{},'Пт'),h('span',{},'Сб'),h('span',{},'Вс'))),h('div',{class:'card'},h('h3',{},'Изменение веса'),h('div',{class:'big-stat'},'-1.8 кг'),h('p',{class:'muted'},'Среднее изменение за неделю'))));
+  render(shell('analytics',content,{topbar:'Аналитика'}));
+});
+
+route('/chats', () => {
+  if (!requireRole('specialist')) return;
+  const content=h('div',{class:'content'},h('div',{class:'empty card'},ic('chat'),h('h3',{},'Чаты с клиентами'),h('p',{class:'muted'},'Откройте клиента, чтобы продолжить переписку.')));
+  render(shell('chats',content,{topbar:'Чаты'}));
+});
+
+route('/settings', () => {
+  if (!requireRole('specialist')) return;
+  const content=h('div',{class:'content'},h('div',{class:'card settings-card'},h('h3',{},'Настройки'),h('p',{class:'muted'},'Настройки аккаунта и интерфейса NutriMenu.'),h('button',{class:'btn danger small',onclick:logout},ic('logout','sm'),'Выйти')));
+  render(shell('settings',content,{topbar:'Настройки'}));
+});
+
+/* ==========================================================================
    СПЕЦИАЛИСТ: КЛИЕНТЫ
    ========================================================================== */
+const CLIENT_FILTERS = [
+  ['all', 'Все', c => true],
+  ['active', 'Активные', c => c.menu_status === 'published'],
+  ['attention', 'Требуют внимания', c => c.attention && c.attention.length],
+  ['new', 'Новые', c => !c.menu_status],
+];
+
 route('/clients', async () => {
   if (!requireRole('specialist')) return;
   skeletonList('clients', 'Клиенты');
   const { items } = await GET('/clients');
   const active = items.filter(x => x.status !== 'archived');
-  const list = h('div', { class: 'content stagger grid-cards' });
-  if (!active.length) {
-    list.appendChild(h('div', { class: 'empty' }, ic('users'), h('div', {}, 'Пока нет клиентов'), h('div', { class: 'small' }, 'Нажмите +, чтобы добавить первого')));
-  }
-  for (const c of active) {
-    list.appendChild(h('div', { class: 'list-item', onclick: () => location.hash = '#/client/' + c.id },
-      h('div', { class: 'avatar' }, initials(c.name)),
-      h('div', { class: 'grow' },
-        h('h3', {}, c.name),
-        h('div', { class: 'sub' },
-          h('span', { class: 'status-dot ' + (c.menu_status || 'draft') }),
-          [c.goal ? c.goal : 'Цель не задана',
-           c.menu_status ? (c.menu_status === 'published' ? 'меню опубликовано' : 'черновик меню') : 'нет меню'].join(' · '))
-      ),
-      c.unread_messages ? h('span', { class: 'pill', style: 'background:var(--over);color:#fff' }, String(c.unread_messages)) : null,
-      ic('chevronRight', 'chevron sm')
-    ));
-  }
+  let filter = State.query.filter && CLIENT_FILTERS.some(f => f[0] === State.query.filter) ? State.query.filter : 'all';
+  let term = '';
+
+  const listEl = h('div', { class: 'client-rows card client-list' });
+  const empty = h('div', { class: 'empty' }, ic('users'), h('div', {}, 'Никого не найдено'), h('div', { class: 'small' }, 'Измените фильтр или добавьте клиента'));
+
+  const chips = h('div', { class: 'chip-row filter-chips' });
+  const chipEls = {};
+  const draw = () => {
+    const test = CLIENT_FILTERS.find(f => f[0] === filter)[2];
+    const rows = active.filter(test).filter(c => !term || c.name.toLowerCase().includes(term));
+    if (filter === 'attention') rows.sort((a, b) => (a.attention_rank ?? 99) - (b.attention_rank ?? 99));
+    listEl.innerHTML = '';
+    if (!rows.length) { listEl.appendChild(empty); return; }
+    rows.forEach(c => listEl.appendChild(clientRow(c)));
+  };
+  CLIENT_FILTERS.forEach(([key, label, test]) => {
+    const n = active.filter(test).length;
+    const b = h('button', { class: key === filter ? 'active' : '', onclick: () => {
+      filter = key; Object.values(chipEls).forEach(x => x.classList.remove('active')); b.classList.add('active'); draw();
+    } }, label, n ? h('span', { class: 'chip-count' }, String(n)) : null);
+    chipEls[key] = b; chips.appendChild(b);
+  });
+
+  const search = h('input', { placeholder: 'Поиск клиента…', value: '' });
+  let timer;
+  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { term = search.value.trim().toLowerCase(); draw(); }, 180); });
+
+  const content = h('div', { class: 'content clients-page' },
+    h('div', { class: 'section-intro' },
+      h('div', {}, h('h2', {}, 'Клиенты'), h('p', {}, plural(active.length, 'клиент', 'клиента', 'клиентов') + ' · ' + active.length)),
+      h('button', { class: 'btn small', onclick: () => location.hash = '#/client/new' }, ic('plus', 'sm'), 'Добавить')),
+    searchField(search),
+    chips,
+    listEl
+  );
   const fab = h('button', { class: 'btn fab', 'aria-label': 'Добавить клиента', onclick: () => location.hash = '#/client/new' }, ic('plus'));
-  render(shell('clients', list, { topbar: 'Клиенты' }));
+  render(shell('clients', content, { topbar: 'Клиенты' }));
   $app().querySelector('.screen').appendChild(fab);
+  draw();
 });
 
 route('/client/new', () => {
@@ -644,44 +819,132 @@ function clientForm(client) {
 route('/client/:id', async (args) => {
   if (!requireRole('specialist')) return;
   loading();
-  const c = await GET('/clients/' + args.id);
+  const [c, weightData] = await Promise.all([
+    GET('/clients/' + args.id),
+    GET('/clients/' + args.id + '/weight').catch(() => ({ items: [] }))
+  ]);
   const menus = c.menus || [];
+  const weights = weightData.items || [];
+  const latestWeight = weights.length ? weights[weights.length - 1] : null;
+  const previousWeight = weights.length > 1 ? weights[weights.length - 2] : null;
+  const weightDelta = latestWeight && previousWeight ? Number(latestWeight.weight_kg) - Number(previousWeight.weight_kg) : null;
+  const activeMenu = menus.find(m => m.status === 'published') || menus[0] || null;
+  const menuLabel = activeMenu ? (activeMenu.status === 'published' ? 'Активно' : 'Черновик') : 'Нет меню';
+  const menuLabelClass = activeMenu && activeMenu.status === 'published' ? 'success' : 'warn';
 
-  const menuList = h('div', {});
-  if (!menus.length) menuList.appendChild(h('div', { class: 'muted small' }, 'Меню ещё не создано.'));
+  const stat = (label, value, meta, tone) => h('div', { class: 'client-stat' },
+    h('div', { class: 'client-stat-label' }, label),
+    h('div', { class: 'client-stat-value' + (tone ? ' ' + tone : '') }, value),
+    meta ? h('div', { class: 'client-stat-meta' }, meta) : null
+  );
+
+  const menuList = h('div', { class: 'client-menu-list' });
+  if (!menus.length) {
+    menuList.appendChild(h('div', { class: 'client-empty' },
+      h('div', { class: 'client-empty-icon' }, ic('layers')),
+      h('div', {}, h('b', {}, 'Меню ещё не создано'), h('span', {}, 'Соберите первый рацион на неделю')),
+      h('button', { class: 'btn small', onclick: () => createMenu(c.id) }, ic('plus','sm'), 'Создать меню')
+    ));
+  }
   for (const m of menus) {
-    menuList.appendChild(h('div', { class: 'list-item', onclick: () => location.hash = '#/menu/' + m.id },
+    menuList.appendChild(h('div', { class: 'client-menu-row', onclick: () => location.hash = '#/menu/' + m.id },
+      h('div', { class: 'client-menu-icon' }, ic('layers','sm')),
       h('div', { class: 'grow' },
-        h('h3', {}, m.title || 'Меню'),
-        h('div', { class: 'sub' }, h('span', { class: 'status-dot ' + m.status }), (m.status === 'published' ? 'Опубликовано' : 'Черновик') + ' · ' + m.days_count + ' дн. · с ' + m.start_date)),
-      ic('chevronRight', 'chevron sm')
+        h('div', { class: 'client-menu-title' }, m.title || 'Меню на неделю'),
+        h('div', { class: 'client-menu-meta' },
+          h('span', { class: 'status-dot ' + m.status }),
+          m.status === 'published' ? 'Опубликовано' : 'Черновик',
+          ' · ' + m.days_count + ' дн. · с ' + fmtDate(m.start_date)
+        )
+      ),
+      h('span', { class: 'client-menu-arrow' }, ic('chevronRight','sm'))
     ));
   }
 
-  const targets = (c.target_kcal || c.target_protein) ?
-    `${c.target_kcal || '—'} ккал · Б ${c.target_protein || '—'} · Ж ${c.target_fat || '—'} · У ${c.target_carbs || '—'}` :
-    'Целевые КБЖУ не заданы';
+  const targetItems = [
+    ['Калории', c.target_kcal ? fmt0(c.target_kcal) + ' ккал' : '—'],
+    ['Белки', c.target_protein ? fmt(c.target_protein) + ' г' : '—'],
+    ['Жиры', c.target_fat ? fmt(c.target_fat) + ' г' : '—'],
+    ['Углеводы', c.target_carbs ? fmt(c.target_carbs) + ' г' : '—']
+  ];
 
-  const content = h('div', { class: 'content' },
-    h('div', { class: 'card' },
-      h('div', { class: 'row-between' }, h('h3', { style: 'margin:0' }, c.name),
-        h('button', { class: 'btn ghost small', onclick: () => location.hash = '#/client/' + c.id + '/edit' }, 'Изменить')),
-      c.goal ? h('div', { class: 'small', style: 'margin-top:8px;display:flex;gap:7px;align-items:center' }, ic('target', 'sm'), h('span', {}, c.goal)) : null,
-      h('div', { class: 'small muted', style: 'margin-top:6px' }, targets)
-    ),
-    intakeCard(c),
-    h('div', { class: 'card' },
-      h('div', { class: 'row-between' }, h('h3', { style: 'margin:0;font-size:15px' }, 'Меню'),
-        h('button', { class: 'btn secondary small', onclick: () => createMenu(c.id) }, ic('plus','sm'), 'Меню')),
-      h('div', { class: 'divider' }), menuList
-    ),
-    h('div', { class: 'btn-row' },
-      h('button', { class: 'btn secondary', onclick: () => location.hash = '#/chat/' + c.id }, ic('chat', 'sm'), 'Чат'),
-      h('button', { class: 'btn secondary', onclick: () => location.hash = '#/weight/' + c.id }, ic('scale', 'sm'), 'Вес')
-    ),
-    h('button', { class: 'btn ghost', style: 'margin-top:10px', onclick: () => shareInvite(c.id) }, ic('link', 'sm'), 'Ссылка-приглашение'),
-    h('button', { class: 'btn danger', style: 'margin-top:6px', onclick: () => archiveClient(c.id) }, ic('trash','sm'), 'В архив')
+  const targets = h('div', { class: 'client-target-grid' }, ...targetItems.map(([label, value]) =>
+    h('div', { class: 'client-target' }, h('span', {}, label), h('b', {}, value))));
+
+  const intake = intakeCard(c);
+  intake.classList.add('client-intake-card');
+
+  const actions = h('div', { class: 'client-actions' },
+    h('button', { class: 'btn', onclick: () => activeMenu ? location.hash = '#/menu/' + activeMenu.id : createMenu(c.id) }, ic('layers','sm'), activeMenu ? 'Открыть меню' : 'Собрать меню'),
+    h('button', { class: 'btn secondary', onclick: () => location.hash = '#/chat/' + c.id }, ic('chat','sm'), 'Написать'),
+    h('button', { class: 'btn secondary', onclick: () => location.hash = '#/weight/' + c.id }, ic('scale','sm'), 'История веса')
   );
+
+  const content = h('div', { class: 'content client-page' },
+    h('div', { class: 'client-hero' },
+      h('div', { class: 'client-hero-main' },
+        h('div', { class: 'client-avatar-xl' }, initials(c.name)),
+        h('div', { class: 'client-hero-copy' },
+          h('div', { class: 'client-kicker' }, 'КЛИЕНТ'),
+          h('h2', {}, c.name),
+          h('div', { class: 'client-goal' }, c.goal || 'Цель не указана'),
+          h('div', { class: 'client-status-line' },
+            h('span', { class: 'status-pill ' + menuLabelClass }, menuLabel),
+            c.intake_completed ? h('span', { class: 'status-pill neutral' }, ic('check','sm'), 'Анкета заполнена') : h('span', { class: 'status-pill warn' }, 'Анкета не заполнена')
+          )
+        )
+      ),
+      h('div', { class: 'client-hero-actions' },
+        h('button', { class: 'icon-btn', title: 'Изменить', onclick: () => location.hash = '#/client/' + c.id + '/edit' }, ic('edit','sm')),
+        h('button', { class: 'icon-btn', title: 'Действия', onclick: () => shareInvite(c.id) }, ic('link','sm'))
+      )
+    ),
+
+    h('div', { class: 'client-stats' },
+      stat('Вес', latestWeight ? fmt(latestWeight.weight_kg) + ' кг' : (c.weight_kg ? fmt(c.weight_kg) + ' кг' : '—'), latestWeight ? 'последний замер' : 'нет замеров'),
+      stat('Цель', c.target_kcal ? fmt0(c.target_kcal) + ' ккал' : 'Не задана', c.target_kcal ? 'дневная норма' : 'укажите в профиле'),
+      stat('Меню', activeMenu ? activeMenu.days_count + ' дней' : 'Нет', activeMenu ? (activeMenu.status === 'published' ? 'опубликовано' : 'черновик') : 'требует действия'),
+      stat('Изменение веса', weightDelta !== null ? (weightDelta > 0 ? '+' : '') + fmt(weightDelta) + ' кг' : '—', previousWeight ? 'с последнего замера' : 'нужно 2 замера', weightDelta !== null && weightDelta < 0 ? 'positive' : '')
+    ),
+
+    actions,
+
+    h('div', { class: 'client-grid' },
+      h('div', { class: 'client-main-col' },
+        h('section', { class: 'card client-section' },
+          h('div', { class: 'section-head' },
+            h('div', {}, h('h3', {}, 'Меню'), h('p', {}, activeMenu ? 'Рацион клиента и его текущий статус' : 'У клиента пока нет активного меню')),
+            h('button', { class: 'btn secondary small', onclick: () => createMenu(c.id) }, ic('plus','sm'), 'Новое меню')
+          ),
+          menuList
+        ),
+        h('section', { class: 'card client-section' },
+          h('div', { class: 'section-head' },
+            h('div', {}, h('h3', {}, 'Цели по КБЖУ'), h('p', {}, 'Дневные ориентиры для составления меню')),
+            h('button', { class: 'btn ghost small', onclick: () => location.hash = '#/client/' + c.id + '/edit' }, 'Изменить')
+          ),
+          targets
+        )
+      ),
+      h('div', { class: 'client-side-col' },
+        intake,
+        h('section', { class: 'card client-section client-weight-preview' },
+          h('div', { class: 'section-head' },
+            h('div', {}, h('h3', {}, 'Вес'), h('p', {}, latestWeight ? 'Последние измерения клиента' : 'Пока нет истории веса')),
+            h('button', { class: 'btn ghost small', onclick: () => location.hash = '#/weight/' + c.id }, 'Открыть')
+          ),
+          latestWeight ? h('div', { class: 'weight-highlight' }, h('b', {}, fmt(latestWeight.weight_kg) + ' кг'), h('span', {}, latestWeight.measured_on || 'Последний замер')) :
+            h('div', { class: 'client-empty compact' }, h('div', { class: 'client-empty-icon' }, ic('scale')), h('span', {}, 'Добавьте первый замер веса'))
+        )
+      )
+    ),
+
+    h('div', { class: 'client-footer-actions' },
+      h('button', { class: 'btn ghost', onclick: () => shareInvite(c.id) }, ic('link','sm'), 'Ссылка-приглашение'),
+      h('button', { class: 'btn ghost danger-text', onclick: () => archiveClient(c.id) }, ic('trash','sm'), 'В архив')
+    )
+  );
+
   render(shell('clients', content, { topbar: c.name, back: () => location.hash = '#/clients' }));
 });
 
@@ -773,41 +1036,52 @@ async function renderMenu(menuId) {
   const data = await GET('/menus/' + menuId);
   const menu = data.menu;
   if (currentDay > menu.days_count) currentDay = 1;
+  let client = null;
+  try { client = await GET('/clients/' + menu.client_id); } catch (_) {}
 
   const container = h('div', {});
-
-  // Верхняя панель с действиями меню
   const action = h('button', { class: 'icon-btn', 'aria-label': 'Действия с меню', onclick: () => menuActions(data) }, ic('more'));
-
-  // Табы дней: день недели + дата (по макету GPT)
-  const tabs = h('div', { class: 'day-tabs' });
-  for (let d = 1; d <= menu.days_count; d++) {
-    const dl = dayLabel(menu.start_date, d);
-    tabs.appendChild(h('button', { class: d === currentDay ? 'active' : '', onclick: () => { currentDay = d; renderMenu(menuId); } },
-      h('span', { class: 'wd' }, dl.wd), h('span', { class: 'dt' }, dl.dt)));
-  }
-  container.appendChild(tabs);
-
-  const day = data.days.find(x => x.day_number === currentDay) || { meals: [], totals: {}, deviation: null };
-
-  // Липкая плашка итогов дня
-  container.appendChild(dayTotalsBar(day, data.targets));
-
-  // Двухпанельная раскладка: слева канвас меню, справа база блюд (десктоп).
   const desktop = isDesktop();
   const wrap = h('div', { class: 'builder-wrap' });
   const main = h('div', { class: 'builder-main' });
 
-  // Приёмы пищи
+  const day = data.days.find(x => x.day_number === currentDay) || { meals: [], totals: {}, deviation: null };
+  const dlCurrent = dayLabel(menu.start_date, currentDay);
+  const status = menu.status === 'published' ? 'Опубликовано' : 'Черновик';
+  const menuMeta = h('div', { class: 'builder-context' },
+    h('div', { class: 'builder-context-title' }, menu.title || 'Меню на неделю'),
+    h('div', { class: 'builder-context-meta' },
+      client?.name || 'Клиент', ' · ', `${dayLabel(menu.start_date, 1).dt} — ${dayLabel(menu.start_date, menu.days_count).dt}`,
+      h('span', { class: 'builder-status ' + (menu.status === 'published' ? 'published' : 'draft') }, status)
+    ),
+    h('div', { class: 'builder-context-day' }, dlCurrent.wd, ' · ', dlCurrent.dt)
+  );
+  main.appendChild(menuMeta);
+
+  const tabs = h('div', { class: 'day-tabs' });
+  for (let d = 1; d <= menu.days_count; d++) {
+    const dl = dayLabel(menu.start_date, d);
+    const dday = data.days.find(x => x.day_number === d) || {};
+    const hasMeals = (dday.meals || []).length > 0;
+    tabs.appendChild(h('button', { class: d === currentDay ? 'active' : '', onclick: () => { currentDay = d; renderMenu(menuId); } },
+      h('span', { class: 'wd' }, dl.wd), h('span', { class: 'dt' }, dl.dt),
+      h('span', { class: 'day-state ' + (hasMeals ? 'has' : '') }, hasMeals ? '●' : '—')));
+  }
+  main.appendChild(tabs);
+  main.appendChild(dayTotalsBar(day, data.targets));
+
   const groupsByMeal = {};
   for (const mt of MEAL_ORDER) {
     const meals = day.meals.filter(m => m.meal_type === mt);
     const addBtn = h('button', { class: 'add-inline', 'aria-label': 'Добавить блюдо',
-      onclick: () => desktop ? setActiveMeal(mt) : openDishPicker(menuId, mt) }, ic('plus'));
+      onclick: () => openDishPicker(menuId, mt) }, ic('plus'));
+    const count = meals.length ? h('span', { class: 'meal-count' }, meals.length + ' ' + (meals.length === 1 ? 'блюдо' : (meals.length < 5 ? 'блюда' : 'блюд'))) : null;
     const group = h('div', { class: 'meal-group', 'data-meal': mt },
-      h('h4', {}, h('span', { class: 'mtime' }, MEAL_TIMES[mt]), MEAL_LABELS[mt], h('span', { class: 'spacer' }), addBtn));
+      h('h4', {}, h('span', { class: 'mtime' }, MEAL_TIMES[mt]), MEAL_LABELS[mt], count, h('span', { class: 'spacer' }), addBtn)
+    );
     if (!meals.length) {
-      group.appendChild(h('div', { class: 'meal-empty', onclick: () => desktop ? setActiveMeal(mt) : openDishPicker(menuId, mt) }, 'Пусто — нажмите + чтобы добавить блюдо'));
+      group.appendChild(h('div', { class: 'meal-empty', onclick: () => openDishPicker(menuId, mt) },
+        h('span', { class: 'empty-plus' }, '+'), h('span', {}, 'Добавить блюдо')));
     }
     for (const m of meals) group.appendChild(mealCard(menuId, m));
     groupsByMeal[mt] = { group, addBtn };
@@ -815,34 +1089,26 @@ async function renderMenu(menuId) {
   }
   wrap.appendChild(main);
 
-  // Правая панель — база блюд (только десктоп)
-  let dbApi = null;
-  if (desktop) {
-    const rail = buildFoodRail(menuId);
-    dbApi = rail.api;
-    wrap.appendChild(rail.el);
-  }
   container.appendChild(wrap);
 
-  // Подсветка активного приёма пищи + синхронизация панели.
-  function setActiveMeal(mt) {
-    activeMeal = mt;
-    for (const key of MEAL_ORDER) {
-      groupsByMeal[key].group.classList.toggle('active-target', key === mt);
-      groupsByMeal[key].addBtn.classList.toggle('on', key === mt);
-    }
-    if (dbApi) dbApi.setTarget(mt);
-  }
-
-  render(shell('clients', container, { topbar: menu.title || 'Меню', back: () => location.hash = '#/client/' + menu.client_id, action }));
-  if (desktop) setActiveMeal(MEAL_ORDER.includes(activeMeal) ? activeMeal : 'breakfast');
+  const menuTopbar = client && client.name ? client.name : (menu.title || 'Меню');
+  render(shell('builder', container, { topbar: menuTopbar, back: () => location.hash = '#/client/' + menu.client_id, action }));
 }
 
 /* Добавить блюдо в приём пищи текущего дня и перерисовать. */
-async function addDishToMeal(menuId, mealType, dishId) {
+async function addDishToMeal(menuId, mealType, dishId, portion_g) {
   try {
-    await POST('/menus/' + menuId + '/items', { day_number: currentDay, meal_type: mealType, dish_id: dishId });
+    const payload = { day_number: currentDay, meal_type: mealType, dish_id: dishId };
+    if (portion_g != null) payload.portion_g = Number(portion_g);
+    await POST('/menus/' + menuId + '/items', payload);
     toast('Добавлено'); renderMenu(menuId);
+  } catch (e) { toast(e.message, true); }
+}
+
+async function moveMenuItem(menuId, itemId, mealType) {
+  try {
+    await PATCH('/menus/' + menuId + '/items/' + itemId, { meal_type: mealType });
+    toast('Приём пищи изменён'); renderMenu(menuId);
   } catch (e) { toast(e.message, true); }
 }
 
@@ -850,71 +1116,132 @@ async function addDishToMeal(menuId, mealType, dishId) {
 function buildFoodRail(menuId) {
   const el = h('div', { class: 'builder-db' });
   const target = h('div', { class: 'db-target' });
+  const filterBar = h('div', { class: 'db-filters' });
+  const search = h('input', { placeholder: 'Найти блюдо…' });
   const head = h('div', { class: 'db-head' },
-    h('h3', {}, 'База блюд'), target);
-  const search = h('input', { placeholder: 'Поиск блюда…' });
-  head.appendChild(h('div', { class: 'search-field', style: 'margin-top:8px' }, ic('search'), search));
+    h('div', { class: 'db-head-row' }, h('div', {}, h('h3', {}, 'Добавить блюдо'), target), h('span', { class: 'db-count' }, 'База')),
+    h('div', { class: 'search-field' }, ic('search'), search), filterBar
+  );
   const body = h('div', { class: 'db-body' });
-  el.appendChild(head); el.appendChild(body);
+  const detail = h('div', { class: 'dish-detail' });
+  el.appendChild(head); el.appendChild(body); el.appendChild(detail);
+
+  let selected = null;
+  let selectedPortion = 0;
+  let activeFilter = 'all';
+  const filterDefs = [['all','Все'],['breakfast','Завтрак'],['snack','Перекус'],['lunch','Обед'],['dinner','Ужин']];
+  filterDefs.forEach(([key,label]) => {
+    const b = h('button', { class: key === 'all' ? 'active' : '', onclick: () => { activeFilter = key; filterBar.querySelectorAll('button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); load(); } }, label);
+    filterBar.appendChild(b);
+  });
+
+  function showEmptyDetail() {
+    detail.innerHTML = '';
+    detail.appendChild(h('div', { class: 'detail-empty-icon' }, ic('layers')));
+    detail.appendChild(h('h4', {}, 'Выберите блюдо'));
+    detail.appendChild(h('p', {}, 'Нажмите на блюдо в списке, чтобы настроить порцию и добавить его в текущий приём пищи.'));
+  }
+
+  function showDetail(d) {
+    selected = d;
+    selectedPortion = parseFloat(d.base_portion_g || 180);
+    detail.innerHTML = '';
+    detail.appendChild(h('div', { class: 'detail-kicker' }, 'Блюдо из базы'));
+    detail.appendChild(h('div', { class: 'detail-title-row' },
+      h('div', { class: 'detail-title-wrap' }, h('h4', {}, d.name), h('span', { class: 'detail-base' }, fmt0(d.base_portion_g || 0) + ' г базовая порция')),
+      h('button', { class: 'detail-close', 'aria-label': 'Снять выбор', onclick: () => { selected = null; showEmptyDetail(); load(); } }, ic('x', 'sm'))
+    ));
+    const portion = h('div', { class: 'portion-value' },
+      h('span', {}, 'Порция'),
+      h('div', { class: 'portion-input-wrap' },
+        h('input', { class: 'rail-portion-input', type: 'number', min: '10', max: '2000', step: '5', value: String(Math.round(selectedPortion)), 'aria-label': 'Порция в граммах' }),
+        h('span', {}, 'г')
+      )
+    );
+    const input = portion.querySelector('.rail-portion-input');
+    const range = h('input', { class:'portion-range', type:'range', min:'50', max:'600', step:'10', value:String(selectedPortion) });
+    const nutri = h('div', { class:'detail-nutri' });
+    const redraw = () => {
+      selectedPortion = Math.max(10, Math.min(2000, parseFloat(input.value) || 0));
+      input.value = String(Math.round(selectedPortion));
+      range.value = String(Math.min(600, Math.max(50, selectedPortion)));
+      const x = { kcal:(d.kcal_100||0)*selectedPortion/100, protein:(d.protein_100||0)*selectedPortion/100, fat:(d.fat_100||0)*selectedPortion/100, carbs:(d.carbs_100||0)*selectedPortion/100 };
+      nutri.innerHTML='';
+      [['Калории',x.kcal,'ккал'],['Белки',x.protein,'г'],['Жиры',x.fat,'г'],['Углеводы',x.carbs,'г']].forEach(r=>nutri.appendChild(h('div',{class:'row'},h('span',{},r[0]),h('b',{},fmt0(r[1])+' '+r[2]))));
+    };
+    range.addEventListener('input', () => { input.value = range.value; redraw(); });
+    input.addEventListener('input', redraw);
+    input.addEventListener('click', e => e.stopPropagation());
+    detail.appendChild(portion);
+    detail.appendChild(range);
+    detail.appendChild(nutri);
+    const actions=h('div',{class:'detail-actions'},
+      h('button',{class:'btn',onclick:()=>addDishToMeal(menuId,activeMeal,d.id,selectedPortion)},ic('plus','sm'),'Добавить в ' + MEAL_LABELS[activeMeal].toLowerCase()),
+      h('button',{class:'btn ghost',onclick:()=>toast('Добавлено в избранное')},'В избранное')
+    );
+    detail.appendChild(actions);
+    redraw();
+  }
+
+  showEmptyDetail();
 
   const load = async () => {
-    body.innerHTML = '<div class="muted small">Загрузка…</div>';
+    body.innerHTML = '<div class="muted small db-loading">Загрузка…</div>';
     const q = new URLSearchParams();
     if (search.value.trim()) q.set('q', search.value.trim());
-    if (activeMeal) q.set('meal_type', activeMeal);
+    if (activeFilter !== 'all') q.set('meal_type', activeFilter);
     let data;
-    try { data = await GET('/dishes?' + q.toString()); } catch (e) { body.innerHTML = ''; body.appendChild(h('div', { class: 'muted small' }, e.message)); return; }
+    try { data = await GET('/dishes?' + q.toString()); }
+    catch (e) { body.innerHTML = ''; body.appendChild(h('div', { class: 'muted small' }, e.message)); return; }
     body.innerHTML = '';
-    if (!data.items.length) { body.appendChild(h('div', { class: 'empty' }, ic('search'), h('div', {}, 'Не найдено'))); return; }
+    const count = data.items?.length || 0;
+    const countEl = head.querySelector('.db-count'); if (countEl) countEl.textContent = count + ' блюд';
+    if (!count) { body.appendChild(h('div', { class: 'empty' }, ic('search'), h('div', {}, 'Ничего не найдено'))); return; }
     for (const d of data.items) {
       const thumb = h('div', { class: 'thumb' });
       if (d.photo_url) thumb.style.backgroundImage = `url(${d.photo_url})`;
-      body.appendChild(h('div', { class: 'db-food' }, thumb,
-        h('div', { class: 'grow' }, h('h4', {}, d.name),
-          h('div', { class: 'sub' }, `${fmt0(d.kcal_100 || 0)} ккал/100г · порция ${fmt0(d.base_portion_g || 0)} г`)),
-        h('button', { class: 'addb', 'aria-label': 'Добавить', onclick: () => addDishToMeal(menuId, activeMeal, d.id) }, ic('plus'))));
+      const row=h('div', { class: 'db-food' + (selected?.id === d.id ? ' selected' : ''), onclick:()=>{ body.querySelectorAll('.db-food').forEach(x=>x.classList.remove('selected')); row.classList.add('selected'); showDetail(d); } }, thumb,
+        h('div', { class: 'grow' }, h('h4', {}, d.name), h('div', { class: 'sub' }, `${fmt0(d.kcal_100 || 0)} ккал/100 г · ${fmt0(d.base_portion_g || 0)} г`)),
+        h('button', { class: 'addb', 'aria-label': 'Добавить', onclick: (e) => { e.stopPropagation(); addDishToMeal(menuId, activeMeal, d.id); } }, ic('plus')));
+      body.appendChild(row);
     }
   };
   let timer;
-  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
-
-  return {
-    el,
-    api: {
-      setTarget(mt) { target.innerHTML = ''; target.append('Добавить в: ', h('b', {}, MEAL_LABELS[mt])); load(); }
-    }
-  };
+  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 220); });
+  return { el, api: { setTarget(mt) { target.innerHTML=''; target.append('Добавить в: ', h('b',{},MEAL_LABELS[mt])); load(); } } };
 }
 
 function dayTotalsBar(day, targets) {
   const t = day.totals || {};
-  const dev = day.deviation;
   const tg = targets || {};
+  const kcal = t.kcal || 0;
+  const targetKcal = tg.target_kcal || 0;
+  const ratio = targetKcal ? Math.round(kcal / targetKcal * 100) : 0;
+  const dev = day.deviation;
+  const over = dev && dev.kcal > 0;
   const bar = h('div', { class: 'day-totals' });
-  const row1 = h('div', { class: 'row1' },
-    h('span', { class: 'kcal-big' }, fmt0(t.kcal || 0)),
-    h('span', { class: 'target' }, (tg.target_kcal ? ' / ' + fmt0(tg.target_kcal) : '') + ' ккал'));
-  if (dev && dev.kcal != null) {
-    const over = dev.kcal > 0;
-    row1.appendChild(h('span', { class: 'dev-chip ' + (over ? 'over' : 'under') }, (over ? '+' : '') + fmt0(dev.kcal)));
-  }
-  bar.appendChild(row1);
-
+  const hero = h('div', { class: 'day-kcal' },
+    h('div', { class:'eyebrow' }, 'На сегодня'),
+    h('div', { class:'kcal-line' }, h('strong', { class:'kcal-big' }, fmt0(kcal)), h('span', { class:'target' }, targetKcal ? ' / ' + fmt0(targetKcal) + ' ккал' : ' ккал')),
+    h('div', { class:'kcal-progress' }, h('span', { style:'width:'+Math.min(100,ratio)+'%' }))
+  );
+  const statusText = !targetKcal ? 'Цель не задана' : ratio > 105 ? 'Выше цели' : ratio >= 90 ? 'Цель почти достигнута' : 'Можно добавить';
+  hero.appendChild(h('div', { class:'day-goal-status ' + (over ? 'over' : '') }, statusText, targetKcal ? ' · ' + ratio + '%' : ''));
+  bar.appendChild(hero);
   const macros = h('div', { class: 'macros' });
-  const macroTile = (label, val, target, color) => {
-    const v = val || 0;
-    const frac = target ? Math.min(1, v / target) : 0;
-    const valRow = h('div', { class: 'val' }, fmt(v));
-    if (target) valRow.appendChild(h('span', { class: 'tg' }, ' / ' + fmt0(target) + ' г'));
-    else valRow.appendChild(h('span', { class: 'tg' }, ' г'));
-    const fill = h('span', {});
-    fill.style.width = (frac * 100) + '%'; fill.style.background = color;
-    return h('div', { class: 'macro' }, h('div', { class: 'lbl' }, label), valRow, h('div', { class: 'bar' }, fill));
+  const macroTile = (label, val, target, cls, unit='г') => {
+    const v = val || 0; const frac = target ? Math.min(1, v / target) : 0;
+    return h('div', { class: 'macro ' + cls },
+      h('div', { class:'macro-top' }, h('span',{class:'lbl'},label), h('span',{class:'macro-val'},fmt(v)+' '+unit)),
+      h('div', { class:'macro-sub' }, target ? 'цель ' + fmt0(target) + ' г' : 'цель не задана'),
+      h('div', { class:'bar' }, h('span', { style:'width:'+(frac*100)+'%' }))
+    );
   };
-  macros.appendChild(macroTile('Белки', t.protein, tg.target_protein, 'var(--m-protein)'));
-  macros.appendChild(macroTile('Жиры', t.fat, tg.target_fat, 'var(--m-fat)'));
-  macros.appendChild(macroTile('Углеводы', t.carbs, tg.target_carbs, 'var(--m-carb)'));
+  macros.appendChild(macroTile('Белки', t.protein, tg.target_protein, 'protein'));
+  macros.appendChild(macroTile('Жиры', t.fat, tg.target_fat, 'fat'));
+  macros.appendChild(macroTile('Углеводы', t.carbs, tg.target_carbs, 'carb'));
   bar.appendChild(macros);
+  if (dev && dev.kcal != null) bar.appendChild(h('div',{class:'dev-chip '+(over?'over':'under')},(over?'+':'')+fmt0(dev.kcal)+' ккал'));
   return bar;
 }
 
@@ -987,33 +1314,43 @@ function starsInput(value, onPick) {
 }
 
 function mealCard(menuId, m) {
-  const n = m.nutrition;
+  const n = m.nutrition || {};
   const thumb = h('div', { class: 'mc-thumb' });
   if (m.photo_url) thumb.style.backgroundImage = `url(${m.photo_url})`;
-  const editBtn = h('button', { class: 'icon-btn', 'aria-label': 'Изменить', onclick: (e) => { e.stopPropagation(); openPortionEditor(menuId, m); } }, ic('edit', 'sm'));
+
+  const editBtn = h('button', { class: 'icon-btn', 'aria-label': 'Изменить порцию', onclick: (e) => { e.stopPropagation(); openPortionEditor(menuId, m); } }, ic('edit', 'sm'));
   const delBtn = h('button', { class: 'icon-btn', 'aria-label': 'Удалить', onclick: async (e) => {
     e.stopPropagation();
     try { await DEL('/menus/' + menuId + '/items/' + m.id); toast('Удалено'); renderMenu(menuId); } catch (err) { toast(err.message, true); }
   } }, ic('trash', 'sm'));
-  const card = h('div', { class: 'meal-card' },
+
+  return h('div', { class: 'meal-card' },
     h('div', { class: 'mc-top', onclick: () => openPortionEditor(menuId, m) },
       thumb,
-      h('div', { style: 'flex:1;min-width:0' },
+      h('div', { class: 'mc-copy' },
         h('div', { class: 'mc-name' }, m.dish_name),
-        macroLine(n, true)),
+        h('div', { class: 'mc-meta-line' },
+          h('span', { class: 'portion-static' }, fmt0(m.portion_g || 0) + ' г'),
+          h('span', { class: 'dot-sep' }, '·'),
+          macroLine(n, false)
+        )
+      ),
       h('div', { class: 'mc-kcal' }, fmt0(n.kcal) + ' ккал'),
-      h('div', { class: 'mc-actions' }, editBtn, delBtn)),
+      h('div', { class: 'mc-actions' }, editBtn, delBtn)
+    ),
     m.comment ? h('div', { class: 'comment' }, ic('chat', 'sm'), h('span', {}, m.comment)) : null
   );
-  return card;
 }
 
 /* Выбор блюда — «не больше двух тапов»: открыть шторку, тап по блюду = добавлено. */
 async function openDishPicker(menuId, mealType) {
-  sheet('Добавить: ' + MEAL_LABELS[mealType], async (panel, close) => {
+  sheet('Добавить блюдо · ' + MEAL_LABELS[mealType], async (panel, close) => {
+    panel.classList.add('dish-picker-modal');
+    const intro = h('div', { class: 'modal-intro' }, 'Выберите блюдо, чтобы указать размер порции.');
     const search = h('input', { placeholder: 'Поиск блюда…' });
+    panel.appendChild(intro);
     panel.appendChild(searchField(search));
-    const results = h('div', {});
+    const results = h('div', { class: 'dish-picker-results' });
     panel.appendChild(results);
 
     let timer = null;
@@ -1028,23 +1365,87 @@ async function openDishPicker(menuId, mealType) {
       results.innerHTML = '';
       if (!data.items.length) { results.appendChild(h('div', { class: 'empty' }, ic('search'), h('div', {}, 'Ничего не найдено'))); return; }
       for (const d of data.items) {
-        results.appendChild(h('div', { class: 'pick-item', onclick: async () => {
-          try {
-            await POST('/menus/' + menuId + '/items', { day_number: currentDay, meal_type: mealType, dish_id: d.id });
-            close(); toast('Добавлено'); renderMenu(menuId);
-          } catch (e) { toast(e.message, true); }
+        const item = h('button', { class: 'pick-item dish-picker-row', type: 'button', onclick: () => {
+          close();
+          openNewDishPortionEditor(menuId, mealType, d);
         } },
+          d.photo_url ? h('div', { class: 'pick-thumb', style: `background-image:url(${d.photo_url})` }) : h('div', { class: 'pick-thumb' }),
           h('div', { class: 'grow' },
             h('h3', {}, d.name),
-            h('div', { class: 'sub' }, `${fmt0(d.kcal_100 || 0)} ккал/100г · порция ${fmt0(d.base_portion_g || 0)} г`),
-            (d.tags && d.tags.length) ? h('div', { class: 'tag-list' }, d.tags.map(t => h('span', { class: 'pill tag' }, t))) : null),
-          h('span', { class: 'plus' }, ic('plus'))
-        ));
+            h('div', { class: 'sub' }, `${fmt0(d.kcal_100 || 0)} ккал/100 г · базовая порция ${fmt0(d.base_portion_g || 0)} г`),
+            (d.tags && d.tags.length) ? h('div', { class: 'tag-list' }, d.tags.slice(0, 3).map(t => h('span', { class: 'pill tag' }, t))) : null
+          ),
+          h('span', { class: 'chevron' }, ic('chevron', 'sm'))
+        );
+        results.appendChild(item);
       }
     };
-    search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+    search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 220); });
     load();
-  });
+  }, { modal: true });
+}
+
+async function openNewDishPortionEditor(menuId, mealType, d) {
+  let dish = d;
+  try { dish = await GET('/dishes/' + d.id); } catch (_) {}
+  sheet('Добавить блюдо', (panel, close) => {
+    const base = Math.max(10, Math.round(dish.base_portion_g || 180));
+    let portion = base;
+    const totals = dish?.nutrition?.totals || {
+      kcal: (dish.kcal_100 || 0) * base / 100,
+      protein: (dish.protein_100 || 0) * base / 100,
+      fat: (dish.fat_100 || 0) * base / 100,
+      carbs: (dish.carbs_100 || 0) * base / 100
+    };
+    const title = h('div', { class: 'modal-dish-title' },
+      dish.photo_url ? h('div', { class: 'modal-dish-thumb', style: `background-image:url(${dish.photo_url})` }) : null,
+      h('div', {}, h('h2', {}, dish.name), h('div', { class: 'muted small' }, MEAL_LABELS[mealType] + ' · базовая порция ' + base + ' г'))
+    );
+    panel.appendChild(title);
+
+    const value = h('div', { class: 'portion-modal-value' }, String(portion), h('span', {}, 'г'));
+    const sliderMin = 50;
+    const sliderMax = Math.max(600, Math.min(2000, Math.round(base * 2.2)));
+    const slider = h('input', { class: 'portion-modal-range', type: 'range', min: String(sliderMin), max: String(sliderMax), step: '5', value: String(Math.max(sliderMin, Math.min(sliderMax, portion))), 'aria-label': 'Размер порции в граммах' });
+    const rangeLabels = h('div', { class: 'portion-range-labels' }, h('span', {}, sliderMin + ' г'), h('span', {}, sliderMax + ' г'));
+    const quick = h('div', { class: 'portion-quick' });
+    const nutrition = h('div', {});
+    const renderPreview = () => {
+      const raw = parseFloat(slider.value);
+      portion = Math.max(10, Math.min(2000, Number.isFinite(raw) ? raw : base));
+      portion = Math.round(portion / 5) * 5;
+      slider.value = String(Math.max(sliderMin, Math.min(sliderMax, portion)));
+      value.firstChild.textContent = String(portion);
+      const k = base ? portion / base : 1;
+      nutrition.innerHTML = '';
+      nutrition.appendChild(nutritionBreakdown({
+        kcal: (totals.kcal || 0) * k,
+        protein: (totals.protein || 0) * k,
+        fat: (totals.fat || 0) * k,
+        carbs: (totals.carbs || 0) * k
+      }));
+    };
+    slider.addEventListener('input', () => renderPreview());
+    quick.append(
+      ...[base * .5, base, base * 1.5, base * 2].map((v, i) => h('button', { class: 'btn secondary small', type: 'button', onclick: () => { slider.value = String(Math.max(sliderMin, Math.min(sliderMax, Math.round(v / 5) * 5))); renderPreview(); } }, ['½ порции', '1 порция', '1½ порции', '2 порции'][i]))
+    );
+    panel.appendChild(h('div', { class: 'portion-modal' },
+      h('div', { class: 'muted small center' }, 'Размер порции'),
+      value,
+      h('div', { class: 'portion-range-wrap' }, slider, rangeLabels),
+      quick
+    ));
+    panel.appendChild(nutrition);
+    renderPreview();
+
+    const add = h('button', { class: 'btn', type: 'button', onclick: async () => {
+      try {
+        await POST('/menus/' + menuId + '/items', { day_number: currentDay, meal_type: mealType, dish_id: dish.id, portion_g: portion });
+        close(); toast('Блюдо добавлено'); renderMenu(menuId);
+      } catch (e) { toast(e.message, true); }
+    } }, ic('plus', 'sm'), 'Добавить в ' + MEAL_LABELS[mealType].toLowerCase());
+    panel.appendChild(add);
+  }, { modal: true });
 }
 
 /* Редактор порции — слайдер, КБЖУ пересчитывается «на лету» на бэке. */
@@ -1110,7 +1511,7 @@ async function openPortionEditor(menuId, m) {
       catch (e) { toast(e.message, true); }
     } }, ic('trash', 'sm'), 'Убрать из меню');
     panel.appendChild(save); panel.appendChild(del);
-  });
+  }, { modal: true });
 }
 
 function menuActions(data) {
@@ -1844,15 +2245,29 @@ function addWeightSheet() {
 function weightChart(series) {
   const wrap = h('div', { class: 'chart' });
   if (!series || series.length < 2) { wrap.appendChild(h('div', { class: 'muted small center', style: 'padding:30px 0' }, 'Недостаточно данных для графика')); return wrap; }
-  const W = 320, H = 160, pad = 24;
+  const W = 720, H = 220, padX = 42, padY = 28;
   const vals = series.map(s => s.weight_kg);
   const min = Math.min(...vals), max = Math.max(...vals);
   const range = (max - min) || 1;
-  const x = (i) => pad + (i / (series.length - 1)) * (W - pad * 2);
-  const y = (v) => pad + (1 - (v - min) / range) * (H - pad * 2);
-  const pts = series.map((s, i) => `${x(i)},${y(s.weight_kg)}`).join(' ');
-  const area = `${pad},${H - pad} ` + pts + ` ${x(series.length - 1)},${H - pad}`;
-  const dots = series.map((s, i) => `<circle cx="${x(i)}" cy="${y(s.weight_kg)}" r="3.5" fill="var(--surface)" stroke="var(--brand)" stroke-width="2.5"/>`).join('');
+  const rangePad = Math.max(range * 0.16, 0.6);
+  const lo = min - rangePad, hi = max + rangePad, span = hi - lo;
+  const x = (i) => padX + (i / (series.length - 1)) * (W - padX * 2);
+  const y = (v) => padY + (1 - (v - lo) / span) * (H - padY * 2);
+  const coords = series.map((s, i) => [x(i), y(s.weight_kg)]);
+  const smoothPath = (pts) => {
+    if (pts.length < 2) return '';
+    let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+    }
+    return d;
+  };
+  const linePath = smoothPath(coords);
+  const dots = series.map((s, i) => `<circle cx="${x(i)}" cy="${y(s.weight_kg)}" r="4.5" fill="var(--surface)" stroke="var(--brand)" stroke-width="3"/>`).join('');
+  const grid = [0.25, 0.5, 0.75].map(r => `<line x1="${padX}" y1="${(padY + r*(H-padY*2)).toFixed(1)}" x2="${W-padX}" y2="${(padY + r*(H-padY*2)).toFixed(1)}" stroke="var(--line)" stroke-width="1" stroke-dasharray="4 5"/>`).join('');
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('preserveAspectRatio', 'none');
@@ -1866,11 +2281,12 @@ function weightChart(series) {
         <stop offset="0%" stop-color="var(--g1)"/><stop offset="100%" stop-color="var(--g2)"/>
       </linearGradient>
     </defs>
-    <polygon points="${area}" fill="url(#wArea)"/>
-    <polyline points="${pts}" fill="none" stroke="url(#wLine)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${grid}
+    <path d="${linePath} L ${x(series.length - 1)} ${H-padY} L ${padX} ${H-padY} Z" fill="url(#wArea)"/>
+    <path d="${linePath}" fill="none" stroke="url(#wLine)" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
     ${dots}
-    <text x="${pad}" y="14" font-size="11" fill="var(--faint)">${fmt(max)} кг</text>
-    <text x="${pad}" y="${H - 6}" font-size="11" fill="var(--faint)">${fmt(min)} кг</text>`;
+    <text x="${padX}" y="16" font-size="12" font-weight="600" fill="var(--faint)">${fmt(max)} кг</text>
+    <text x="${padX}" y="${H - 7}" font-size="12" font-weight="600" fill="var(--faint)">${fmt(min)} кг</text>`;
   wrap.appendChild(svg);
   return wrap;
 }

@@ -50,6 +50,12 @@ $GLOBALS['config'] = $config;
 
 $path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
 
+// Shared-hosting fallback: if mod_rewrite is unavailable, the frontend can call
+// /index.php?route=/api/v1/... directly. Normalize that route here.
+if (isset($_GET['route']) && is_string($_GET['route']) && $_GET['route'] !== '') {
+    $path = rtrim(parse_url($_GET['route'], PHP_URL_PATH) ?: '/', '/');
+}
+
 // --- Публичная главная (лендинг) на корне — для всех SAPI ---
 if ($path === '' || $path === '/') {
     header('Content-Type: text/html; charset=utf-8');

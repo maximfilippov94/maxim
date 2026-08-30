@@ -30,18 +30,144 @@ class ClientController extends Controller
         foreach ($clients as &$c) {
             unset($c['password_hash']);
             $c['excluded_ingredients'] = $this->decodeJson($c['excluded_ingredients']);
-            $c['unread_messages'] = (int)(Database::one(
-                "SELECT COUNT(*) n FROM messages WHERE client_id = ? AND author_type = 'client' AND read_at IS NULL",
-                [(int)$c['id']]
-            )['n'] ?? 0);
-            $lastMenu = Database::one(
-                'SELECT status, title FROM menus WHERE client_id = ? ORDER BY created_at DESC LIMIT 1',
-                [(int)$c['id']]
-            );
-            $c['menu_status'] = $lastMenu['status'] ?? null;
+            $c = array_merge($c, $this->clientSignals((int)$c['id']));
             $c['has_password'] = false; // не раскрываем хэш, но флаг полезен фронту
         }
         return ['items' => $clients];
+    }
+
+    /**
+     * Лёгкие вычисляемые сигналы клиента для Главной, списка клиентов и движка
+     * «Требуют внимания». Все данные берутся из существующих таблиц, без новых
+     * сущностей. Возвращает статус меню, вес и его динамику, соблюдение и список
+     * причин внимания (простые правила — без AI).
+     */
+    private function clientSignals(int $clientId): array
+    {
+        $today = new \DateTimeImmutable('today');
+        $out = [
+            'unread_messages' => 0,
+            'menu_status' => null,
+            'menu_end_days' => null,
+            'last_weight_kg' => null,
+            'last_weight_on' => null,
+            'weight_delta' => null,
+            'weight_days_ago' => null,
+            'meal_days_ago' => null,
+            'compliance_pct' => null,
+            'attention' => [],
+        ];
+
+        $out['unread_messages'] = (int)(Database::one(
+            "SELECT COUNT(*) n FROM messages WHERE client_id = ? AND author_type = 'client' AND read_at IS NULL",
+            [$clientId]
+        )['n'] ?? 0);
+
+        // Активное меню (опубликованное — приоритетно, иначе последнее).
+        $menu = Database::one(
+            "SELECT id, status, start_date, days_count FROM menus WHERE client_id = ?
+             ORDER BY (status = 'published') DESC, created_at DESC LIMIT 1",
+            [$clientId]
+        );
+        $out['menu_status'] = $menu['status'] ?? null;
+        if ($menu && $menu['status'] === 'published' && !empty($menu['start_date'])) {
+            try {
+                $end = (new \DateTimeImmutable($menu['start_date']))
+                    ->modify('+' . ((int)$menu['days_count'] - 1) . ' days');
+                $out['menu_end_days'] = (int)$today->diff($end)->format('%r%a');
+            } catch (\Throwable $e) {}
+        }
+
+        // Вес: последний и предыдущий замеры.
+        $weights = Database::all(
+            'SELECT weight_kg, measured_on FROM weight_logs WHERE client_id = ?
+             ORDER BY measured_on DESC LIMIT 2',
+            [$clientId]
+        );
+        if ($weights) {
+            $out['last_weight_kg'] = (float)$weights[0]['weight_kg'];
+            $out['last_weight_on'] = $weights[0]['measured_on'];
+            try {
+                $on = new \DateTimeImmutable($weights[0]['measured_on']);
+                $out['weight_days_ago'] = (int)$on->diff($today)->format('%r%a');
+            } catch (\Throwable $e) {}
+            if (isset($weights[1])) {
+                $out['weight_delta'] = round((float)$weights[0]['weight_kg'] - (float)$weights[1]['weight_kg'], 1);
+            }
+        }
+
+        // Последняя отметка приёма пищи.
+        $lastLog = Database::one(
+            'SELECT logged_at FROM meal_logs WHERE client_id = ? ORDER BY logged_at DESC LIMIT 1',
+            [$clientId]
+        );
+        if ($lastLog && !empty($lastLog['logged_at'])) {
+            try {
+                $on = new \DateTimeImmutable(substr($lastLog['logged_at'], 0, 10));
+                $out['meal_days_ago'] = (int)$on->diff($today)->format('%r%a');
+            } catch (\Throwable $e) {}
+        }
+
+        // Соблюдение по опубликованному меню: отмеченные «съедено» / всего позиций.
+        if ($menu && $menu['status'] === 'published') {
+            $total = (int)(Database::one(
+                'SELECT COUNT(*) n FROM menu_items WHERE menu_id = ?',
+                [(int)$menu['id']]
+            )['n'] ?? 0);
+            if ($total > 0) {
+                $eaten = (int)(Database::one(
+                    "SELECT COUNT(*) n FROM meal_logs ml
+                     JOIN menu_items mi ON mi.id = ml.menu_item_id
+                     WHERE mi.menu_id = ? AND ml.status = 'eaten'",
+                    [(int)$menu['id']]
+                )['n'] ?? 0);
+                $out['compliance_pct'] = (int)round($eaten / $total * 100);
+            }
+        }
+
+        // ---- Правила «Требуют внимания» ----
+        $a = [];
+        if ($out['unread_messages'] > 0) {
+            $a[] = ['type' => 'message', 'text' => 'Новое сообщение'];
+        }
+        if ($out['menu_status'] === null) {
+            $a[] = ['type' => 'no_menu', 'text' => 'Меню не создано'];
+        } elseif ($out['menu_end_days'] !== null && $out['menu_end_days'] <= 1) {
+            $a[] = ['type' => 'menu_ending', 'text' => $out['menu_end_days'] < 0
+                ? 'Меню закончилось'
+                : ($out['menu_end_days'] === 0 ? 'Меню заканчивается сегодня' : 'Меню заканчивается завтра')];
+        }
+        if ($out['menu_status'] === 'published' && ($out['meal_days_ago'] === null || $out['meal_days_ago'] >= 3)) {
+            $a[] = ['type' => 'no_logs', 'text' => $out['meal_days_ago'] === null
+                ? 'Ещё не отмечал питание'
+                : 'Не отмечает питание ' . $this->plDays($out['meal_days_ago'])];
+        }
+        if ($out['weight_days_ago'] !== null && $out['weight_days_ago'] >= 7) {
+            $a[] = ['type' => 'no_weight', 'text' => 'Не вносил вес ' . $this->plDays($out['weight_days_ago'])];
+        }
+        if ($out['weight_delta'] !== null && abs($out['weight_delta']) < 0.3
+            && $out['weight_days_ago'] !== null && $out['weight_days_ago'] >= 5) {
+            $a[] = ['type' => 'weight_stall', 'text' => 'Вес не меняется'];
+        }
+        // Сортировка по важности: сообщение и «стоп-сигналы» выше, «меню не создано» ниже.
+        $sev = ['message' => 0, 'menu_ending' => 1, 'no_logs' => 2, 'weight_stall' => 3, 'no_weight' => 4, 'no_menu' => 5];
+        usort($a, fn($x, $y) => ($sev[$x['type']] ?? 9) <=> ($sev[$y['type']] ?? 9));
+        $out['attention'] = $a;
+        $out['attention_rank'] = $a ? ($sev[$a[0]['type']] ?? 9) : 99;
+
+        return $out;
+    }
+
+    /** Склонение «дней». */
+    private function plDays(int $n): string
+    {
+        $n = abs($n);
+        $mod100 = $n % 100;
+        $mod10 = $n % 10;
+        if ($mod100 >= 11 && $mod100 <= 14) return $n . ' дней';
+        if ($mod10 === 1) return $n . ' день';
+        if ($mod10 >= 2 && $mod10 <= 4) return $n . ' дня';
+        return $n . ' дней';
     }
 
     public function show(Request $req, array $args): array
