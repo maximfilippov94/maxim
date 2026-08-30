@@ -261,6 +261,7 @@ async function router() {
 }
 function defaultRoute() {
   if (!State.token) return '#/';
+  if (State.role === 'admin') return '#/admin/dashboard';
   return State.role === 'specialist' ? '#/clients' : '#/today';
 }
 
@@ -1836,6 +1837,648 @@ function requireRole(role) {
 /* ==========================================================================
    BOOTSTRAP
    ========================================================================== */
+/* ==========================================================================
+   ADMIN PANEL — внутренний SaaS control center владельца платформы.
+   ========================================================================== */
+Object.assign(ICONS, {
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>',
+  creditCard: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  tag: '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.8 8.8a2 2 0 0 0 2.8 0l6.4-6.4a2 2 0 0 0 0-2.8z"/><path d="M7 7h.01"/>',
+  cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  lifebuoy: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M14.83 9.17l3.53-3.53M4.93 19.07l4.24-4.24"/>',
+  chart: '<path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="12" y="6" width="3" height="11"/><rect x="17" y="13" width="3" height="4"/>',
+  ban: '<circle cx="12" cy="12" r="10"/><path d="M4.9 4.9l14.2 14.2"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/>',
+  bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-1.67 2.68"/><path d="M6.6 6.6A13.3 13.3 0 0 0 2 12s3.5 7 10 7a9.1 9.1 0 0 0 5.4-1.6"/><path d="M14.1 14.1a3 3 0 0 1-4.2-4.2"/><path d="M2 2l20 20"/>',
+});
+
+const PLAN_LABEL = { trial: 'Trial', pro: 'Pro', business: 'Business', enterprise: 'Enterprise', owner: 'Owner', admin: 'Admin', support: 'Support', content: 'Content' };
+const STATUS_LABEL = {
+  active: 'Активен', trial: 'Trial', inactive: 'Неактивен', blocked: 'Заблокирован', overdue: 'Просрочен',
+  paid: 'Оплачен', pending: 'Ожидает', failed: 'Ошибка', refunded: 'Возврат', cancelled: 'Отменён',
+  published: 'Опубликован', hidden: 'Скрыт', rejected: 'Отклонён', draft: 'Черновик',
+  new: 'Новое', in_progress: 'В работе', waiting: 'Ждёт ответа', resolved: 'Решено',
+  nutritionist: 'Нутрициолог', client: 'Клиент', admin: 'Админ',
+};
+function badge(status) { return h('span', { class: 'badge ' + status }, STATUS_LABEL[status] || status); }
+function fmtDate(s) { return s ? new Date(s).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'; }
+function timeAgo(s) {
+  if (!s) return '';
+  const d = Math.floor((Date.now() - new Date(s).getTime()) / 60000);
+  if (d < 1) return 'только что'; if (d < 60) return d + ' мин назад';
+  const hraw = Math.floor(d / 60); if (hraw < 24) return hraw + ' ч назад';
+  return Math.floor(hraw / 24) + ' дн назад';
+}
+
+/* --- Мини-графики --- */
+function sparkline(series, down) {
+  const w = 100, hgt = 34, min = Math.min(...series), max = Math.max(...series), rng = (max - min) || 1;
+  const x = (i) => i / (series.length - 1) * w;
+  const y = (v) => hgt - ((v - min) / rng) * (hgt - 4) - 2;
+  const pts = series.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const col = down ? 'var(--danger)' : 'var(--brand)';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${w} ${hgt}`); svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = `<polyline points="${pts}" fill="none" stroke="${col}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+  return svg;
+}
+function barsEl(series) {
+  const max = Math.max(...series) || 1;
+  const box = h('div', { class: 'bars' });
+  for (const v of series) { const b = h('div', { class: 'bar' }); b.style.height = (v / max * 100) + '%'; box.appendChild(b); }
+  return box;
+}
+function donut(nutri, clients) {
+  const total = nutri + clients || 1, c = 2 * Math.PI * 52;
+  const nFrac = nutri / total, off = c * nFrac;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 128 128'); svg.setAttribute('class', 'donut');
+  svg.innerHTML = `
+    <circle cx="64" cy="64" r="52" fill="none" stroke="#3B82F6" stroke-width="16"/>
+    <circle cx="64" cy="64" r="52" fill="none" stroke="#8B5CF6" stroke-width="16"
+      stroke-dasharray="${off} ${c}" transform="rotate(-90 64 64)"/>
+    <text x="64" y="60" text-anchor="middle" class="center" font-size="22" fill="var(--text)">${total}</text>
+    <text x="64" y="80" text-anchor="middle" font-size="11" fill="var(--muted)">всего</text>`;
+  return svg;
+}
+function lineChart(series, height) {
+  const w = 300, hgt = height || 150, pad = 8, min = Math.min(...series), max = Math.max(...series), rng = (max - min) || 1;
+  const x = (i) => pad + i / (series.length - 1) * (w - pad * 2);
+  const y = (v) => pad + (1 - (v - min) / rng) * (hgt - pad * 2);
+  const pts = series.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const area = `${pad},${hgt - pad} ${pts} ${w - pad},${hgt - pad}`;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${w} ${hgt}`); svg.setAttribute('preserveAspectRatio', 'none');
+  svg.style.width = '100%'; svg.style.height = hgt + 'px';
+  svg.innerHTML = `
+    <defs><linearGradient id="lc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--brand)" stop-opacity="0.25"/><stop offset="100%" stop-color="var(--brand)" stop-opacity="0"/></linearGradient></defs>
+    <polygon points="${area}" fill="url(#lc)"/>
+    <polyline points="${pts}" fill="none" stroke="var(--brand)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  return svg;
+}
+
+/* --- Таблица --- */
+function dtable(columns, rows, opts = {}) {
+  const table = h('table', { class: 'dtable' });
+  const thead = h('thead', {}, h('tr', {}, ...columns.map(c => h('th', { style: c.thStyle || null }, c.label))));
+  const tbody = h('tbody', {});
+  if (!rows.length) {
+    tbody.appendChild(h('tr', {}, h('td', { colspan: String(columns.length), style: 'text-align:center;padding:28px;color:var(--muted)' }, 'Ничего не найдено')));
+  }
+  for (const row of rows) {
+    const tr = h('tr', opts.onRow ? { onclick: (e) => { if (!e.target.closest('.row-actions')) opts.onRow(row); } } : {});
+    for (const c of columns) tr.appendChild(h('td', { style: c.tdStyle || null }, c.render ? c.render(row) : (row[c.key] ?? '—')));
+    tbody.appendChild(tr);
+  }
+  table.appendChild(thead); table.appendChild(tbody);
+  return h('div', { class: 'dtable-wrap' }, h('div', { class: 'dtable-scroll' }, table));
+}
+function avatarCell(name, photo) {
+  const a = h('div', { class: 'avatar' });
+  if (photo) { a.style.backgroundImage = `url(${photo})`; a.style.backgroundSize = 'cover'; } else a.textContent = initials(name);
+  return h('div', { class: 'u' }, a, h('span', {}, name));
+}
+
+/* --- Admin shell --- */
+const ADMIN_NAV = [
+  ['dashboard', 'grid', 'Dashboard', '#/admin/dashboard'],
+  ['users', 'users', 'Пользователи', '#/admin/users'],
+  ['nutritionists', 'user', 'Нутрициологи', '#/admin/nutritionists'],
+  ['clients', 'chat', 'Клиенты', '#/admin/clients'],
+  ['subscriptions', 'creditCard', 'Подписки', '#/admin/subscriptions'],
+  ['payments', 'creditCard', 'Платежи', '#/admin/payments'],
+  ['plans', 'tag', 'Тарифы', '#/admin/plans'],
+  ['food', 'book', 'База блюд', '#/admin/food'],
+  ['reviews', 'lifebuoy', 'Отзывы', '#/admin/reviews'],
+  ['support', 'chat', 'Поддержка', '#/admin/support'],
+  ['analytics', 'chart', 'Аналитика', '#/admin/analytics'],
+  ['settings', 'cog', 'Настройки', '#/admin/settings'],
+];
+function adminShell(active, contentNode, opts = {}) {
+  const layout = h('div', { class: 'layout admin' });
+  // Sidebar
+  const aside = h('aside', { class: 'sidebar admin' });
+  aside.appendChild(h('div', { class: 'brand', onclick: () => location.hash = '#/admin/dashboard', style: 'cursor:pointer' },
+    h('span', { class: 'mark' }, ic('leaf')),
+    h('span', {}, h('span', { class: 'name', style: 'display:block' }, 'NutriMenu'), h('span', { class: 'sub' }, 'Admin Panel'))));
+  const nav = h('nav', { class: 'nav' });
+  for (const [key, icon, label, hash] of ADMIN_NAV) nav.appendChild(navButton(active, key, icon, label, hash));
+  aside.appendChild(nav);
+  const u = State.user || {};
+  aside.appendChild(h('div', { class: 'foot' }, h('div', { class: 'who' },
+    h('div', { class: 'avatar' }, initials(u.name || 'A')),
+    h('div', { style: 'min-width:0' }, h('div', { class: 'nm' }, u.name || 'Владелец'), h('div', { class: 'sub' }, 'Owner')))));
+  layout.appendChild(aside);
+
+  // Main
+  const screen = h('div', { class: 'screen', style: 'max-width:none;margin:0;padding:0;width:100%' });
+  const bar = h('div', { class: 'admin-topbar' });
+  bar.appendChild(h('button', { class: 'icon-btn admin-hamburger', 'aria-label': 'Меню', onclick: () => layout.classList.toggle('drawer-open') }, ic('grid')));
+  bar.appendChild(h('div', { class: 'hi' }, h('h1', {}, opts.title || 'Admin'), opts.sub ? h('div', { class: 'sub' }, opts.sub) : null));
+  bar.appendChild(h('div', { class: 'spacer' }));
+  if (opts.action) bar.appendChild(opts.action);
+  bar.appendChild(h('button', { class: 'icon-btn', 'aria-label': 'Уведомления' }, ic('bell')));
+  bar.appendChild(h('div', { class: 'admin-user' }, h('div', { class: 'avatar' }, initials(u.name || 'A')),
+    h('div', {}, h('div', { class: 'nm' }, (u.name || 'Владелец').split(' ')[0]), h('div', { class: 'role' }, 'Owner'))));
+  screen.appendChild(bar);
+  screen.appendChild(contentNode);
+  layout.appendChild(screen);
+  layout.addEventListener('click', (e) => { if (layout.classList.contains('drawer-open') && (e.target === layout)) layout.classList.remove('drawer-open'); });
+  return layout;
+}
+function requireAdmin() {
+  if (!State.token) { location.hash = '#/admin'; return false; }
+  if (State.role !== 'admin') { location.hash = defaultRoute(); return false; }
+  return true;
+}
+
+/* --- Admin login --- */
+route('/admin', () => {
+  if (State.token && State.role === 'admin') { location.hash = '#/admin/dashboard'; return; }
+  const err = h('div', { class: 'form-err', style: 'display:none' });
+  const email = h('input', { type: 'email', placeholder: 'owner@nutrimenu.app', value: 'owner@nutrimenu.app' });
+  const pass = h('input', { type: 'password', placeholder: 'Пароль' });
+  const submit = async () => {
+    err.style.display = 'none';
+    try { const r = await POST('/admin/login', { email: email.value.trim(), password: pass.value });
+      State.setAuth(r.token, 'admin', r.user); location.hash = '#/admin/dashboard';
+    } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  };
+  render(h('div', { class: 'auth-wrap' },
+    h('div', { class: 'auth-logo' }, h('div', { class: 'mark' }, ic('grid', 'lg')), h('h1', {}, 'NutriMenu'), h('div', { class: 'tag' }, 'Admin Panel · вход для владельца')),
+    h('div', { class: 'card auth-card' },
+      h('label', {}, 'Email'), email, h('label', {}, 'Пароль'), pass, err,
+      h('button', { class: 'btn', style: 'margin-top:14px', onclick: submit }, 'Войти в панель'),
+      h('div', { class: 'auth-switch small' }, h('a', { href: '#/' }, '← На сайт')))
+  ));
+  pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+});
+
+/* --- Dashboard --- */
+route('/admin/dashboard', async () => {
+  if (!requireAdmin()) return;
+  loading();
+  const s = await GET('/admin/stats');
+  const u = State.user || {};
+
+  const kpiGrid = h('div', { class: 'kpi-grid' });
+  for (const k of s.kpis) {
+    const up = k.delta >= 0; const good = k.invert ? !up : up;
+    kpiGrid.appendChild(h('div', { class: 'kpi' },
+      h('div', { class: 'lbl' }, k.label),
+      h('div', { class: 'row' },
+        h('span', { class: 'val' }, (k.unit === '€' ? '€' : '') + fmtNum(k.value) + (k.unit === '%' ? '%' : '')),
+        h('span', { class: 'delta ' + (good ? 'up' : 'down') }, (up ? '+' : '') + k.delta + '%')),
+      h('div', { class: 'spark' }, sparkline(k.spark, k.invert ? up : !up && false))));
+  }
+
+  // Row 2: revenue, distribution, conversion, subscriptions
+  const dist = s.distribution;
+  const row2 = h('div', { class: 'admin-cols c4' },
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Выручка'), h('span', { class: 'muted small' }, 'MRR')),
+      h('div', { class: 'val', style: 'font-family:var(--font-display);font-size:26px;font-weight:800' }, '€' + fmtNum(s.revenue.total)),
+      h('div', { style: 'margin-top:8px' }, lineChart(s.revenue.week, 150))),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Пользователи')),
+      h('div', { class: 'donut-wrap' }, donut(dist.nutritionists, dist.clients),
+        h('div', { class: 'legend' },
+          h('div', { class: 'li' }, h('span', { class: 'dot', style: 'background:#8B5CF6' }), h('span', {}, 'Нутрициологи ', h('b', {}, String(dist.nutritionists)))),
+          h('div', { class: 'li' }, h('span', { class: 'dot', style: 'background:#3B82F6' }), h('span', {}, 'Клиенты ', h('b', {}, String(dist.clients))))))),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Trial → Paid')),
+      h('div', { class: 'conv-big' }, s.conversion.rate + '%'),
+      h('div', { class: 'muted small' }, 'конверсия'),
+      h('div', { class: 'conv-bar' }, (() => { const sp = h('span', {}); sp.style.width = s.conversion.rate + '%'; return sp; })()),
+      h('div', { class: 'row-between small muted' }, h('span', {}, 'Оплатили: ' + s.conversion.paid), h('span', {}, 'Trial: ' + s.conversion.trial))),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Подписки'), h('span', { class: 'link', onclick: () => location.hash = '#/admin/subscriptions' }, 'Перейти')),
+      ...s.plans.map(p => h('div', { class: 'row-between', style: 'padding:7px 0;border-bottom:1px solid var(--line);font-size:13px' },
+        h('span', {}, PLAN_LABEL[p.code]), h('span', { class: 'muted' }, '€' + p.price + '/мес'),
+        h('span', { class: (p.delta >= 0 ? 'delta up' : 'delta down'), style: 'font-family:var(--font-display);font-weight:700;font-size:12px' }, (p.delta >= 0 ? '+' : '') + p.delta))),
+      h('div', { class: 'row-between', style: 'padding-top:10px;font-weight:700' }, h('span', {}, 'Активных'), h('span', { class: 'num' }, fmtNum(s.active_subs_total)))));
+
+  // Row 3: recent registrations, recent nutritionists, support
+  const regList = h('div', { class: 'mini-list' });
+  for (const r of s.recent_registrations) regList.appendChild(h('div', { class: 'mi' }, h('div', { class: 'avatar' }, initials(r.name)),
+    h('div', { class: 'grow' }, h('div', { class: 't' }, r.name), h('div', { class: 's' }, STATUS_LABEL[r.role] || r.role)),
+    h('div', { class: 'r' }, timeAgo(r.created_at))));
+
+  const nutriTable = dtable([
+    { label: 'Нутрициолог', render: r => avatarCell(r.name) },
+    { label: 'Тариф', render: r => badge(r.plan === 'trial' ? 'trial' : 'active') },
+    { label: 'Клиенты', tdStyle: 'text-align:center', render: r => h('span', { class: 'num' }, String(r.clients_count)) },
+    { label: 'Активность', render: r => h('span', { class: 'muted' }, timeAgo(r.last_active_at)) },
+    { label: 'Статус', render: r => badge(r.status) },
+  ], s.recent_nutritionists, { onRow: r => location.hash = '#/admin/nutritionist/' + r.id });
+
+  const supportList = h('div', { class: 'mini-list' });
+  for (const t of s.support) supportList.appendChild(h('div', { class: 'mi' }, h('div', { class: 'avatar' }, initials(t.user_name)),
+    h('div', { class: 'grow' }, h('div', { class: 't' }, t.subject), h('div', { class: 's' }, t.user_name)),
+    badge(t.status)));
+
+  const row3 = h('div', { class: 'admin-cols c3' },
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Новые регистрации'), h('span', { class: 'link', onclick: () => location.hash = '#/admin/users' }, 'Все')), regList),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Активные нутрициологи'), h('span', { class: 'link', onclick: () => location.hash = '#/admin/nutritionists' }, 'Все')), nutriTable),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Обращения в поддержку'), h('span', { class: 'link', onclick: () => location.hash = '#/admin/support' }, 'Все')), supportList));
+
+  // Row 4: popular dishes, revenue by period, activity, quick actions
+  const popular = h('div', { class: 'mini-list' });
+  for (const d of s.popular_dishes) { const th = h('div', { class: 'thumb' }); if (d.photo_url) th.style.backgroundImage = `url(${d.photo_url})`;
+    popular.appendChild(h('div', { class: 'mi' }, th, h('div', { class: 'grow' }, h('div', { class: 't' }, d.name), h('div', { class: 's' }, 'Добавлено ' + d.uses + ' раз')))); }
+
+  const activity = h('div', { class: 'mini-list' });
+  const actIcon = { nutritionist: 'user', payment: 'creditCard', support: 'chat' };
+  for (const e of s.activity) activity.appendChild(h('div', { class: 'mi' },
+    h('div', { class: 'qa-ic', style: 'width:32px;height:32px;border-radius:8px;background:var(--surface-2);display:grid;place-items:center;color:var(--muted);flex:0 0 auto' }, ic(actIcon[e.type] || 'grid', 'sm')),
+    h('div', { class: 'grow' }, h('div', { class: 't', style: 'font-weight:500;white-space:normal' }, e.text)), h('div', { class: 'r' }, timeAgo(e.at))));
+
+  const qa = h('div', { class: 'qa-grid' },
+    h('div', { class: 'qa', onclick: () => location.hash = '#/admin/nutritionists' }, h('span', { class: 'ic' }, ic('user', 'sm')), 'Добавить нутрициолога'),
+    h('div', { class: 'qa', onclick: () => location.hash = '#/admin/users' }, h('span', { class: 'ic' }, ic('users', 'sm')), 'Пользователи'),
+    h('div', { class: 'qa', onclick: () => location.hash = '#/admin/food' }, h('span', { class: 'ic' }, ic('book', 'sm')), 'Модерация блюд'),
+    h('div', { class: 'qa', onclick: () => location.hash = '#/admin/support' }, h('span', { class: 'ic' }, ic('chat', 'sm')), 'Поддержка'),
+    h('div', { class: 'qa full', onclick: () => exportPayments() }, h('span', { class: 'ic' }, ic('download', 'sm')), 'Экспорт платежей (CSV)'));
+
+  const row4 = h('div', { class: 'admin-cols c4b' },
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Популярные блюда')), popular),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Выручка по периодам'), h('span', { class: 'muted small' }, '30 дней')),
+      h('div', { class: 'val', style: 'font-family:var(--font-display);font-size:22px;font-weight:800;margin-bottom:8px' }, '€' + fmtNum(s.revenue.total)),
+      barsEl(s.revenue.days)),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Активность системы')), activity),
+    h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Быстрые действия')), qa));
+
+  const page = h('div', { class: 'admin-page' }, kpiGrid, row2, row3, row4);
+  render(adminShell('dashboard', page, { title: 'Добрый день, ' + (u.name || 'Владелец').split(' ')[0] + '! 👋', sub: 'Вот что происходит с NutriMenu сегодня' }));
+});
+
+function fmtNum(n) { return Number(n).toLocaleString('ru-RU'); }
+
+async function exportPayments() {
+  try {
+    const r = await GET('/admin/payments/export');
+    const blob = new Blob(["﻿" + r.csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = r.filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast('CSV выгружен');
+  } catch (e) { toast(e.message, true); }
+}
+
+/* --- Универсальный табличный экран с тулбаром и пагинацией --- */
+function adminTableScreen(active, opts) {
+  // opts: { title, sub, endpoint, columns, tabs?, filters?, onRow, search, extraAction }
+  let offset = 0; const limit = 25;
+  let q = ''; let tab = opts.tabs ? opts.tabs[0][0] : null; const filterVals = {};
+  const container = h('div', {});
+
+  const load = async () => {
+    container.innerHTML = '<div class="skeleton sk-card" style="height:300px"></div>';
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (q) params.set('q', q);
+    if (tab) params.set('tab', tab);
+    for (const [k, v] of Object.entries(filterVals)) if (v) params.set(k, v);
+    let data;
+    try { data = await GET(opts.endpoint + '?' + params.toString()); } catch (e) { container.innerHTML = ''; container.appendChild(h('div', { class: 'empty' }, e.message)); return; }
+    container.innerHTML = '';
+    if (opts.renderHead) container.appendChild(opts.renderHead(data));
+    container.appendChild(dtable(opts.columns, data.items, { onRow: opts.onRow }));
+    const from = data.total ? offset + 1 : 0, to = Math.min(offset + limit, data.total);
+    container.appendChild(h('div', { class: 'pager' },
+      h('span', {}, `${from}–${to} из ${data.total}`),
+      h('div', { class: 'btns' },
+        h('button', { class: 'btn tonal small', onclick: () => { if (offset > 0) { offset -= limit; load(); } } }, 'Назад'),
+        h('button', { class: 'btn tonal small', onclick: () => { if (offset + limit < data.total) { offset += limit; load(); } } }, 'Далее'))));
+  };
+
+  const toolbar = h('div', { class: 'toolbar' });
+  if (opts.tabs) {
+    const tabsEl = h('div', { class: 'tabs' });
+    for (const [val, label] of opts.tabs) {
+      const btn = h('button', { class: val === tab ? 'active' : '' }, label);
+      btn.addEventListener('click', () => {
+        tab = val; offset = 0;
+        tabsEl.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); load();
+      });
+      tabsEl.appendChild(btn);
+    }
+    toolbar.appendChild(tabsEl);
+  }
+  if (opts.search !== false) {
+    const si = h('input', { placeholder: 'Поиск…' });
+    let t; si.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { q = si.value.trim(); offset = 0; load(); }, 250); });
+    toolbar.appendChild(h('div', { class: 'searchbox' }, ic('search'), si));
+  }
+  for (const f of (opts.filters || [])) {
+    const sel = h('select', {}, h('option', { value: '' }, f.label), ...f.options.map(o => h('option', { value: o[0] }, o[1])));
+    sel.addEventListener('change', () => { filterVals[f.key] = sel.value; offset = 0; load(); });
+    toolbar.appendChild(sel);
+  }
+
+  const page = h('div', { class: 'admin-page' }, toolbar, container);
+  render(adminShell(active, page, { title: opts.title, sub: opts.sub, action: opts.extraAction }));
+  load();
+}
+
+/* --- Нутрициологи --- */
+route('/admin/nutritionists', () => {
+  if (!requireAdmin()) return;
+  adminTableScreen('nutritionists', {
+    title: 'Нутрициологи', endpoint: '/admin/nutritionists',
+    filters: [
+      { key: 'plan', label: 'Тариф', options: [['trial', 'Trial'], ['pro', 'Pro'], ['business', 'Business'], ['enterprise', 'Enterprise']] },
+      { key: 'status', label: 'Статус', options: [['active', 'Активен'], ['trial', 'Trial'], ['overdue', 'Просрочен'], ['blocked', 'Заблокирован'], ['inactive', 'Неактивен']] },
+    ],
+    columns: [
+      { label: 'Нутрициолог', render: r => avatarCell(r.name, r.photo_url) },
+      { label: 'Email', render: r => h('span', { class: 'muted' }, r.email) },
+      { label: 'Тариф', render: r => badge(r.plan === 'trial' ? 'trial' : 'active') },
+      { label: 'Клиенты', tdStyle: 'text-align:center', render: r => h('span', { class: 'num' }, String(r.clients_count)) },
+      { label: 'Рейтинг', render: r => r.rating ? h('span', { class: 'num' }, '★ ' + r.rating) : h('span', { class: 'muted' }, '—') },
+      { label: 'Регистрация', render: r => h('span', { class: 'muted' }, fmtDate(r.created_at)) },
+      { label: 'Статус', render: r => badge(r.status) },
+      { label: 'Оплата', render: r => r.last_payment ? badge(r.last_payment.status) : h('span', { class: 'muted' }, '—') },
+    ],
+    onRow: r => location.hash = '#/admin/nutritionist/' + r.id,
+  });
+});
+
+route('/admin/nutritionist/:id', async (args) => {
+  if (!requireAdmin()) return;
+  loading();
+  const p = await GET('/admin/nutritionists/' + args.id);
+  const refresh = () => location.reload ? renderAdminNutri(args.id) : null;
+
+  const stat = (k, v) => h('div', { class: 'stat' }, h('div', { class: 'k' }, k), h('div', { class: 'v' }, v));
+  const stats = h('div', { class: 'stat-grid' },
+    stat('Клиентов', String(p.clients_count)), stat('Меню', String(p.menus_count)),
+    stat('Своих блюд', String(p.dishes_count)), stat('Соблюдение', p.avg_adherence != null ? p.avg_adherence + '%' : '—'),
+    stat('Выручка', '€' + fmtNum(p.revenue)), stat('Рейтинг', p.rating ? '★ ' + p.rating + ' (' + p.reviews_count + ')' : '—'),
+    stat('Тариф', PLAN_LABEL[p.plan] || p.plan), stat('Статус', STATUS_LABEL[p.status] || p.status));
+
+  const payTable = dtable([
+    { label: 'Дата', render: r => fmtDate(r.created_at) },
+    { label: 'Тариф', render: r => PLAN_LABEL[r.plan_code] },
+    { label: 'Сумма', render: r => h('span', { class: 'num' }, '€' + r.amount) },
+    { label: 'Способ', render: r => h('span', { class: 'muted' }, r.method) },
+    { label: 'Статус', render: r => badge(r.status) },
+  ], p.payments);
+
+  const clientsTable = dtable([
+    { label: 'Клиент', render: r => r.name },
+    { label: 'Цель', render: r => h('span', { class: 'muted' }, r.goal || '—') },
+    { label: 'Добавлен', render: r => fmtDate(r.created_at) },
+  ], p.clients);
+
+  const changePlan = h('select', {}, ...['trial', 'pro', 'business', 'enterprise'].map(c => h('option', { value: c, selected: c === p.plan ? 'selected' : null }, PLAN_LABEL[c])));
+  changePlan.value = p.plan;
+  const isBlocked = !!p.blocked_at;
+
+  const actions = h('div', { class: 'panel', style: 'margin-bottom:14px' },
+    h('div', { class: 'ph' }, h('h3', {}, 'Управление аккаунтом')),
+    h('div', { class: 'toolbar', style: 'margin:0' },
+      h('div', {}, h('label', { style: 'margin:0 0 4px' }, 'Тариф'), changePlan),
+      h('button', { class: 'btn small', style: 'align-self:flex-end', onclick: async () => {
+        try { await PATCH('/admin/nutritionists/' + p.id, { plan: changePlan.value }); toast('Тариф изменён'); location.hash = '#/admin/nutritionist/' + p.id; renderAdminNutri(p.id); } catch (e) { toast(e.message, true); }
+      } }, 'Сохранить тариф'),
+      h('button', { class: 'btn ' + (isBlocked ? 'secondary' : 'danger') + ' small', style: 'align-self:flex-end', onclick: async () => {
+        try { await PATCH('/admin/nutritionists/' + p.id, { blocked: !isBlocked }); toast(isBlocked ? 'Разблокирован' : 'Заблокирован'); renderAdminNutri(p.id); } catch (e) { toast(e.message, true); }
+      } }, isBlocked ? 'Разблокировать' : 'Заблокировать'),
+      h('button', { class: 'btn tonal small', style: 'align-self:flex-end', onclick: () => toast('Сообщение отправлено (демо)') }, 'Написать')));
+
+  const head = h('div', { class: 'panel', style: 'margin-bottom:14px;display:flex;align-items:center;gap:16px' },
+    (() => { const a = h('div', { class: 'avatar', style: 'width:64px;height:64px;font-size:24px' }); if (p.photo_url) { a.style.backgroundImage = `url(${p.photo_url})`; a.style.backgroundSize = 'cover'; } else a.textContent = initials(p.name); return a; })(),
+    h('div', { class: 'grow' }, h('h2', { style: 'margin:0' }, p.name),
+      h('div', { class: 'muted small' }, p.email + (p.city ? ' · ' + p.city : '') + ' · с ' + fmtDate(p.created_at)),
+      p.specialization ? h('div', { class: 'small', style: 'margin-top:4px' }, p.specialization) : null),
+    badge(p.status));
+
+  const page = h('div', { class: 'admin-page' }, head, actions, stats,
+    h('div', { class: 'admin-cols', style: 'grid-template-columns:1.3fr 1fr' },
+      h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'История платежей')), payTable),
+      h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, 'Клиенты')), clientsTable)));
+
+  render(adminShell('nutritionists', page, { title: p.name, sub: 'Профиль нутрициолога',
+    action: h('button', { class: 'btn tonal small', style: 'width:auto', onclick: () => location.hash = '#/admin/nutritionists' }, ic('arrowLeft', 'sm'), 'К списку') }));
+});
+function renderAdminNutri(id) { location.hash = '#/admin/nutritionist/' + id; router(); }
+
+/* --- Пользователи --- */
+route('/admin/users', () => {
+  if (!requireAdmin()) return;
+  adminTableScreen('users', {
+    title: 'Пользователи', endpoint: '/admin/users',
+    tabs: [['all', 'Все'], ['nutritionists', 'Нутрициологи'], ['clients', 'Клиенты'], ['admins', 'Администраторы']],
+    columns: [
+      { label: 'Пользователь', render: r => avatarCell(r.name) },
+      { label: 'Роль', render: r => badge(r.role) },
+      { label: 'Email', render: r => h('span', { class: 'muted' }, r.email || '—') },
+      { label: 'Тариф', render: r => r.plan ? (PLAN_LABEL[r.plan] || r.plan) : '—' },
+      { label: 'Регистрация', render: r => h('span', { class: 'muted' }, fmtDate(r.created_at)) },
+      { label: 'Активность', render: r => h('span', { class: 'muted' }, r.last_active_at ? timeAgo(r.last_active_at) : '—') },
+      { label: 'Статус', render: r => badge(r.status) },
+    ],
+    onRow: r => { if (r.role === 'nutritionist') location.hash = '#/admin/nutritionist/' + r.id; },
+  });
+});
+
+/* --- Клиенты --- */
+route('/admin/clients', () => {
+  if (!requireAdmin()) return;
+  adminTableScreen('clients', {
+    title: 'Клиенты', endpoint: '/admin/clients',
+    columns: [
+      { label: 'Клиент', render: r => avatarCell(r.name) },
+      { label: 'Нутрициолог', render: r => h('span', { class: 'muted' }, r.nutritionist || '—') },
+      { label: 'Цель', render: r => r.goal || '—' },
+      { label: 'Последнее меню', render: r => h('span', { class: 'muted' }, r.last_menu ? fmtDate(r.last_menu) : '—') },
+      { label: 'Регистрация', render: r => h('span', { class: 'muted' }, fmtDate(r.created_at)) },
+      { label: 'Статус', render: r => badge(r.status === 'active' ? 'active' : 'inactive') },
+    ],
+  });
+});
+
+/* --- Подписки --- */
+route('/admin/subscriptions', () => {
+  if (!requireAdmin()) return;
+  adminTableScreen('subscriptions', {
+    title: 'Подписки и платежи', endpoint: '/admin/subscriptions', search: false,
+    renderHead: (data) => { const k = data.kpis; return h('div', { class: 'stat-grid', style: 'grid-template-columns:repeat(7,1fr)' },
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Активные'), h('div', { class: 'v' }, fmtNum(k.active))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Trial'), h('div', { class: 'v' }, fmtNum(k.trial))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Отменённые'), h('div', { class: 'v' }, fmtNum(k.cancelled))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Просрочка'), h('div', { class: 'v' }, fmtNum(k.past_due))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'MRR'), h('div', { class: 'v' }, '€' + fmtNum(k.mrr))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'ARR'), h('div', { class: 'v' }, '€' + fmtNum(k.arr))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Churn'), h('div', { class: 'v' }, k.churn + '%'))); },
+    columns: [
+      { label: 'Пользователь', render: r => avatarCell(r.name) },
+      { label: 'Тариф', render: r => PLAN_LABEL[r.plan] || r.plan },
+      { label: 'Стоимость', render: r => h('span', { class: 'num' }, r.price ? '€' + r.price + '/мес' : '—') },
+      { label: 'Начало', render: r => h('span', { class: 'muted' }, fmtDate(r.created_at)) },
+      { label: 'След. платёж', render: r => h('span', { class: 'muted' }, fmtDate(r.plan_expires_at)) },
+      { label: 'Посл. платёж', render: r => h('span', { class: 'muted' }, fmtDate(r.last_payment)) },
+      { label: 'Статус', render: r => badge(r.status) },
+    ],
+    onRow: r => location.hash = '#/admin/nutritionist/' + r.id,
+  });
+});
+
+/* --- Платежи --- */
+route('/admin/payments', () => {
+  if (!requireAdmin()) return;
+  adminTableScreen('payments', {
+    title: 'Платежи', endpoint: '/admin/payments',
+    extraAction: h('button', { class: 'btn small', style: 'width:auto', onclick: exportPayments }, ic('download', 'sm'), 'Экспорт CSV'),
+    filters: [{ key: 'status', label: 'Статус', options: [['paid', 'Оплачен'], ['pending', 'Ожидает'], ['failed', 'Ошибка'], ['refunded', 'Возврат']] }],
+    renderHead: (data) => h('div', { class: 'stat-grid', style: 'grid-template-columns:repeat(2,220px)' },
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Всего платежей'), h('div', { class: 'v' }, fmtNum(data.total))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Сумма (оплачено)'), h('div', { class: 'v' }, '€' + fmtNum(data.sum_paid)))),
+    columns: [
+      { label: 'Дата', render: r => fmtDate(r.created_at) },
+      { label: 'Пользователь', render: r => avatarCell(r.user_name) },
+      { label: 'Сумма', render: r => h('span', { class: 'num' }, '€' + r.amount) },
+      { label: 'Тариф', render: r => PLAN_LABEL[r.plan_code] || r.plan_code },
+      { label: 'Способ', render: r => h('span', { class: 'muted' }, r.method) },
+      { label: 'ID', render: r => h('span', { class: 'muted', style: 'font-family:monospace;font-size:12px' }, r.external_id) },
+      { label: 'Статус', render: r => badge(r.status) },
+    ],
+  });
+});
+
+/* --- Тарифы --- */
+route('/admin/plans', async () => {
+  if (!requireAdmin()) return;
+  loading();
+  const { items } = await GET('/admin/plans');
+  const grid = h('div', { class: 'plan-grid' });
+  for (const p of items) grid.appendChild(h('div', { class: 'plan-card' },
+    h('h3', {}, p.name),
+    h('div', { class: 'price' }, '€' + p.price, h('small', {}, '/' + (p.period === 'month' ? 'мес' : p.period))),
+    h('ul', {}, ...p.features.map(f => h('li', {}, ic('check', 'sm'), f))),
+    h('div', { class: 'small muted' }, 'Лимит клиентов: ' + (p.client_limit ?? '∞')),
+    h('div', { class: 'pfoot' }, h('span', {}, p.users + ' польз.'), h('span', { class: 'num' }, 'MRR €' + fmtNum(p.mrr)))));
+  const page = h('div', { class: 'admin-page' },
+    h('div', { class: 'toolbar' }, h('div', { style: 'flex:1' }), h('button', { class: 'btn small', style: 'width:auto', onclick: () => toast('Создание тарифа (демо)') }, ic('plus', 'sm'), 'Добавить тариф')),
+    grid);
+  render(adminShell('plans', page, { title: 'Тарифы', sub: 'Управление подписками и лимитами' }));
+});
+
+/* --- Отзывы (модерация) --- */
+route('/admin/reviews', () => {
+  if (!requireAdmin()) return;
+  const reload = () => location.hash === '#/admin/reviews' && router();
+  adminTableScreen('reviews', {
+    title: 'Отзывы и каталог', sub: 'Модерация публичных отзывов', endpoint: '/admin/reviews', search: false,
+    columns: [
+      { label: 'Нутрициолог', render: r => r.nutritionist },
+      { label: 'Автор', render: r => h('span', { class: 'muted' }, r.author) },
+      { label: 'Оценка', render: r => h('span', { class: 'num' }, '★ ' + r.rating) },
+      { label: 'Отзыв', tdStyle: 'max-width:340px', render: r => h('span', {}, r.body || '—') },
+      { label: 'Дата', render: r => h('span', { class: 'muted' }, fmtDate(r.created_at)) },
+      { label: 'Статус', render: r => badge(r.status) },
+      { label: '', render: r => h('div', { class: 'row-actions' },
+        h('button', { class: 'icon-btn', title: r.status === 'hidden' ? 'Показать' : 'Скрыть', onclick: async () => {
+          await POST('/admin/reviews/' + r.id + '/moderate', { action: r.status === 'hidden' ? 'approve' : 'hide' }); toast('Обновлено'); router();
+        } }, ic(r.status === 'hidden' ? 'eye' : 'eyeOff', 'sm')),
+        h('button', { class: 'icon-btn', title: 'Удалить', onclick: async () => {
+          if (!confirm('Удалить отзыв?')) return; await POST('/admin/reviews/' + r.id + '/moderate', { action: 'delete' }); toast('Удалён'); router();
+        } }, ic('trash', 'sm'))) },
+    ],
+  });
+});
+
+/* --- Поддержка --- */
+route('/admin/support', () => {
+  if (!requireAdmin()) return;
+  adminTableScreen('support', {
+    title: 'Поддержка', endpoint: '/admin/tickets', search: false,
+    filters: [{ key: 'status', label: 'Статус', options: [['new', 'Новые'], ['in_progress', 'В работе'], ['waiting', 'Ждут'], ['resolved', 'Решены']] }],
+    renderHead: (data) => h('div', { class: 'stat-grid' },
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Новые'), h('div', { class: 'v' }, String(data.counts.new))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'В работе'), h('div', { class: 'v' }, String(data.counts.in_progress))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Ждут ответа'), h('div', { class: 'v' }, String(data.counts.waiting))),
+      h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Решены'), h('div', { class: 'v' }, String(data.counts.resolved)))),
+    columns: [
+      { label: 'Пользователь', render: r => avatarCell(r.user_name) },
+      { label: 'Тема', render: r => r.subject },
+      { label: 'Канал', render: r => h('span', { class: 'muted' }, r.channel) },
+      { label: 'Приоритет', render: r => r.priority === 'high' ? badge('high') : h('span', { class: 'muted' }, r.priority) },
+      { label: 'Дата', render: r => h('span', { class: 'muted' }, fmtDate(r.created_at)) },
+      { label: 'Статус', render: r => badge(r.status) },
+    ],
+    onRow: r => openTicket(r.id),
+  });
+});
+async function openTicket(id) {
+  const t = await GET('/admin/tickets/' + id);
+  sheet('Обращение #' + id, (panel, close) => {
+    panel.appendChild(h('div', { class: 'row-between' }, h('h3', { style: 'margin:0' }, t.subject), badge(t.status)));
+    panel.appendChild(h('div', { class: 'muted small', style: 'margin:4px 0 12px' }, t.user_name + ' · ' + t.channel + ' · ' + fmtDate(t.created_at)));
+    const thread = h('div', { class: 'chat-thread', style: 'margin-bottom:12px' });
+    if (!t.messages.length) thread.appendChild(h('div', { class: 'muted small' }, 'Переписки пока нет.'));
+    for (const m of t.messages) thread.appendChild(h('div', { class: 'bubble ' + (m.author_type === 'admin' ? 'me' : 'them') }, m.body));
+    panel.appendChild(thread);
+    const reply = h('textarea', { placeholder: 'Ответ пользователю…' });
+    panel.appendChild(reply);
+    panel.appendChild(h('button', { class: 'btn', style: 'margin-top:10px', onclick: async () => {
+      if (!reply.value.trim()) return;
+      await PATCH('/admin/tickets/' + id, { reply: reply.value.trim() }); close(); toast('Ответ отправлен'); router();
+    } }, ic('send', 'sm'), 'Ответить'));
+    const statuses = [['in_progress', 'В работу'], ['waiting', 'Ждёт ответа'], ['resolved', 'Решено']];
+    panel.appendChild(h('div', { class: 'btn-row', style: 'margin-top:8px' }, ...statuses.map(([v, l]) =>
+      h('button', { class: 'btn tonal small', onclick: async () => { await PATCH('/admin/tickets/' + id, { status: v }); close(); toast('Статус: ' + l); router(); } }, l))));
+  });
+}
+
+/* --- Модерация блюд --- */
+route('/admin/food', () => {
+  if (!requireAdmin()) return;
+  adminTableScreen('food', {
+    title: 'База блюд', sub: 'Модерация пользовательских блюд', endpoint: '/admin/food', search: false,
+    filters: [{ key: 'status', label: 'Статус', options: [['published', 'Опубликованы'], ['pending', 'На модерации'], ['rejected', 'Отклонены']] }],
+    columns: [
+      { label: 'Блюдо', render: r => { const th = h('div', { class: 'thumb', style: 'width:32px;height:32px;border-radius:7px;background:var(--surface-3) center/cover' }); if (r.photo_url) th.style.backgroundImage = `url(${r.photo_url})`; return h('div', { class: 'u' }, th, h('span', {}, r.name)); } },
+      { label: 'Автор', render: r => h('span', { class: 'muted' }, r.author || 'Общая база') },
+      { label: 'Ккал/100г', render: r => h('span', { class: 'num' }, fmt0(r.kcal_100 || 0)) },
+      { label: 'Исп.', tdStyle: 'text-align:center', render: r => h('span', { class: 'num' }, String(r.uses)) },
+      { label: 'Дата', render: r => h('span', { class: 'muted' }, fmtDate(r.created_at)) },
+      { label: 'Статус', render: r => badge(r.status) },
+      { label: '', render: r => h('div', { class: 'row-actions' },
+        h('button', { class: 'icon-btn', title: 'Одобрить', onclick: async () => { await POST('/admin/food/' + r.id + '/moderate', { action: 'approve' }); toast('Одобрено'); router(); } }, ic('check', 'sm')),
+        h('button', { class: 'icon-btn', title: 'Отклонить', onclick: async () => { await POST('/admin/food/' + r.id + '/moderate', { action: 'reject' }); toast('Отклонено'); router(); } }, ic('x', 'sm'))) },
+    ],
+  });
+});
+
+/* --- Аналитика / Настройки (заглушки-панели) --- */
+route('/admin/analytics', async () => {
+  if (!requireAdmin()) return;
+  loading();
+  const s = await GET('/admin/stats');
+  const metric = (k, v, spark) => h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h3', {}, k)),
+    h('div', { class: 'val', style: 'font-family:var(--font-display);font-size:24px;font-weight:800' }, v),
+    h('div', { class: 'spark', style: 'height:44px' }, sparkline(spark || s.revenue.days)));
+  const page = h('div', { class: 'admin-page' },
+    h('div', { class: 'admin-cols c3' },
+      metric('MRR', '€' + fmtNum(s.revenue.total), s.kpis[0].spark),
+      metric('Активные клиенты', fmtNum(s.distribution.clients), s.kpis[3].spark),
+      metric('Trial → Paid', s.conversion.rate + '%', s.kpis[1].spark)),
+    h('div', { class: 'panel', style: 'margin-top:14px' }, h('div', { class: 'ph' }, h('h3', {}, 'Выручка за период')), lineChart(s.revenue.days, 220)),
+    h('div', { class: 'muted small', style: 'margin-top:12px' }, 'Расширенная аналитика (DAU/WAU/MAU, retention, LTV, ARPU) — в разработке.'));
+  render(adminShell('analytics', page, { title: 'Аналитика', sub: 'Ключевые метрики платформы' }));
+});
+route('/admin/settings', () => {
+  if (!requireAdmin()) return;
+  const sections = ['General', 'Brand', 'Тарифы', 'Роли и права', 'Уведомления', 'Email', 'Интеграции', 'Безопасность', 'Приватность', 'Feature flags'];
+  const page = h('div', { class: 'admin-page' },
+    h('div', { class: 'admin-cols c3' }, ...sections.map(sec => h('div', { class: 'panel', style: 'cursor:pointer', onclick: () => toast(sec + ' — в разработке') },
+      h('h3', { style: 'margin:0 0 4px' }, sec), h('div', { class: 'muted small' }, 'Настройки раздела')))),
+    h('div', { class: 'panel', style: 'margin-top:14px' }, h('div', { class: 'ph' }, h('h3', {}, 'Роли и права')),
+      h('div', { class: 'muted small' }, 'Owner — полный доступ · Admin — управление платформой · Support — пользователи и обращения · Content — контент, блюда, отзывы · Nutritionist — свой кабинет · Client — свой кабинет.')),
+    h('button', { class: 'btn danger', style: 'margin-top:14px;max-width:240px', onclick: logout }, ic('logout', 'sm'), 'Выйти'));
+  render(adminShell('settings', page, { title: 'Настройки', sub: 'Конфигурация платформы' }));
+});
+
 async function boot() {
   if (State.token) {
     try {

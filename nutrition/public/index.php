@@ -25,6 +25,7 @@ spl_autoload_register(function (string $class) use ($root) {
 });
 
 use App\Auth;
+use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\ClientController;
 use App\Controllers\ClientPortalController;
@@ -95,6 +96,26 @@ $r->get("$api/invite/{token}",            [AuthController::class, 'inviteInfo'])
 $r->post("$api/invite/{token}/accept",    [AuthController::class, 'acceptInvite']);
 $r->get("$api/me",                        [AuthController::class, 'me']);
 $r->post("$api/auth/logout",              [AuthController::class, 'logout']);
+
+// --- Админ-панель владельца ---
+$r->post("$api/admin/login",                 [AdminController::class, 'login']);
+$r->get("$api/admin/stats",                  [AdminController::class, 'stats']);
+$r->get("$api/admin/nutritionists",          [AdminController::class, 'nutritionists']);
+$r->get("$api/admin/nutritionists/{id}",     [AdminController::class, 'nutritionist']);
+$r->patch("$api/admin/nutritionists/{id}",   [AdminController::class, 'updateNutritionist']);
+$r->get("$api/admin/users",                  [AdminController::class, 'users']);
+$r->get("$api/admin/clients",                [AdminController::class, 'clients']);
+$r->get("$api/admin/subscriptions",          [AdminController::class, 'subscriptions']);
+$r->get("$api/admin/plans",                  [AdminController::class, 'plans']);
+$r->get("$api/admin/payments/export",        [AdminController::class, 'paymentsExport']);
+$r->get("$api/admin/payments",               [AdminController::class, 'payments']);
+$r->get("$api/admin/reviews",                [AdminController::class, 'reviews']);
+$r->post("$api/admin/reviews/{id}/moderate", [AdminController::class, 'moderateReview']);
+$r->get("$api/admin/tickets",                [AdminController::class, 'tickets']);
+$r->get("$api/admin/tickets/{id}",           [AdminController::class, 'ticket']);
+$r->patch("$api/admin/tickets/{id}",         [AdminController::class, 'updateTicket']);
+$r->get("$api/admin/food",                   [AdminController::class, 'foodModeration']);
+$r->post("$api/admin/food/{id}/moderate",    [AdminController::class, 'moderateFood']);
 
 // --- Профиль специалиста + загрузка изображений ---
 $r->get("$api/profile",       [ProfileController::class, 'myProfile']);

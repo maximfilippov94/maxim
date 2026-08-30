@@ -56,7 +56,7 @@ class Auth
             throw new HttpException('Сессия истекла', 401);
         }
 
-        $table = $session['user_type'] === 'specialist' ? 'specialists' : 'clients';
+        $table = ['specialist' => 'specialists', 'client' => 'clients', 'admin' => 'admins'][$session['user_type']] ?? 'clients';
         $user = Database::one("SELECT * FROM {$table} WHERE id = ?", [(int)$session['user_id']]);
         if (!$user) {
             throw new HttpException('Пользователь не найден', 401);
