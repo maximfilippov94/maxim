@@ -9,6 +9,16 @@ const MEAL_LABELS = {
   breakfast: 'Завтрак', snack1: 'Перекус', lunch: 'Обед', snack2: 'Полдник', dinner: 'Ужин'
 };
 const MEAL_ORDER = ['breakfast', 'snack1', 'lunch', 'snack2', 'dinner'];
+const MEAL_TIMES = { breakfast: '08:00', snack1: '10:30', lunch: '13:00', snack2: '16:30', dinner: '20:00' };
+const WEEKDAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const MONTHS_GEN = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+/* Дата дня меню d (1-based) от start_date. Возвращает {wd:'Пн', dt:'26 мая'}. */
+function dayLabel(startDate, d) {
+  const base = new Date((startDate || new Date().toISOString().slice(0, 10)) + 'T00:00:00');
+  if (isNaN(base)) return { wd: 'День', dt: String(d) };
+  const dt = new Date(base.getTime() + (d - 1) * 86400000);
+  return { wd: WEEKDAYS[dt.getDay()], dt: dt.getDate() + ' ' + MONTHS_GEN[dt.getMonth()] };
+}
 
 /* ---------- Состояние ---------- */
 const State = {
@@ -132,6 +142,21 @@ function fmt0(n) { return Math.round(n).toString(); }
 function initials(name) {
   return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] ? w[0].toUpperCase() : '').join('') || '?';
 }
+/* Пищевая ценность с процентами от калорийности (по макету GPT). */
+function nutritionBreakdown(n, title) {
+  const kcal = n.kcal || 0;
+  const pct = (grams, factor) => kcal > 0 ? Math.round(grams * factor / kcal * 100) : 0;
+  const row = (label, grams, p, color) => h('div', { class: 'nb-row' },
+    h('span', { class: 'nb-dot', style: 'background:' + color }), h('span', { class: 'nb-l' }, label),
+    h('span', { class: 'nb-g' }, fmt(grams) + ' г'), h('span', { class: 'nb-p' }, p + '%'));
+  return h('div', { class: 'nutri-breakdown' },
+    h('div', { class: 'nb-head' }, h('span', { class: 'muted small' }, title || 'Пищевая ценность на порцию'),
+      h('span', { class: 'nb-kcal' }, fmt0(kcal) + ' ккал')),
+    row('Белки', n.protein || 0, pct(n.protein || 0, 4), 'var(--m-protein)'),
+    row('Жиры', n.fat || 0, pct(n.fat || 0, 9), 'var(--m-fat)'),
+    row('Углеводы', n.carbs || 0, pct(n.carbs || 0, 4), 'var(--m-carb)'));
+}
+
 /* Строка макросов с цветовой кодировкой (Б синий, Ж янтарь, У фиолетовый). */
 function macroLine(n, withPortion) {
   const parts = [];
@@ -728,10 +753,12 @@ async function renderMenu(menuId) {
   // Верхняя панель с действиями меню
   const action = h('button', { class: 'icon-btn', 'aria-label': 'Действия с меню', onclick: () => menuActions(data) }, ic('more'));
 
-  // Табы дней (горизонтальный свайп)
+  // Табы дней: день недели + дата (по макету GPT)
   const tabs = h('div', { class: 'day-tabs' });
   for (let d = 1; d <= menu.days_count; d++) {
-    tabs.appendChild(h('button', { class: d === currentDay ? 'active' : '', onclick: () => { currentDay = d; renderMenu(menuId); } }, 'День ' + d));
+    const dl = dayLabel(menu.start_date, d);
+    tabs.appendChild(h('button', { class: d === currentDay ? 'active' : '', onclick: () => { currentDay = d; renderMenu(menuId); } },
+      h('span', { class: 'wd' }, dl.wd), h('span', { class: 'dt' }, dl.dt)));
   }
   container.appendChild(tabs);
 
@@ -752,7 +779,7 @@ async function renderMenu(menuId) {
     const addBtn = h('button', { class: 'add-inline', 'aria-label': 'Добавить блюдо',
       onclick: () => desktop ? setActiveMeal(mt) : openDishPicker(menuId, mt) }, ic('plus'));
     const group = h('div', { class: 'meal-group', 'data-meal': mt },
-      h('h4', {}, MEAL_LABELS[mt], addBtn));
+      h('h4', {}, h('span', { class: 'mtime' }, MEAL_TIMES[mt]), MEAL_LABELS[mt], h('span', { class: 'spacer' }), addBtn));
     if (!meals.length) {
       group.appendChild(h('div', { class: 'meal-empty', onclick: () => desktop ? setActiveMeal(mt) : openDishPicker(menuId, mt) }, 'Пусто — нажмите + чтобы добавить блюдо'));
     }
@@ -836,31 +863,31 @@ function buildFoodRail(menuId) {
 function dayTotalsBar(day, targets) {
   const t = day.totals || {};
   const dev = day.deviation;
+  const tg = targets || {};
   const bar = h('div', { class: 'day-totals' });
   const row1 = h('div', { class: 'row1' },
     h('span', { class: 'kcal-big' }, fmt0(t.kcal || 0)),
-    h('span', { class: 'target' }, 'ккал' + (targets && targets.target_kcal ? ' / ' + targets.target_kcal : '')));
+    h('span', { class: 'target' }, (tg.target_kcal ? ' / ' + fmt0(tg.target_kcal) : '') + ' ккал'));
   if (dev && dev.kcal != null) {
     const over = dev.kcal > 0;
-    row1.appendChild(h('span', { class: 'dev-chip' }, (over ? '+' : '') + fmt0(dev.kcal)));
+    row1.appendChild(h('span', { class: 'dev-chip ' + (over ? 'over' : 'under') }, (over ? '+' : '') + fmt0(dev.kcal)));
   }
   bar.appendChild(row1);
 
   const macros = h('div', { class: 'macros' });
-  const macroBlock = (label, val, devVal) => {
-    const block = h('div', { class: 'macro' },
-      h('div', { class: 'lbl' }, label));
-    const valRow = h('div', { class: 'val' }, fmt(val || 0) + ' г');
-    if (devVal != null) {
-      const over = devVal > 0;
-      valRow.appendChild(h('span', { class: 'dev' }, (over ? '+' : '') + fmt(devVal)));
-    }
-    block.appendChild(valRow);
-    return block;
+  const macroTile = (label, val, target, color) => {
+    const v = val || 0;
+    const frac = target ? Math.min(1, v / target) : 0;
+    const valRow = h('div', { class: 'val' }, fmt(v));
+    if (target) valRow.appendChild(h('span', { class: 'tg' }, ' / ' + fmt0(target) + ' г'));
+    else valRow.appendChild(h('span', { class: 'tg' }, ' г'));
+    const fill = h('span', {});
+    fill.style.width = (frac * 100) + '%'; fill.style.background = color;
+    return h('div', { class: 'macro' }, h('div', { class: 'lbl' }, label), valRow, h('div', { class: 'bar' }, fill));
   };
-  macros.appendChild(macroBlock('Белки', t.protein, dev && dev.protein));
-  macros.appendChild(macroBlock('Жиры', t.fat, dev && dev.fat));
-  macros.appendChild(macroBlock('Углеводы', t.carbs, dev && dev.carbs));
+  macros.appendChild(macroTile('Белки', t.protein, tg.target_protein, 'var(--m-protein)'));
+  macros.appendChild(macroTile('Жиры', t.fat, tg.target_fat, 'var(--m-fat)'));
+  macros.appendChild(macroTile('Углеводы', t.carbs, tg.target_carbs, 'var(--m-carb)'));
   bar.appendChild(macros);
   return bar;
 }
@@ -935,11 +962,21 @@ function starsInput(value, onPick) {
 
 function mealCard(menuId, m) {
   const n = m.nutrition;
-  const card = h('div', { class: 'meal-card', onclick: () => openPortionEditor(menuId, m) },
-    h('div', { class: 'mc-top' },
-      h('div', { class: 'mc-name' }, m.dish_name),
-      h('div', { class: 'mc-kcal' }, fmt0(n.kcal) + ' ккал')),
-    macroLine(n, true),
+  const thumb = h('div', { class: 'mc-thumb' });
+  if (m.photo_url) thumb.style.backgroundImage = `url(${m.photo_url})`;
+  const editBtn = h('button', { class: 'icon-btn', 'aria-label': 'Изменить', onclick: (e) => { e.stopPropagation(); openPortionEditor(menuId, m); } }, ic('edit', 'sm'));
+  const delBtn = h('button', { class: 'icon-btn', 'aria-label': 'Удалить', onclick: async (e) => {
+    e.stopPropagation();
+    try { await DEL('/menus/' + menuId + '/items/' + m.id); toast('Удалено'); renderMenu(menuId); } catch (err) { toast(err.message, true); }
+  } }, ic('trash', 'sm'));
+  const card = h('div', { class: 'meal-card' },
+    h('div', { class: 'mc-top', onclick: () => openPortionEditor(menuId, m) },
+      thumb,
+      h('div', { style: 'flex:1;min-width:0' },
+        h('div', { class: 'mc-name' }, m.dish_name),
+        macroLine(n, true)),
+      h('div', { class: 'mc-kcal' }, fmt0(n.kcal) + ' ккал'),
+      h('div', { class: 'mc-actions' }, editBtn, delBtn)),
     m.comment ? h('div', { class: 'comment' }, ic('chat', 'sm'), h('span', {}, m.comment)) : null
   );
   return card;
@@ -997,19 +1034,18 @@ async function openPortionEditor(menuId, m) {
     const base = dish ? (dish.base_portion_g || portion) : portion;
     const maxP = Math.max(base * 3, portion * 2, 100);
 
+    if (dish && dish.photo_url) panel.appendChild(h('img', { class: 'dish-hero', src: dish.photo_url, alt: m.dish_name }));
+
     const valEl = h('div', { class: 'val' }, portion, h('span', {}, ' г'));
-    const kcalEl = h('div', { class: 'center kcal-live', style: 'margin:4px 0 10px' }, fmt0(m.nutrition.kcal) + ' ккал');
-    const macroEl = h('div', { class: 'center muted small' }, '');
     const slider = h('input', { type: 'range', min: '10', max: String(Math.round(maxP)), step: '5', value: String(portion) });
+    const nbBox = h('div', {}, nutritionBreakdown(m.nutrition));
 
     // Предпросчёт на клиенте (для отзывчивости), правда придёт из API при сохранении.
     const preview = () => {
       const k = base > 0 ? portion / base : 0;
       const whole = dish && dish.nutrition ? dish.nutrition.totals : null;
-      if (whole) {
-        kcalEl.textContent = fmt0(whole.kcal * k) + ' ккал';
-        macroEl.textContent = `Б ${fmt(whole.protein * k)} · Ж ${fmt(whole.fat * k)} · У ${fmt(whole.carbs * k)}`;
-      }
+      const n = whole ? { kcal: whole.kcal * k, protein: whole.protein * k, fat: whole.fat * k, carbs: whole.carbs * k } : m.nutrition;
+      nbBox.innerHTML = ''; nbBox.appendChild(nutritionBreakdown(n));
       valEl.firstChild.textContent = portion;
     };
     slider.addEventListener('input', () => { portion = parseInt(slider.value); preview(); });
@@ -1023,7 +1059,8 @@ async function openPortionEditor(menuId, m) {
 
     const comment = h('textarea', { placeholder: 'Комментарий клиенту (необязательно)' }, m.comment || '');
 
-    panel.appendChild(h('div', { class: 'portion-edit' }, valEl, kcalEl, macroEl, slider, quick));
+    panel.appendChild(h('div', { class: 'portion-edit' }, h('div', { class: 'muted small', style: 'text-align:center' }, 'Размер порции'), valEl, slider, quick));
+    panel.appendChild(nbBox);
     panel.appendChild(h('label', {}, 'Комментарий')); panel.appendChild(comment);
 
     // Состав + точечная правка (override)
@@ -1639,7 +1676,7 @@ function clientDayBody(data, dayNum) {
   for (const mt of MEAL_ORDER) {
     const meals = day.meals.filter(m => m.meal_type === mt);
     if (!meals.length) continue;
-    body.appendChild(h('h4', { class: '', style: 'margin:14px 2px 6px;color:var(--muted);font-size:13px;text-transform:uppercase' }, MEAL_LABELS[mt]));
+    body.appendChild(h('h4', { class: 'meal-head' }, h('span', { class: 'mtime' }, MEAL_TIMES[mt]), MEAL_LABELS[mt]));
     for (const m of meals) body.appendChild(clientMealCard(data.menu.id, m));
   }
   return body;
@@ -1650,10 +1687,12 @@ function clientMealCard(menuId, m) {
   const eaten = m.log && m.log.status === 'eaten';
   const skipped = m.log && m.log.status === 'skipped';
   const card = h('div', { class: 'meal-card' + (eaten ? ' eaten' : '') + (skipped ? ' skipped' : '') });
-  card.appendChild(h('div', { class: 'mc-top' },
-    h('div', { class: 'mc-name', onclick: () => showDishForClient(m) }, m.dish_name),
+  const thumb = h('div', { class: 'mc-thumb' });
+  if (m.photo_url) thumb.style.backgroundImage = `url(${m.photo_url})`;
+  card.appendChild(h('div', { class: 'mc-top', onclick: () => showDishForClient(m) },
+    thumb,
+    h('div', { style: 'flex:1;min-width:0' }, h('div', { class: 'mc-name' }, m.dish_name), macroLine(n, true)),
     h('div', { class: 'mc-kcal' }, fmt0(n.kcal) + ' ккал')));
-  card.appendChild(macroLine(n, true));
   if (m.comment) card.appendChild(h('div', { class: 'comment' }, ic('chat', 'sm'), h('span', {}, m.comment)));
   const actions = h('div', { class: 'btn-row', style: 'margin-top:10px' },
     h('button', { class: 'btn ' + (eaten ? '' : 'tonal') + ' small', onclick: () => logMeal(menuId, m, 'eaten') }, eaten ? ic('check', 'sm') : null, eaten ? 'Съедено' : 'Съел'),
@@ -1676,12 +1715,8 @@ async function logMeal(menuId, m, status) {
 function showDishForClient(m) {
   sheet(m.dish_name, async (panel, close) => {
     if (m.photo_url) panel.appendChild(h('img', { class: 'dish-hero', src: m.photo_url, alt: m.dish_name }));
-    panel.appendChild(h('div', { class: 'kbju', style: 'margin-bottom:10px' },
-      h('span', { class: 'pill k' }, fmt0(m.nutrition.kcal) + ' ккал'),
-      h('span', { class: 'pill b' }, 'Б ' + fmt(m.nutrition.protein)),
-      h('span', { class: 'pill f' }, 'Ж ' + fmt(m.nutrition.fat)),
-      h('span', { class: 'pill c' }, 'У ' + fmt(m.nutrition.carbs))));
-    panel.appendChild(h('div', { class: 'muted small' }, 'Порция: ' + fmt(m.nutrition.portion_g) + ' г'));
+    panel.appendChild(h('div', { class: 'muted small', style: 'margin-bottom:8px' }, 'Порция: ' + fmt(m.nutrition.portion_g) + ' г'));
+    panel.appendChild(nutritionBreakdown(m.nutrition));
     if (m.comment) panel.appendChild(h('div', { class: 'comment', style: 'margin-top:8px' }, ic('chat', 'sm'), h('span', {}, m.comment)));
     try {
       const d = await GET('/dishes/' + m.dish_id);

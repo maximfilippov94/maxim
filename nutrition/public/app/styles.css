@@ -230,21 +230,23 @@ svg { display: block; }
 /* ---------- Кнопки ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: var(--grad); color: var(--on-brand); border: none; border-radius: var(--r);
-  padding: 14px 20px; font-size: 15.5px; font-weight: 700; font-family: var(--font-ui);
-  cursor: pointer; width: 100%; min-height: 50px; letter-spacing: .01em;
-  box-shadow: var(--sh-brand);
-  transition: transform .13s var(--ease), box-shadow .2s var(--ease), filter .2s var(--ease);
+  background: var(--brand); color: var(--on-brand); border: 1.5px solid transparent; border-radius: var(--r-sm);
+  padding: 13px 20px; font-size: 15px; font-weight: 700; font-family: var(--font-ui);
+  cursor: pointer; width: 100%; min-height: 48px; letter-spacing: .01em;
+  box-shadow: none;
+  transition: transform .12s var(--ease), background .16s var(--ease), filter .16s var(--ease);
 }
 .btn .icon { width: 19px; height: 19px; stroke-width: 2.2; }
-.btn:active { transform: scale(.97); filter: brightness(.97); }
-.btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent); outline-offset: 2px; }
-.btn.secondary { background: var(--brand-soft); color: var(--brand-700); box-shadow: none; }
+.btn:active { transform: scale(.97); background: var(--brand-600); }
+.btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 40%, transparent); outline-offset: 2px; }
+.btn.secondary { background: var(--surface); color: var(--brand-700); border-color: var(--brand); }
+.btn.secondary:active { background: var(--brand-soft); }
 @media (prefers-color-scheme: dark) { .btn.secondary { color: var(--brand); } }
-.btn.tonal { background: var(--surface-2); color: var(--text); box-shadow: none; border: 1px solid var(--line); }
-.btn.ghost { background: transparent; color: var(--brand-700); box-shadow: none; }
+.btn.tonal { background: var(--surface-2); color: var(--text); border-color: var(--line); }
+.btn.ghost { background: transparent; color: var(--brand-700); }
 @media (prefers-color-scheme: dark) { .btn.ghost { color: var(--brand); } }
-.btn.danger { background: var(--danger-soft); color: var(--danger); box-shadow: none; }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.danger:active { filter: brightness(.94); }
 .btn.small { width: auto; padding: 9px 15px; font-size: 13.5px; min-height: 42px; border-radius: var(--r-sm); }
 .btn-row { display: flex; gap: 11px; }
 .btn-row .btn { flex: 1; }
@@ -307,31 +309,41 @@ textarea { min-height: 84px; resize: vertical; }
 .day-tabs::-webkit-scrollbar { display: none; }
 .day-tabs button {
   flex: 0 0 auto; border: 1.5px solid var(--line); background: var(--surface); color: var(--muted);
-  border-radius: var(--r-full); padding: 9px 17px; font-size: 14px; font-weight: 600; cursor: pointer;
-  font-family: var(--font-display); transition: all .2s var(--ease);
+  border-radius: var(--r-sm); padding: 7px 15px; cursor: pointer; line-height: 1.15;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font-family: var(--font-display); transition: all .18s var(--ease); min-width: 58px;
 }
-.day-tabs button.active { background: var(--grad); color: var(--on-brand); border-color: transparent; box-shadow: var(--sh-brand); }
+.day-tabs button .wd { font-size: 11px; font-weight: 600; opacity: .85; }
+.day-tabs button .dt { font-size: 13px; font-weight: 700; }
+.day-tabs button.active { background: var(--brand); color: var(--on-brand); border-color: transparent; }
 
+/* Итоги дня — чистая карточка с макро-тайлами и прогресс-барами (по макету GPT). */
 .day-totals {
   position: sticky; z-index: 15; top: 0;
-  background: var(--grad-hero); color: #fff; padding: 16px 18px 15px;
-  box-shadow: var(--sh-2); overflow: hidden;
+  background: var(--surface); color: var(--text); padding: 16px;
+  border-bottom: 1px solid var(--line);
 }
-.day-totals::after { content: ""; position: absolute; right: -30px; top: -40px; width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,.1); }
-.day-totals .row1 { display: flex; align-items: baseline; gap: 8px; position: relative; }
-.day-totals .kcal-big { font-family: var(--font-display); font-size: 34px; font-weight: 700; letter-spacing: -.03em; line-height: 1; animation: countPop .4s var(--spring); }
-@keyframes countPop { from { transform: scale(.9); opacity: .5; } to { transform: none; opacity: 1; } }
-.day-totals .target { opacity: .9; font-size: 13px; font-weight: 500; }
-.day-totals .dev-chip { margin-left: auto; font-family: var(--font-display); font-weight: 700; font-size: 15px; background: rgba(255,255,255,.2); padding: 5px 11px; border-radius: var(--r-full); backdrop-filter: blur(4px); }
-.day-totals .macros { display: flex; gap: 8px; margin-top: 13px; position: relative; }
-.day-totals .macro { flex: 1; background: rgba(255,255,255,.14); border-radius: var(--r-sm); padding: 8px 10px; backdrop-filter: blur(3px); }
-.day-totals .macro .lbl { font-size: 11px; opacity: .85; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
-.day-totals .macro .val { font-family: var(--font-display); font-size: 16px; font-weight: 700; margin-top: 2px; }
-.day-totals .macro .dev { font-size: 11px; opacity: .9; margin-left: 3px; font-weight: 600; }
+.day-totals .row1 { display: flex; align-items: baseline; gap: 8px; }
+.day-totals .kcal-big { font-family: var(--font-display); font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1; animation: countPop .35s var(--spring); }
+@keyframes countPop { from { transform: scale(.94); opacity: .6; } to { transform: none; opacity: 1; } }
+.day-totals .target { color: var(--muted); font-size: 14px; font-weight: 600; }
+.day-totals .dev-chip { margin-left: auto; font-family: var(--font-display); font-weight: 700; font-size: 14px; background: var(--surface-2); color: var(--muted); padding: 5px 11px; border-radius: var(--r-full); }
+.day-totals .dev-chip.over { background: var(--danger-soft); color: var(--danger); }
+.day-totals .dev-chip.under { background: var(--brand-soft); color: var(--brand-700); }
+@media (prefers-color-scheme: dark) { .day-totals .dev-chip.under { color: var(--brand); } }
+.day-totals .macros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.day-totals .macro { background: var(--surface-2); border-radius: var(--r-sm); padding: 10px 11px; }
+.day-totals .macro .lbl { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.day-totals .macro .val { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin: 3px 0 7px; }
+.day-totals .macro .val .tg { color: var(--faint); font-weight: 600; }
+.day-totals .macro .bar { height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.day-totals .macro .bar > span { display: block; height: 100%; border-radius: 3px; transition: width .4s var(--ease-out); }
 
 .builder-main { padding: 14px 16px; }
 .meal-group { margin: 18px 0 4px; }
-.meal-group h4 { margin: 0 0 9px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; font-family: var(--font-ui); font-weight: 700; }
+.meal-group h4 { margin: 0 0 9px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-weight: 700; }
+.meal-group h4 .mtime { color: var(--faint); font-family: var(--font-display); font-weight: 700; }
+.meal-group h4 .spacer { flex: 1; }
 .meal-group h4 .add-inline {
   display: grid; place-items: center; width: 30px; height: 30px; border-radius: var(--r-sm);
   color: var(--brand); background: var(--brand-soft); cursor: pointer;
@@ -341,6 +353,19 @@ textarea { min-height: 84px; resize: vertical; }
 .meal-group h4 .add-inline .icon { width: 18px; height: 18px; stroke-width: 2.6; }
 .meal-empty { padding: 14px; border: 1.5px dashed var(--line-strong); border-radius: var(--r); color: var(--faint); font-size: 13px; text-align: center; margin-bottom: 8px; }
 
+/* Пищевая ценность с процентами (food detail по макету GPT) */
+.nutri-breakdown { background: var(--surface-2); border-radius: var(--r); padding: 12px 14px; }
+.nutri-breakdown .nb-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.nutri-breakdown .nb-kcal { font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+.nb-row { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-top: 1px solid var(--line); }
+.nb-row .nb-dot { width: 9px; height: 9px; border-radius: 3px; flex: 0 0 auto; }
+.nb-row .nb-l { flex: 1; font-size: 14px; }
+.nb-row .nb-g { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+.nb-row .nb-p { width: 44px; text-align: right; color: var(--muted); font-family: var(--font-display); font-weight: 700; font-size: 13px; }
+
+.meal-head { margin: 16px 2px 8px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.meal-head .mtime { color: var(--faint); font-family: var(--font-display); font-weight: 700; }
+
 .meal-card {
   background: var(--surface); border-radius: var(--r); box-shadow: var(--sh-1);
   padding: 13px 15px; margin-bottom: 9px; border: 1px solid var(--line);
@@ -348,6 +373,10 @@ textarea { min-height: 84px; resize: vertical; }
 }
 .meal-card:active { transform: scale(.99); }
 .meal-card .mc-top { display: flex; align-items: center; gap: 11px; cursor: pointer; }
+.meal-card .mc-thumb { width: 46px; height: 46px; border-radius: 11px; background: var(--surface-3) center/cover; flex: 0 0 auto; }
+.meal-card .mc-actions { display: flex; gap: 2px; flex: 0 0 auto; }
+.meal-card .mc-actions .icon-btn { width: 32px; height: 32px; }
+.meal-card .mc-actions .icon-btn .icon { width: 16px; height: 16px; color: var(--faint); }
 .meal-card .mc-name { flex: 1; font-weight: 600; font-size: 15.5px; }
 .meal-card .mc-kcal { font-family: var(--font-display); font-weight: 700; color: var(--brand-700); font-size: 15px; white-space: nowrap; }
 @media (prefers-color-scheme: dark) { .meal-card .mc-kcal { color: var(--brand); } }
