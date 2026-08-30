@@ -19,6 +19,8 @@ class DishController extends Controller
         $tag = trim((string)($req->query['tag'] ?? ''));
         $limit = min(200, max(1, (int)($req->query['limit'] ?? 100)));
 
+        $scope = trim((string)($req->query['scope'] ?? ''));   // '', 'mine', 'favorites'
+
         $sql = 'SELECT DISTINCT d.* FROM dishes d';
         $params = [];
         $where = ['(d.is_public = 1 OR d.created_by = ?)'];
@@ -28,6 +30,14 @@ class DishController extends Controller
             $sql .= ' JOIN dish_tags dt ON dt.dish_id = d.id';
             $where[] = 'dt.tag = ?';
             $params[] = $tag;
+        }
+        if ($scope === 'favorites') {
+            $sql .= ' JOIN dish_favorites df ON df.dish_id = d.id AND df.specialist_id = ?';
+            $params[] = $auth['id'];
+        }
+        if ($scope === 'mine') {
+            $where[] = 'd.created_by = ?';
+            $params[] = $auth['id'];
         }
         if ($search !== '') {
             $where[] = 'd.name LIKE ?';
@@ -42,11 +52,47 @@ class DishController extends Controller
         $sql .= ' WHERE ' . implode(' AND ', $where) . ' ORDER BY d.name LIMIT ' . $limit;
         $dishes = Database::all($sql, $params);
 
+        // Множество избранных для отметки is_favorite (один запрос).
+        $favs = array_column(
+            Database::all('SELECT dish_id FROM dish_favorites WHERE specialist_id = ?', [$auth['id']]),
+            'dish_id'
+        );
+        $favSet = array_flip(array_map('intval', $favs));
+
         foreach ($dishes as &$d) {
             $d['meal_types'] = $this->decodeJson($d['meal_types']);
             $d['tags'] = Repo::dishTags((int)$d['id']);
+            $d['is_favorite'] = isset($favSet[(int)$d['id']]);
+            $d['is_mine'] = ((int)($d['created_by'] ?? 0) === (int)$auth['id']);
         }
-        return ['items' => $dishes];
+        return ['items' => $dishes, 'favorites_count' => count($favs)];
+    }
+
+    /** Добавить блюдо в избранное. */
+    public function favorite(Request $req, array $args): array
+    {
+        $auth = Auth::require($req, 'specialist');
+        $id = (int)$args['id'];
+        if (!Repo::dish($id)) {
+            throw new HttpException('Блюдо не найдено', 404);
+        }
+        Database::exec(
+            'INSERT OR IGNORE INTO dish_favorites (specialist_id, dish_id, created_at) VALUES (?, ?, ?)',
+            [$auth['id'], $id, gmdate('c')]
+        );
+        return ['ok' => true, 'is_favorite' => true];
+    }
+
+    /** Убрать блюдо из избранного. */
+    public function unfavorite(Request $req, array $args): array
+    {
+        $auth = Auth::require($req, 'specialist');
+        $id = (int)$args['id'];
+        Database::exec(
+            'DELETE FROM dish_favorites WHERE specialist_id = ? AND dish_id = ?',
+            [$auth['id'], $id]
+        );
+        return ['ok' => true, 'is_favorite' => false];
     }
 
     public function show(Request $req, array $args): array

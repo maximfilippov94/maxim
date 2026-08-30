@@ -246,4 +246,14 @@ if (isset($clientIds[5])) {
     $addWeight($cid, 74.1, 1); $addWeight($cid, 75.0, 8);
 }
 echo "Сценарии внимания: клиенты 2–6 наполнены (меню/вес/питание/сообщение)\n";
+
+// ---------- Избранные блюда специалиста ----------
+if (Database::one("SELECT name FROM sqlite_master WHERE type='table' AND name='dish_favorites'")) {
+    $favDishes = Database::all('SELECT id FROM dishes WHERE is_public = 1 ORDER BY RANDOM() LIMIT 6');
+    foreach ($favDishes as $fd) {
+        Database::exec('INSERT OR IGNORE INTO dish_favorites (specialist_id, dish_id, created_at) VALUES (?, ?, ?)',
+            [$specId, (int)$fd['id'], $now]);
+    }
+    echo "Избранных блюд: " . count($favDishes) . "\n";
+}
 echo "Готово.\n";

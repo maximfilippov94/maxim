@@ -124,6 +124,7 @@ const ICONS = {
   sparkles: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M9 9l1.5 1.5M13.5 13.5 15 15M15 9l-1.5 1.5M10.5 13.5 9 15"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   note: '<path d="M15.5 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5z"/><path d="M15 3v6h6"/>',
+  star: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14l-5-4.87 6.91-1.01L12 2z"/>',
 };
 function ic(name, cls) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -1180,7 +1181,7 @@ function buildFoodRail(menuId) {
     detail.appendChild(nutri);
     const actions=h('div',{class:'detail-actions'},
       h('button',{class:'btn',onclick:()=>addDishToMeal(menuId,activeMeal,d.id,selectedPortion)},ic('plus','sm'),'Добавить в ' + MEAL_LABELS[activeMeal].toLowerCase()),
-      h('button',{class:'btn ghost',onclick:()=>toast('Добавлено в избранное')},'В избранное')
+      h('button',{class:'btn ghost',onclick:async(e)=>{e.stopPropagation();try{if(d.is_favorite){await DEL('/dishes/'+d.id+'/favorite');d.is_favorite=false;toast('Убрано из избранного');}else{await POST('/dishes/'+d.id+'/favorite');d.is_favorite=true;toast('В избранном');}}catch(err){toast(err.message,true);}}},'В избранное')
     );
     detail.appendChild(actions);
     redraw();
@@ -1625,48 +1626,108 @@ function copyMealSheet(menu, fromDay, mealType) {
 /* ==========================================================================
    СПЕЦИАЛИСТ: БАЗА БЛЮД
    ========================================================================== */
+const TAG_LABEL = { высокобелковое: 'Высокобелковое', безлактозное: 'Без лактозы', безглютеновое: 'Без глютена', вегетарианское: 'Вегетарианское', веган: 'Веган', быстро: 'Быстро', бюджетно: 'Бюджетно' };
+/* Фильтры базы: смешанный ряд «тип приёма + диета», как в макете. */
+const BASE_FILTERS = [
+  { key: 'all', label: 'Все' },
+  { key: 'meal:breakfast', label: 'Завтрак' },
+  { key: 'meal:snack1', label: 'Перекус' },
+  { key: 'meal:lunch', label: 'Обед' },
+  { key: 'meal:dinner', label: 'Ужин' },
+  { key: 'tag:высокобелковое', label: 'Высокобелковое' },
+  { key: 'lowcal', label: 'Низкокалорийное' },
+  { key: 'tag:вегетарианское', label: 'Вегетарианское' },
+  { key: 'tag:безлактозное', label: 'Без лактозы' },
+  { key: 'tag:безглютеновое', label: 'Без глютена' },
+];
+const BASE_SCOPES = [['', 'Все блюда'], ['mine', 'Мои'], ['favorites', 'Избранное']];
+
+/* Кнопка-звезда «в избранное» с оптимистичным переключением. */
+function favStar(d) {
+  const btn = h('button', { class: 'fav-star' + (d.is_favorite ? ' on' : ''), title: d.is_favorite ? 'В избранном' : 'В избранное' }, ic('star', 'sm'));
+  btn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const next = !d.is_favorite;
+    d.is_favorite = next; btn.classList.toggle('on', next);
+    try {
+      if (next) await POST('/dishes/' + d.id + '/favorite'); else await DEL('/dishes/' + d.id + '/favorite');
+    } catch (err) { d.is_favorite = !next; btn.classList.toggle('on', !next); toast(err.message, true); }
+  });
+  return btn;
+}
+
+/* Карточка блюда для базы. */
+function dishCard(d) {
+  const mm = (label, val, cls) => h('span', { class: 'mm ' + cls }, label + ' ' + fmt(val || 0));
+  return h('div', { class: 'dish-card', onclick: () => location.hash = '#/dish/' + d.id },
+    h('div', { class: 'dish-card-head' },
+      h('div', { class: 'dish-thumb' }, d.photo_url ? h('img', { src: d.photo_url, alt: '' }) : ic('utensils')),
+      favStar(d)),
+    h('div', { class: 'dish-name' }, d.name),
+    h('div', { class: 'dish-kcal' }, fmt0(d.kcal_100 || 0), h('span', {}, ' ккал / 100 г')),
+    h('div', { class: 'dish-macros' }, mm('Б', d.protein_100, 'b'), mm('Ж', d.fat_100, 'f'), mm('У', d.carbs_100, 'c')),
+    h('div', { class: 'dish-foot' },
+      h('span', { class: 'dish-portion' }, 'Порция ' + fmt0(d.base_portion_g || 0) + ' г'),
+      d.is_mine ? h('span', { class: 'dish-mine' }, 'Моё') : null),
+    d.tags && d.tags.length ? h('div', { class: 'dish-tags' }, ...d.tags.slice(0, 3).map(t => h('span', { class: 'dish-tag' }, TAG_LABEL[t] || t))) : null
+  );
+}
+
 route('/base', async () => {
   if (!requireRole('specialist')) return;
   loading();
-  const content = h('div', { class: 'content' });
+  let scope = '';
+  let filter = 'all';
+  let favCount = 0;
+
+  const results = h('div', { class: 'dish-grid' });
+  const countEl = h('p', {}, '');
   const search = h('input', { placeholder: 'Поиск блюда…' });
-  const chips = h('div', { class: 'chip-row' });
-  const results = h('div', { class: 'grid-cards' });
-  let mealFilter = '';
+  const tabs = h('div', { class: 'seg base-scopes' });
+  const chips = h('div', { class: 'chip-row filter-chips' });
 
   const load = async () => {
-    results.innerHTML = '<div class="muted small">Загрузка…</div>';
+    results.innerHTML = '<div class="muted small" style="padding:10px">Загрузка…</div>';
     const q = new URLSearchParams();
     if (search.value.trim()) q.set('q', search.value.trim());
-    if (mealFilter) q.set('meal_type', mealFilter);
+    if (scope) q.set('scope', scope);
+    if (filter.startsWith('meal:')) q.set('meal_type', filter.slice(5));
+    if (filter.startsWith('tag:')) q.set('tag', filter.slice(4));
     const data = await GET('/dishes?' + q.toString());
+    favCount = data.favorites_count || 0;
+    let items = data.items;
+    if (filter === 'lowcal') items = items.filter(d => (d.kcal_100 || 0) <= 120);
     results.innerHTML = '';
-    if (!data.items.length) { results.appendChild(h('div', { class: 'empty' }, ic('search'), h('div', {}, 'Ничего не найдено'))); return; }
-    for (const d of data.items) {
-      results.appendChild(h('div', { class: 'list-item', onclick: () => location.hash = '#/dish/' + d.id },
-        h('div', { class: 'grow' },
-          h('h3', {}, d.name),
-          h('div', { class: 'sub' }, `${fmt0(d.kcal_100 || 0)} ккал/100г · порция ${fmt0(d.base_portion_g || 0)} г`)),
-        ic('chevronRight', 'chevron sm')));
-    }
+    countEl.textContent = plural(items.length, 'блюдо', 'блюда', 'блюд') + ' · ' + items.length;
+    if (!items.length) { results.appendChild(h('div', { class: 'empty' }, ic('search'), h('div', {}, 'Ничего не найдено'), h('div', { class: 'small' }, 'Измените фильтр или добавьте блюдо'))); return; }
+    items.forEach(d => results.appendChild(dishCard(d)));
   };
 
-  const chipDefs = [['', 'Все'], ...MEAL_ORDER.map(mt => [mt, MEAL_LABELS[mt]])];
-  for (const [val, label] of chipDefs) {
-    const b = h('button', { class: val === mealFilter ? 'active' : '', onclick: () => {
-      mealFilter = val;
-      chips.querySelectorAll('button').forEach(x => x.classList.remove('active'));
-      b.classList.add('active'); load();
+  BASE_SCOPES.forEach(([val, label]) => {
+    const b = h('button', { class: val === scope ? 'active' : '', onclick: () => {
+      scope = val; tabs.querySelectorAll('button').forEach(x => x.classList.remove('active')); b.classList.add('active'); load();
+    } }, label);
+    tabs.appendChild(b);
+  });
+  BASE_FILTERS.forEach(({ key, label }) => {
+    const b = h('button', { class: key === filter ? 'active' : '', onclick: () => {
+      filter = key; chips.querySelectorAll('button').forEach(x => x.classList.remove('active')); b.classList.add('active'); load();
     } }, label);
     chips.appendChild(b);
-  }
+  });
 
   let timer;
-  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 220); });
 
-  content.appendChild(searchField(search));
-  content.appendChild(chips);
-  content.appendChild(results);
+  const content = h('div', { class: 'content base-page' },
+    h('div', { class: 'section-intro' },
+      h('div', {}, h('h2', {}, 'База блюд'), countEl),
+      h('button', { class: 'btn small', onclick: () => location.hash = '#/dish/new' }, ic('plus', 'sm'), 'Добавить блюдо')),
+    searchField(search),
+    tabs,
+    chips,
+    results
+  );
   const fab = h('button', { class: 'btn fab', 'aria-label': 'Новое блюдо', onclick: () => location.hash = '#/dish/new' }, ic('plus'));
   render(shell('base', content, { topbar: 'База блюд' }));
   $app().querySelector('.screen').appendChild(fab);

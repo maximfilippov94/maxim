@@ -154,6 +154,8 @@ $r->post("$api/dishes",       [DishController::class, 'create']);
 $r->get("$api/dishes/{id}",   [DishController::class, 'show']);
 $r->patch("$api/dishes/{id}", [DishController::class, 'update']);
 $r->delete("$api/dishes/{id}",[DishController::class, 'delete']);
+$r->post("$api/dishes/{id}/favorite",   [DishController::class, 'favorite']);
+$r->delete("$api/dishes/{id}/favorite", [DishController::class, 'unfavorite']);
 
 // --- Clients (специалист) ---
 $r->get("$api/clients",              [ClientController::class, 'index']);
