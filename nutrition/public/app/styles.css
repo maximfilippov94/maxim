@@ -1870,3 +1870,112 @@ body { background:#f7f9fb; color:var(--text); font-size:14px; }
     display: none !important;
   }
 }
+
+/* ============================================================================
+   STUDIO POLISH v18 — слой доводки: типографика, глубина, микроанимации.
+   Аккуратно, без перегруза; всё движение отключается prefers-reduced-motion.
+   ============================================================================ */
+
+/* — Плавная прокрутка и мягкий рендеринг шрифта — */
+html { scroll-behavior: smooth; }
+body { -moz-osx-font-smoothing: grayscale; letter-spacing: -0.004em; }
+h1, h2, h3, h4 { letter-spacing: -0.021em; }
+/* Табличные цифры для показателей — ровные колонки чисел */
+.mini-kpi b, .cr-metric b, .metric-delta, .dish-kcal, .progress-stats b, .client-stat-value,
+.day-totals .kcal-big, .big-stat, .ov-metrics b, .abar-label b, .cr-metrics b, .client-target b {
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+}
+
+/* — Тонкая брендовая «атмосфера» фона для глубины (очень слабая) — */
+body {
+  background:
+    radial-gradient(1150px 540px at 88% -12%, color-mix(in srgb, var(--brand) 7%, transparent), transparent 58%),
+    radial-gradient(880px 480px at -10% 112%, color-mix(in srgb, var(--g2) 6%, transparent), transparent 54%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* — Тонкие аккуратные скроллбары — */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--faint) 55%, transparent) transparent; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--faint) 52%, transparent); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--faint) 80%, transparent); background-clip: padding-box; }
+
+/* — Единый видимый фокус для клавиатурной навигации — */
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, .list-item:focus-visible,
+.dish-card:focus-visible, .client-row:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 42%, transparent);
+  outline-offset: 2px; border-radius: var(--r-sm);
+}
+
+/* — Кнопки: мягкий блик сверху, подъём при наведении, чёткое нажатие — */
+.btn { position: relative; overflow: hidden; }
+.btn:not(.secondary):not(.ghost):not(.tonal)::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 46%);
+}
+.btn.secondary, .btn.ghost { transition: background .16s var(--ease), border-color .16s var(--ease), color .16s var(--ease), transform .12s var(--ease); }
+@media (hover: hover) {
+  .btn:not(.ghost):not(.secondary):hover { transform: translateY(-1px); }
+  .btn.secondary:hover { background: color-mix(in srgb, var(--brand) 8%, transparent); border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
+  .btn.ghost:hover { background: color-mix(in srgb, var(--brand) 7%, transparent); }
+  .qa-btn:hover .qa-ic { transform: scale(1.06); }
+}
+.btn:active { transform: translateY(0) scale(.985); }
+.qa-ic { transition: transform .18s var(--spring); }
+.icon-btn { transition: background .16s var(--ease), transform .14s var(--ease), color .16s var(--ease); }
+@media (hover: hover) { .icon-btn:hover { background: var(--surface-2); color: var(--brand-700); } }
+
+/* — Поля ввода: мягкая подсветка фона при фокусе — */
+input, select, textarea { transition: border-color .18s var(--ease), box-shadow .2s var(--ease), background .18s var(--ease); }
+input:focus, select:focus, textarea:focus { background: color-mix(in srgb, var(--brand) 4%, var(--surface)); }
+::placeholder { color: var(--faint); opacity: 1; }
+
+/* — Карточки и кликабельные строки: аккуратный ховер — */
+@media (hover: hover) {
+  .card { transition: box-shadow .25s var(--ease), transform .25s var(--ease), border-color .2s var(--ease); }
+  .mini-kpi { transition: transform .2s var(--ease), box-shadow .22s var(--ease), border-color .2s var(--ease); }
+  .mini-kpi:hover { transform: translateY(-2px); box-shadow: var(--sh-2); }
+}
+.client-row, .chat-row, .attn-item, .timeline-row, .client-menu-row {
+  border-radius: 12px; transition: background .16s var(--ease);
+}
+@media (hover: hover) {
+  .client-row:hover, .chat-row:hover, .attn-item:hover, .client-menu-row:hover {
+    background: color-mix(in srgb, var(--brand) 5%, transparent);
+  }
+}
+
+/* — Боковое меню: акцентная полоска активного пункта — */
+.sidebar .nav button.active::before {
+  content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 20px; border-radius: 0 3px 3px 0; background: var(--grad);
+}
+
+/* — Модалки/шторки: более «стеклянный» фон подложки — */
+.sheet-backdrop { background: color-mix(in srgb, #06140d 52%, transparent); backdrop-filter: blur(7px) saturate(1.3); -webkit-backdrop-filter: blur(7px) saturate(1.3); }
+.sheet { animation: sheetPop .42s var(--spring); }
+@keyframes sheetPop { from { transform: translateY(46px) scale(.985); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* — Вкладки карточки клиента: плавная подсветка индикатора — */
+.client-tabs button { transition: color .18s var(--ease), border-color .22s var(--ease); }
+
+/* — Появление контента при переходе между экранами (choreography) — */
+@media (prefers-reduced-motion: no-preference) {
+  .content > * { animation: fadeUp .5s var(--ease-out) both; }
+  .content > *:nth-child(1) { animation-delay: 0s; }
+  .content > *:nth-child(2) { animation-delay: .05s; }
+  .content > *:nth-child(3) { animation-delay: .1s; }
+  .content > *:nth-child(4) { animation-delay: .15s; }
+  .content > *:nth-child(5) { animation-delay: .2s; }
+  .content > *:nth-child(n+6) { animation-delay: .24s; }
+  .dish-grid > .dish-card { animation: fadeUp .44s var(--ease-out) both; }
+  .timeline-row, .client-row, .attn-item, .chat-row { animation: fadeUp .4s var(--ease-out) both; }
+}
+
+/* — Уважение к настройке «меньше движения» — */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0s !important; transition-duration: .001ms !important; }
+  body { background-attachment: scroll; }
+}
