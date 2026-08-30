@@ -3,25 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-  <meta name="theme-color" content="#228b57">
-  <title>Конструктор меню</title>
+  <meta name="theme-color" content="#0FA958" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0C120F" media="(prefers-color-scheme: dark)">
+  <title>NutriMenu — конструктор меню</title>
   <link rel="manifest" href="/app/manifest.json">
   <link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png">
   <link rel="icon" href="/app/icons/favicon-32.png" sizes="32x32">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Меню">
-  <link rel="stylesheet" href="/app/styles.css?v=1">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NutriMenu">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap">
+  <link rel="stylesheet" href="/app/styles.css?v=2">
 </head>
 <body>
   <div id="app">
-    <div class="boot">Загрузка…</div>
+    <div class="boot"><div class="spinner"></div></div>
   </div>
 
   <!-- Контейнер для всплывающих панелей (нижние шторки, тосты) -->
   <div id="overlay-root"></div>
 
-  <script src="/app/app.js?v=1"></script>
+  <script src="/app/app.js?v=2"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
