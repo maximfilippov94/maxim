@@ -140,6 +140,35 @@ footer .cols{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
 footer .disc{margin-top:18px;font-size:12.5px;color:var(--faint);max-width:720px}
 .fnav{display:flex;gap:18px;flex-wrap:wrap}
 .fnav a{color:var(--muted)}.fnav a:hover{color:var(--text)}
+
+/* ── Доводка v18: мягкость, глубина, микроанимации ── */
+body{-moz-osx-font-smoothing:grayscale;letter-spacing:-.004em;
+  background:
+    radial-gradient(1200px 560px at 88% -12%, color-mix(in srgb,var(--brand) 8%,transparent), transparent 58%),
+    radial-gradient(900px 500px at -8% 6%, color-mix(in srgb,var(--g2) 6%,transparent), transparent 54%),
+    var(--bg);}
+h1,h2,h3{letter-spacing:-.022em}
+.kc,.price,.n,.hv-top{font-variant-numeric:tabular-nums}
+*{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--faint) 55%,transparent) transparent}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--faint) 52%,transparent);border-radius:999px;border:3px solid transparent;background-clip:padding-box}
+a:focus-visible,.btn:focus-visible{outline:3px solid color-mix(in srgb,var(--brand) 42%,transparent);outline-offset:3px;border-radius:var(--r-sm)}
+.btn{transition:transform .14s ease,filter .16s ease,box-shadow .2s ease,border-color .16s ease,background .16s ease}
+@media(hover:hover){
+  .btn.primary:hover{transform:translateY(-1px);box-shadow:var(--sh-brand)}
+  .card,.step,.plan{transition:transform .28s cubic-bezier(.16,1,.3,1),box-shadow .28s ease,border-color .2s ease}
+  .card:hover,.step:hover,.plan:hover{transform:translateY(-4px);box-shadow:var(--sh-2)}
+  .card:hover .ic{transform:scale(1.08)}
+}
+.card .ic{transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+/* появление секций при прокрутке */
+.reveal{opacity:0;transform:translateY(20px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+.reveal.d1{transition-delay:.06s}.reveal.d2{transition-delay:.12s}.reveal.d3{transition-delay:.18s}
+@media(prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}
 </style>
 </head>
 <body>
@@ -305,5 +334,17 @@ footer .disc{margin-top:18px;font-size:12.5px;color:var(--faint);max-width:720px
   </div>
 </footer>
 <script>document.getElementById('y').textContent=new Date().getFullYear();</script>
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var targets = document.querySelectorAll('.sec-h, .card, .step, .plan, .hero-visual');
+  if (reduce || !('IntersectionObserver' in window)) { targets.forEach(function(el){ el.classList.add('in'); }); return; }
+  targets.forEach(function(el, i){ el.classList.add('reveal'); if (el.parentElement){ var sibs=[].slice.call(el.parentElement.children).filter(function(c){return c.classList.contains('reveal');}); var idx=sibs.indexOf(el); if(idx>0&&idx<4) el.classList.add('d'+idx); } });
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+  targets.forEach(function(el){ io.observe(el); });
+})();
+</script>
 </body>
 </html>
