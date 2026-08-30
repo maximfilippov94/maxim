@@ -50,6 +50,8 @@ class ClientController extends Controller
         $client = Repo::clientOwnedBy((int)$args['id'], $auth['id']);
         unset($client['password_hash']);
         $client['excluded_ingredients'] = $this->decodeJson($client['excluded_ingredients']);
+        $client['medical_flags'] = $this->decodeJson($client['medical_flags'] ?? null);
+        $client['intake_completed'] = !empty($client['intake_completed_at']);
         $client['menus'] = Database::all(
             'SELECT id, title, start_date, days_count, status, published_at, created_at
              FROM menus WHERE client_id = ? ORDER BY created_at DESC',

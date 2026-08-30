@@ -58,6 +58,7 @@ class DishController extends Controller
             throw new HttpException('Блюдо не найдено', 404);
         }
         $dish['meal_types'] = $this->decodeJson($dish['meal_types']);
+        $dish['recipe_steps'] = $this->decodeJson($dish['recipe_steps']);
         $dish['tags'] = Repo::dishTags($id);
         $dish['ingredients'] = Repo::dishComposition($id);
         $dish['nutrition'] = NutritionCalculator::dishCache($dish['ingredients']);
@@ -71,13 +72,14 @@ class DishController extends Controller
 
         return Database::transaction(function () use ($req, $auth) {
             $id = Database::insert(
-                'INSERT INTO dishes (name, meal_types, cook_minutes, instructions, photo_url, is_public, created_by, created_at)
-                 VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
+                'INSERT INTO dishes (name, meal_types, cook_minutes, instructions, recipe_steps, photo_url, is_public, created_by, created_at)
+                 VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)',
                 [
                     trim((string)$req->input('name')),
                     json_encode($req->input('meal_types', []), JSON_UNESCAPED_UNICODE),
                     $req->input('cook_minutes'),
                     $req->input('instructions'),
+                    $this->encodeSteps($req->input('recipe_steps')),
                     $req->input('photo_url'),
                     $auth['id'],
                     $this->now(),
@@ -121,6 +123,10 @@ class DishController extends Controller
             if (array_key_exists('meal_types', $req->body)) {
                 $set[] = 'meal_types = ?';
                 $params[] = json_encode($req->input('meal_types', []), JSON_UNESCAPED_UNICODE);
+            }
+            if (array_key_exists('recipe_steps', $req->body)) {
+                $set[] = 'recipe_steps = ?';
+                $params[] = $this->encodeSteps($req->input('recipe_steps'));
             }
             if ($set) {
                 $params[] = $id;
@@ -195,5 +201,18 @@ class DishController extends Controller
     {
         $v = json_decode((string)$json, true);
         return is_array($v) ? $v : [];
+    }
+
+    /** Нормализует шаги рецепта в JSON-массив непустых строк. */
+    private function encodeSteps(mixed $steps): ?string
+    {
+        if (!is_array($steps)) {
+            return null;
+        }
+        $clean = array_values(array_filter(array_map(
+            fn($s) => trim((string)$s),
+            $steps
+        ), fn($s) => $s !== ''));
+        return $clean ? json_encode($clean, JSON_UNESCAPED_UNICODE) : null;
     }
 }

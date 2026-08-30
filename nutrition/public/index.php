@@ -33,6 +33,10 @@ use App\Controllers\IngredientController;
 use App\Controllers\MealLogController;
 use App\Controllers\MenuController;
 use App\Controllers\MessageController;
+use App\Controllers\ProfileController;
+use App\Controllers\ReviewController;
+use App\Controllers\ShoppingController;
+use App\Controllers\UploadController;
 use App\Controllers\WeightController;
 use App\Database;
 use App\Request;
@@ -78,6 +82,11 @@ $api = '/api/v1';
 // health
 $r->get("$api/health", fn() => ['ok' => true, 'time' => gmdate('c')]);
 
+// --- Публичный каталог нутрициологов (без авторизации) ---
+$r->get("$api/catalog/cities", [ProfileController::class, 'cities']);
+$r->get("$api/catalog",        [ProfileController::class, 'catalog']);
+$r->get("$api/catalog/{slug}", [ProfileController::class, 'publicProfile']);
+
 // --- Auth ---
 $r->post("$api/auth/specialist/register", [AuthController::class, 'registerSpecialist']);
 $r->post("$api/auth/specialist/login",    [AuthController::class, 'loginSpecialist']);
@@ -86,6 +95,11 @@ $r->get("$api/invite/{token}",            [AuthController::class, 'inviteInfo'])
 $r->post("$api/invite/{token}/accept",    [AuthController::class, 'acceptInvite']);
 $r->get("$api/me",                        [AuthController::class, 'me']);
 $r->post("$api/auth/logout",              [AuthController::class, 'logout']);
+
+// --- Профиль специалиста + загрузка изображений ---
+$r->get("$api/profile",       [ProfileController::class, 'myProfile']);
+$r->patch("$api/profile",     [ProfileController::class, 'updateProfile']);
+$r->post("$api/uploads/image", [UploadController::class, 'image']);
 
 // --- Ingredients (специалист) ---
 $r->get("$api/ingredients/categories", [IngredientController::class, 'categories']);
@@ -122,6 +136,7 @@ $r->delete("$api/menus/{id}",         [MenuController::class, 'delete']);
 $r->post("$api/menus/{id}/publish",   [MenuController::class, 'publish']);
 $r->post("$api/menus/{id}/duplicate", [MenuController::class, 'duplicate']);
 $r->post("$api/menus/{id}/copy-day",  [MenuController::class, 'copyDay']);
+$r->get("$api/menus/{id}/shopping-list", [ShoppingController::class, 'list']);
 $r->post("$api/menus/{id}/items",              [MenuController::class, 'addItem']);
 $r->patch("$api/menus/{id}/items/{item_id}",   [MenuController::class, 'updateItem']);
 $r->delete("$api/menus/{id}/items/{item_id}",  [MenuController::class, 'deleteItem']);
@@ -131,9 +146,14 @@ $r->post("$api/menu-items/{item_id}/log",   [MealLogController::class, 'log']);
 $r->delete("$api/menu-items/{item_id}/log", [MealLogController::class, 'delete']);
 
 // --- Кабинет клиента ---
+$r->get("$api/me/intake",   [ClientPortalController::class, 'intake']);
+$r->patch("$api/me/intake", [ClientPortalController::class, 'submitIntake']);
 $r->get("$api/me/menus",    [ClientPortalController::class, 'menus']);
 $r->get("$api/me/menu",     [ClientPortalController::class, 'activeMenu']);
 $r->get("$api/me/progress", [ClientPortalController::class, 'progress']);
+$r->get("$api/me/review",   [ReviewController::class, 'mine']);
+$r->post("$api/me/review",  [ReviewController::class, 'upsert']);
+$r->delete("$api/me/review",[ReviewController::class, 'delete']);
 $r->get("$api/me/messages", [MessageController::class, 'clientList']);
 $r->post("$api/me/messages",[MessageController::class, 'clientSend']);
 $r->get("$api/me/weight",   [WeightController::class, 'clientList']);

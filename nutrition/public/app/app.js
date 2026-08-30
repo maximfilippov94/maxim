@@ -204,6 +204,9 @@ function route(pattern, handler) {
 }
 
 async function router() {
+  // Закрываем висящие шторки/тосты при смене экрана.
+  const ov = $overlay();
+  if (ov) ov.innerHTML = '';
   const hash = location.hash.replace(/^#/, '') || '/';
   for (const r of routes) {
     const m = hash.match(r.rx);
@@ -262,7 +265,8 @@ function screenSpecialistLogin() {
     h('div', { class: 'auth-switch' }, 'Нет аккаунта? ',
       h('a', { href: '#/register' }, 'Регистрация')),
     h('div', { class: 'auth-switch small' },
-      h('a', { href: '#/client-login' }, 'Вход для клиента'))
+      h('a', { href: '#/client-login' }, 'Вход для клиента'), '  ·  ',
+      h('a', { href: '#/catalog' }, 'Найти нутрициолога'))
   ));
   setTimeout(() => email.focus(), 50);
 }
@@ -297,7 +301,7 @@ route('/client-login', () => {
     err.style.display = 'none';
     try {
       const r = await POST('/auth/client/login', { email: email.value.trim(), password: pass.value });
-      State.setAuth(r.token, 'client', r.user); location.hash = '#/today';
+      State.setAuth(r.token, 'client', r.user); await afterClientAuth();
     } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
   };
   authShell(h('div', { class: 'card' },
@@ -327,15 +331,118 @@ route('/invite/:token', async (args) => {
     err.style.display = 'none';
     try {
       const r = await POST('/invite/' + args.token + '/accept', { password: pass.value });
-      State.setAuth(r.token, 'client', r.user); location.hash = '#/today';
+      State.setAuth(r.token, 'client', r.user); location.hash = '#/intake';
     } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
   };
   authShell(h('div', { class: 'card' },
+    info.specialist ? specBadge(info.specialist) : null,
     h('p', {}, 'Здравствуйте, ', h('b', {}, info.name), '! Задайте пароль для входа в кабинет.'),
     h('label', {}, 'Пароль'), pass, err,
     h('button', { class: 'btn', style: 'margin-top:12px', onclick: submit }, 'Продолжить')
   ));
 });
+
+/* Плашка «вот твой специалист». */
+function specBadge(spec) {
+  const ava = h('div', { class: 'ava' });
+  if (spec.photo_url) ava.style.backgroundImage = `url(${spec.photo_url})`;
+  else ava.textContent = initials(spec.name);
+  return h('div', { class: 'spec-badge' }, ava,
+    h('div', {}, h('div', { style: 'font-weight:700' }, spec.name),
+      spec.specialization ? h('div', { class: 'small muted' }, spec.specialization) : h('div', { class: 'small muted' }, 'Ваш нутрициолог')));
+}
+
+/* После входа/регистрации клиента — на анкету, если не пройдена. */
+async function afterClientAuth() {
+  try { const s = await GET('/me/intake'); location.hash = s.completed ? '#/today' : '#/intake'; }
+  catch (e) { location.hash = '#/today'; }
+}
+
+/* ==========================================================================
+   КЛИЕНТ: АНКЕТА ПРИ СТАРТЕ
+   ========================================================================== */
+route('/intake', async () => {
+  if (!requireRole('client')) return;
+  loading();
+  const s = await GET('/me/intake');
+
+  const goal = h('textarea', { placeholder: 'Например: сбросить 5 кг, наладить питание…' }, s.goal || '');
+  const weight = h('input', { type: 'number', step: '0.1', placeholder: 'кг', value: s.weight_kg || '' });
+  const height = h('input', { type: 'number', placeholder: 'см', value: s.height_cm || '' });
+  const year = h('input', { type: 'number', placeholder: 'год', value: s.birth_year || '' });
+
+  let sex = s.sex || '';
+  const sexSeg = seg([['m', 'Мужской'], ['f', 'Женский']], sex, (v) => sex = v);
+
+  let activity = s.activity_level || '';
+  const actSeg = seg([['low', 'Низкая'], ['medium', 'Средняя'], ['high', 'Высокая']], activity, (v) => activity = v);
+
+  const allergies = h('textarea', { placeholder: 'Аллергии и непереносимости (если есть)' }, s.allergies || '');
+  const prefs = h('textarea', { placeholder: 'Предпочтения: веган, без свинины и т.п.' }, s.dietary_prefs || '');
+
+  const flags = new Set(s.medical_flags || []);
+  const flagDefs = [['pregnancy', 'Беременность / ГВ'], ['diabetes', 'Диабет'], ['gi', 'Заболевания ЖКТ'], ['eating_disorder', 'Расстройство пищевого поведения']];
+  const flagBox = h('div', {});
+  for (const [val, label] of flagDefs) flagBox.appendChild(checkRow(label, flags.has(val), (on) => on ? flags.add(val) : flags.delete(val)));
+
+  const err = h('div', { class: 'form-err', style: 'display:none' });
+  const save = async () => {
+    err.style.display = 'none';
+    if (!goal.value.trim()) { err.textContent = 'Опишите вашу цель'; err.style.display = 'block'; window.scrollTo(0, 0); return; }
+    try {
+      await api('PATCH', '/me/intake', {
+        goal: goal.value.trim(), weight_kg: weight.value || null, height_cm: height.value || null,
+        birth_year: year.value || null, sex: sex || null, activity_level: activity || null,
+        allergies: allergies.value || null, dietary_prefs: prefs.value || null, medical_flags: [...flags],
+      });
+      toast('Анкета сохранена'); location.hash = '#/today';
+    } catch (e) { err.textContent = e.message; err.style.display = 'block'; }
+  };
+
+  const content = h('div', { class: 'content stagger' },
+    h('div', { class: 'card' },
+      h('h3', { style: 'margin:0 0 4px' }, 'Расскажите о себе'),
+      h('div', { class: 'muted small' }, 'Это поможет специалисту составить меню под вас. Целевые КБЖУ он рассчитает сам.')),
+    h('div', { class: 'card' },
+      h('label', {}, 'Ваша цель'), goal,
+      h('label', {}, 'Пол'), sexSeg,
+      h('div', { class: 'field-row' }, h('div', {}, h('label', {}, 'Вес, кг'), weight), h('div', {}, h('label', {}, 'Рост, см'), height)),
+      h('label', {}, 'Год рождения'), year,
+      h('label', {}, 'Физическая активность'), actSeg),
+    h('div', { class: 'card' },
+      h('label', {}, 'Аллергии / непереносимости'), allergies,
+      h('label', {}, 'Пищевые предпочтения'), prefs),
+    h('div', { class: 'card' },
+      h('div', { class: 'section-title' }, 'Важно для безопасности'),
+      flagBox,
+      h('div', { class: 'disclaimer', style: 'margin-top:10px' }, ic('alert'), h('span', {}, 'При отмеченных состояниях меню составляется только после консультации с врачом.'))),
+    err,
+    h('button', { class: 'btn', onclick: save }, ic('check', 'sm'), 'Сохранить и продолжить'),
+    s.completed ? h('button', { class: 'btn ghost', style: 'margin-top:6px', onclick: () => location.hash = '#/today' }, 'Пропустить') : null
+  );
+  render(shell('today', content, { topbar: 'Анкета' }));
+});
+
+/* Сегментированный переключатель. */
+function seg(options, current, onChange) {
+  const box = h('div', { class: 'seg' });
+  for (const [val, label] of options) {
+    const b = h('button', { type: 'button', class: val === current ? 'on' : '', onclick: () => {
+      box.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on'); onChange(val);
+    } }, label);
+    box.appendChild(b);
+  }
+  return box;
+}
+
+/* Строка-чекбокс. */
+function checkRow(label, checked, onChange) {
+  let on = !!checked;
+  const row = h('div', { class: 'check-row' + (on ? ' on' : '') }, h('span', { class: 'box' }, ic('check', 'sm')), h('span', {}, label));
+  row.addEventListener('click', () => { on = !on; row.classList.toggle('on', on); onChange(on); });
+  return row;
+}
 
 /* ==========================================================================
    СПЕЦИАЛИСТ: КЛИЕНТЫ
@@ -463,6 +570,7 @@ route('/client/:id', async (args) => {
       c.goal ? h('div', { class: 'small', style: 'margin-top:8px;display:flex;gap:7px;align-items:center' }, ic('target', 'sm'), h('span', {}, c.goal)) : null,
       h('div', { class: 'small muted', style: 'margin-top:6px' }, targets)
     ),
+    intakeCard(c),
     h('div', { class: 'card' },
       h('div', { class: 'row-between' }, h('h3', { style: 'margin:0;font-size:15px' }, 'Меню'),
         h('button', { class: 'btn secondary small', onclick: () => createMenu(c.id) }, ic('plus','sm'), 'Меню')),
@@ -477,6 +585,31 @@ route('/client/:id', async (args) => {
   );
   render(shell('clients', content, { topbar: c.name, back: () => location.hash = '#/clients' }));
 });
+
+/* Карточка «Анкета клиента» на странице специалиста. */
+const MEDICAL_LABELS = { pregnancy: 'Беременность / ГВ', diabetes: 'Диабет', gi: 'Заболевания ЖКТ', eating_disorder: 'РПП' };
+function intakeCard(c) {
+  const card = h('div', { class: 'card' });
+  card.appendChild(h('div', { class: 'row-between' },
+    h('h3', { style: 'margin:0;font-size:15px' }, 'Анкета клиента'),
+    c.intake_completed ? h('span', { class: 'info-chip' }, ic('check', 'sm'), 'заполнена') : h('span', { class: 'info-chip warn' }, 'не заполнена')));
+  if (!c.intake_completed && !c.allergies && !(c.medical_flags && c.medical_flags.length)) {
+    card.appendChild(h('div', { class: 'muted small', style: 'margin-top:8px' }, 'Клиент ещё не прошёл анкету. Отправьте ему ссылку-приглашение.'));
+    return card;
+  }
+  const rows = [];
+  if (c.allergies) rows.push(['Аллергии', c.allergies]);
+  if (c.dietary_prefs) rows.push(['Предпочтения', c.dietary_prefs]);
+  for (const [k, v] of rows) {
+    card.appendChild(h('div', { class: 'small', style: 'margin-top:8px' }, h('b', {}, k + ': '), v));
+  }
+  if (c.medical_flags && c.medical_flags.length) {
+    const chips = h('div', { class: 'tag-list', style: 'margin-top:10px' });
+    for (const f of c.medical_flags) chips.appendChild(h('span', { class: 'info-chip warn' }, ic('alert', 'sm'), MEDICAL_LABELS[f] || f));
+    card.appendChild(chips);
+  }
+  return card;
+}
 
 route('/client/:id/edit', async (args) => {
   if (!requireRole('specialist')) return;
@@ -614,6 +747,69 @@ function searchField(input) {
   return h('div', { class: 'search-box' }, h('div', { class: 'search-field' }, ic('search'), input));
 }
 
+/* Загрузка изображения: File -> base64 -> /uploads/image -> url. */
+function uploadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) return reject({ message: 'Файл не выбран' });
+    if (file.size > 3_000_000) return reject({ message: 'Файл больше 3 МБ' });
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try { const r = await POST('/uploads/image', { data: reader.result }); resolve(r.url); }
+      catch (e) { reject(e); }
+    };
+    reader.onerror = () => reject({ message: 'Не удалось прочитать файл' });
+    reader.readAsDataURL(file);
+  });
+}
+
+/* Кнопка выбора/замены фото. onChange(url) вызывается после загрузки. */
+function photoPicker(currentUrl, onChange, shape) {
+  const preview = h('div', { class: 'photo-preview ' + (shape || 'square') });
+  const setImg = (url) => { preview.style.backgroundImage = url ? `url(${url})` : 'none'; preview.classList.toggle('empty', !url); if (!url) preview.appendChild(ic('user')); };
+  setImg(currentUrl);
+  const input = h('input', { type: 'file', accept: 'image/*', style: 'display:none' });
+  input.addEventListener('change', async () => {
+    const f = input.files[0]; if (!f) return;
+    preview.classList.add('loading');
+    try { const url = await uploadImageFile(f); preview.innerHTML = ''; setImg(url); onChange(url); toast('Фото загружено'); }
+    catch (e) { toast(e.message || 'Ошибка загрузки', true); }
+    finally { preview.classList.remove('loading'); }
+  });
+  const wrap = h('div', { class: 'photo-picker', onclick: () => input.click() }, preview, h('span', { class: 'photo-hint' }, 'Изменить фото'), input);
+  return wrap;
+}
+
+/* Звёзды рейтинга (только показ). */
+function starsDisplay(avg, count) {
+  const wrap = h('div', { class: 'stars' });
+  const full = Math.round(avg || 0);
+  for (let i = 1; i <= 5; i++) {
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('class', 'icon sm star' + (i <= full ? ' on' : ''));
+    s.innerHTML = '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>';
+    wrap.appendChild(s);
+  }
+  if (avg != null) wrap.appendChild(h('span', { class: 'stars-num' }, fmt(avg) + (count != null ? ` · ${count}` : '')));
+  else wrap.appendChild(h('span', { class: 'stars-num muted' }, 'нет отзывов'));
+  return wrap;
+}
+
+/* Интерактивный выбор звёзд. onPick(value). */
+function starsInput(value, onPick) {
+  const wrap = h('div', { class: 'stars input' });
+  const paint = (v) => wrap.querySelectorAll('svg').forEach((s, i) => s.classList.toggle('on', i < v));
+  for (let i = 1; i <= 5; i++) {
+    const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('class', 'icon lg star');
+    s.innerHTML = '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>';
+    s.addEventListener('click', () => { value = i; paint(i); onPick(i); });
+    wrap.appendChild(s);
+  }
+  paint(value || 0);
+  return wrap;
+}
+
 function mealCard(menuId, m) {
   const n = m.nutrition;
   const card = h('div', { class: 'meal-card', onclick: () => openPortionEditor(menuId, m) },
@@ -741,6 +937,7 @@ function menuActions(data) {
       catch (e) { toast(e.message, true); }
     } }, published ? null : ic('checkCircle', 'sm'), published ? 'Снять с публикации' : 'Опубликовать клиенту'));
 
+    panel.appendChild(h('button', { class: 'btn secondary', style: 'margin-top:8px', onclick: () => { close(); openShoppingList(menu.id); } }, ic('inbox', 'sm'), 'Список покупок'));
     panel.appendChild(h('button', { class: 'btn secondary', style: 'margin-top:8px', onclick: () => { close(); copyDaySheet(menu); } }, ic('copy', 'sm'), 'Скопировать день'));
     panel.appendChild(h('button', { class: 'btn secondary', style: 'margin-top:8px', onclick: async () => {
       try { const r = await POST('/menus/' + menu.id + '/duplicate', {}); close(); toast('Меню продублировано'); location.hash = '#/menu/' + r.menu.id; }
@@ -752,6 +949,39 @@ function menuActions(data) {
       if (!confirm('Удалить меню целиком?')) return;
       await DEL('/menus/' + menu.id); close(); toast('Удалено'); location.hash = '#/client/' + menu.client_id;
     } }, ic('trash', 'sm'), 'Удалить меню'));
+  });
+}
+
+/* Список покупок из меню. Отметки «куплено» хранятся локально у зрителя. */
+async function openShoppingList(menuId) {
+  let data;
+  try { data = await GET('/menus/' + menuId + '/shopping-list'); }
+  catch (e) { toast(e.message, true); return; }
+
+  const storeKey = 'nutri_shop_' + menuId;
+  let checked = {};
+  try { checked = JSON.parse(localStorage.getItem(storeKey) || '{}'); } catch (e) { checked = {}; }
+  const persist = () => { try { localStorage.setItem(storeKey, JSON.stringify(checked)); } catch (e) {} };
+
+  sheet('Список покупок', (panel, close) => {
+    if (!data.groups.length) { panel.appendChild(h('div', { class: 'empty' }, ic('inbox'), h('div', {}, 'В меню пока нет блюд'))); return; }
+    panel.appendChild(h('div', { class: 'muted small', style: 'margin-bottom:4px' }, data.total_items + ' позиций · дни ' + data.from_day + '–' + data.to_day));
+    for (const g of data.groups) {
+      panel.appendChild(h('div', { class: 'shop-cat' }, g.category));
+      for (const it of g.items) {
+        const key = String(it.ingredient_id);
+        const row = h('div', { class: 'shop-item' + (checked[key] ? ' checked' : '') },
+          h('span', { class: 'box' }, ic('check', 'sm')),
+          h('span', { class: 'nm' }, it.name),
+          h('span', { class: 'qty' }, it.display));
+        row.addEventListener('click', () => {
+          checked[key] = !checked[key];
+          row.classList.toggle('checked', checked[key]);
+          persist();
+        });
+        panel.appendChild(row);
+      }
+    }
   });
 }
 
@@ -837,6 +1067,7 @@ route('/dish/:id', async (args) => {
   const n = d.nutrition;
   const canEdit = d.created_by != null; // общую базу редактировать нельзя
   const content = h('div', { class: 'content' },
+    d.photo_url ? h('img', { class: 'dish-hero', src: d.photo_url, alt: d.name }) : null,
     h('div', { class: 'card' },
       h('h3', { style: 'margin:0 0 8px' }, d.name),
       h('div', { class: 'kbju' },
@@ -854,7 +1085,7 @@ route('/dish/:id', async (args) => {
       ...d.ingredients.map(ing => h('div', { class: 'row-between small', style: 'padding:4px 0;border-bottom:1px solid var(--line)' },
         h('span', {}, ing.name), h('span', { class: 'muted' }, fmt(ing.grams) + ' г')))
     ),
-    d.instructions ? h('div', { class: 'card' }, h('div', { class: 'muted small', style: 'margin-bottom:6px' }, 'Рецепт'), h('div', {}, d.instructions)) : null,
+    recipeStepsView(d),
     canEdit ? h('div', { class: 'btn-row' },
       h('button', { class: 'btn secondary', onclick: () => dishForm(d) }, ic('edit', 'sm'), 'Изменить'),
       h('button', { class: 'btn danger', onclick: async () => { if (confirm('Удалить блюдо?')) { try { await DEL('/dishes/' + d.id); toast('Удалено'); location.hash = '#/base'; } catch (e) { toast(e.message, true); } } } }, ic('trash', 'sm'), 'Удалить')
@@ -863,12 +1094,51 @@ route('/dish/:id', async (args) => {
   render(shell('base', content, { topbar: 'Блюдо', back: () => location.hash = '#/base' }));
 });
 
+/* Показ рецепта: пошагово с отметкой «готово», либо цельным текстом. */
+function recipeStepsView(d) {
+  const steps = Array.isArray(d.recipe_steps) && d.recipe_steps.length ? d.recipe_steps
+    : (d.instructions ? [d.instructions] : []);
+  if (!steps.length) return null;
+  const card = h('div', { class: 'card' });
+  card.appendChild(h('div', { class: 'section-title' }, 'Рецепт'));
+  steps.forEach((txt, i) => {
+    const step = h('div', { class: 'recipe-step' },
+      h('span', { class: 'n' }, String(i + 1)),
+      h('span', { class: 'txt' }, txt));
+    step.querySelector('.txt').addEventListener('click', () => step.classList.toggle('done'));
+    step.querySelector('.n').addEventListener('click', () => step.classList.toggle('done'));
+    card.appendChild(step);
+  });
+  return card;
+}
+
 async function dishForm(dish) {
   loading();
   const name = h('input', { placeholder: 'Название блюда', value: dish ? dish.name : '' });
   const cook = h('input', { type: 'number', placeholder: 'Время готовки, мин', value: dish ? (dish.cook_minutes || '') : '' });
-  const instr = h('textarea', { placeholder: 'Рецепт / инструкция' }, dish ? (dish.instructions || '') : '');
   const tags = h('input', { placeholder: 'Теги через запятую (веган, быстро…)', value: dish && dish.tags ? dish.tags.join(', ') : '' });
+
+  // Фото блюда
+  let photoUrl = dish ? (dish.photo_url || null) : null;
+  const photo = photoPicker(photoUrl, (url) => photoUrl = url, 'square');
+
+  // Пошаговый рецепт
+  const steps = dish && Array.isArray(dish.recipe_steps) ? [...dish.recipe_steps] : [];
+  if (!steps.length && dish && dish.instructions) steps.push(dish.instructions);
+  const stepsBox = h('div', {});
+  const redrawSteps = () => {
+    stepsBox.innerHTML = '';
+    steps.forEach((txt, i) => {
+      const ta = h('textarea', { placeholder: 'Шаг ' + (i + 1) }, txt);
+      ta.addEventListener('input', () => steps[i] = ta.value);
+      stepsBox.appendChild(h('div', { class: 'step-edit' },
+        h('span', { class: 'n' }, String(i + 1)), ta,
+        h('button', { class: 'icon-btn', 'aria-label': 'Удалить шаг', onclick: () => { steps.splice(i, 1); redrawSteps(); } }, ic('x', 'sm'))));
+    });
+    if (!steps.length) stepsBox.appendChild(h('div', { class: 'muted small' }, 'Добавьте шаги приготовления.'));
+  };
+  redrawSteps();
+  const addStepBtn = h('button', { class: 'btn secondary small', onclick: () => { steps.push(''); redrawSteps(); } }, ic('plus', 'sm'), 'Шаг');
 
   const mealChecks = {};
   const mealBox = h('div', { class: 'chip-row', style: 'flex-wrap:wrap' });
@@ -908,11 +1178,14 @@ async function dishForm(dish) {
   const err = h('div', { class: 'form-err', style: 'display:none' });
   const save = async () => {
     err.style.display = 'none';
+    const cleanSteps = steps.map(s => s.trim()).filter(Boolean);
     const payload = {
       name: name.value.trim(),
       meal_types: [...selected],
       cook_minutes: cook.value || null,
-      instructions: instr.value || null,
+      recipe_steps: cleanSteps,
+      instructions: cleanSteps.join('\n') || null,
+      photo_url: photoUrl,
       tags: tags.value.split(',').map(s => s.trim()).filter(Boolean),
       ingredients: composition.map((r, i) => ({ ingredient_id: r.ingredient_id, grams: r.grams, sort_order: i }))
     };
@@ -925,6 +1198,7 @@ async function dishForm(dish) {
   };
 
   const content = h('div', { class: 'content' },
+    h('div', { class: 'card center' }, photo),
     h('div', { class: 'card' },
       h('label', {}, 'Название'), name,
       h('label', {}, 'Для приёмов пищи'), mealBox,
@@ -935,7 +1209,10 @@ async function dishForm(dish) {
       h('div', { class: 'row-between' }, h('div', { class: 'muted small' }, 'Состав (сырой вес)'), addIngBtn),
       h('div', { class: 'divider' }), compRows
     ),
-    h('div', { class: 'card' }, h('label', {}, 'Рецепт'), instr),
+    h('div', { class: 'card' },
+      h('div', { class: 'row-between' }, h('div', { class: 'muted small' }, 'Рецепт по шагам'), addStepBtn),
+      h('div', { class: 'divider' }), stepsBox
+    ),
     err,
     h('button', { class: 'btn', onclick: save }, dish ? 'Сохранить блюдо' : 'Создать блюдо')
   );
@@ -1024,22 +1301,158 @@ route('/weight/:id', async (args) => {
   render(shell('clients', content, { topbar: 'Вес клиента', back: () => location.hash = '#/client/' + args.id }));
 });
 
-route('/profile', () => {
+route('/profile', async () => {
   if (!requireRole('specialist')) return;
-  const u = State.user || {};
-  const content = h('div', { class: 'content' },
+  loading();
+  const p = await GET('/profile');
+  let photoUrl = p.photo_url || null;
+
+  const name = h('input', { placeholder: 'Имя и фамилия', value: p.name || '' });
+  const spec = h('input', { placeholder: 'Специализация (напр. Снижение веса, ЖКТ)', value: p.specialization || '' });
+  const city = h('input', { placeholder: 'Город', value: p.city || '' });
+  const bio = h('textarea', { placeholder: 'О себе, подход к работе' }, p.bio || '');
+  const cred = h('textarea', { placeholder: 'Образование, сертификаты' }, p.credentials || '');
+  const exp = h('input', { type: 'number', placeholder: 'лет', value: p.experience_years || '' });
+  const price = h('input', { type: 'number', placeholder: '₽', value: p.price_from || '' });
+
+  let listed = !!p.is_listed;
+  const listedRow = checkRow('Показывать меня в публичном каталоге', listed, (on) => listed = on);
+
+  const save = async (goCatalog) => {
+    try {
+      const r = await PATCH('/profile', {
+        name: name.value.trim(), specialization: spec.value || null, city: city.value || null,
+        bio: bio.value || null, credentials: cred.value || null,
+        experience_years: exp.value || null, price_from: price.value || null,
+        photo_url: photoUrl, is_listed: listed,
+      });
+      State.user = { ...State.user, name: r.name, photo_url: r.photo_url };
+      toast('Профиль сохранён');
+      if (goCatalog && r.slug) location.hash = '#/n/' + r.slug;
+    } catch (e) { toast(e.message, true); }
+  };
+
+  const rating = p.rating || { average: null, count: 0 };
+  const content = h('div', { class: 'content stagger' },
+    h('div', { class: 'card center' },
+      photoPicker(photoUrl, (url) => photoUrl = url, 'round'),
+      h('div', { style: 'margin-top:8px' }, starsDisplay(rating.average, rating.count)),
+      h('div', { class: 'muted small', style: 'margin-top:6px' }, p.email + ' · клиентов: ' + (p.clients_count || 0))),
     h('div', { class: 'card' },
-      h('h3', { style: 'margin:0' }, u.name || 'Специалист'),
-      h('div', { class: 'muted small' }, u.email || ''),
-      h('div', { class: 'small', style: 'margin-top:8px' }, 'Тариф: ' + (u.plan === 'trial' ? 'пробный' : u.plan) + (u.plan_expires_at ? ' до ' + u.plan_expires_at.slice(0, 10) : ''))),
-    h('button', { class: 'btn danger', onclick: logout }, 'Выйти')
+      h('label', {}, 'Имя'), name,
+      h('label', {}, 'Специализация'), spec,
+      h('div', { class: 'field-row' }, h('div', {}, h('label', {}, 'Город'), city), h('div', {}, h('label', {}, 'Опыт, лет'), exp)),
+      h('label', {}, 'Стоимость, ₽ (от)'), price,
+      h('label', {}, 'О себе'), bio,
+      h('label', {}, 'Образование и сертификаты'), cred),
+    h('div', { class: 'card' },
+      h('div', { class: 'section-title' }, 'Публичная страница'),
+      listedRow,
+      p.slug ? h('button', { class: 'btn ghost small', style: 'margin-top:4px', onclick: () => location.hash = '#/n/' + p.slug }, ic('link', 'sm'), 'Открыть мою страницу') : h('div', { class: 'muted small' }, 'Включите каталог и сохраните — появится ваша публичная страница.')),
+    h('button', { class: 'btn', onclick: () => save(false) }, ic('check', 'sm'), 'Сохранить'),
+    h('div', { class: 'card', style: 'margin-top:14px' },
+      h('div', { class: 'small', style: 'margin-bottom:8px' }, 'Тариф: ' + (p.plan === 'trial' ? 'пробный' : p.plan) + (p.plan_expires_at ? ' до ' + p.plan_expires_at.slice(0, 10) : '')),
+      h('button', { class: 'btn danger', onclick: logout }, ic('logout', 'sm'), 'Выйти'))
   );
-  render(shell('profile', content, { topbar: 'Профиль' }));
+  render(shell('profile', content, { topbar: 'Мой профиль' }));
 });
 
 async function logout() {
   try { await POST('/auth/logout', {}); } catch (e) {}
   State.clear(); location.hash = '#/';
+}
+
+/* ==========================================================================
+   ПУБЛИЧНЫЙ КАТАЛОГ НУТРИЦИОЛОГОВ
+   ========================================================================== */
+
+/* Каркас для публичных страниц (без нижней навигации). */
+function publicShell(content, opts = {}) {
+  const wrap = h('div', { class: 'screen', style: 'padding-bottom:24px' });
+  const bar = h('div', { class: 'topbar' });
+  bar.appendChild(h('button', { class: 'icon-btn', 'aria-label': 'Назад', onclick: opts.back || (() => history.back()) }, ic('arrowLeft')));
+  bar.appendChild(h('h1', {}, opts.topbar || ''));
+  wrap.appendChild(bar);
+  wrap.appendChild(content);
+  render(wrap);
+}
+
+route('/catalog', async () => {
+  loading();
+  const content = h('div', { class: 'content' });
+  const search = h('input', { placeholder: 'Имя или специализация…' });
+  const results = h('div', { class: 'stagger' });
+
+  const load = async () => {
+    results.innerHTML = '';
+    for (let i = 0; i < 4; i++) results.appendChild(h('div', { class: 'skeleton sk-card' }));
+    const q = new URLSearchParams();
+    if (search.value.trim()) q.set('q', search.value.trim());
+    let data;
+    try { data = await GET('/catalog?' + q.toString()); } catch (e) { results.innerHTML = ''; results.appendChild(h('div', { class: 'empty' }, e.message)); return; }
+    results.innerHTML = '';
+    if (!data.items.length) { results.appendChild(h('div', { class: 'empty' }, ic('users'), h('div', {}, 'Пока никого не найдено'))); return; }
+    for (const s of data.items) {
+      const ava = h('div', { class: 'ava' });
+      if (s.photo_url) ava.style.backgroundImage = `url(${s.photo_url})`; else ava.textContent = initials(s.name);
+      results.appendChild(h('div', { class: 'list-item', onclick: () => location.hash = '#/n/' + s.slug },
+        h('div', { class: 'catalog-card', style: 'flex:1' }, ava,
+          h('div', { class: 'grow' },
+            h('h3', { style: 'margin:0' }, s.name),
+            s.specialization ? h('div', { class: 'spec' }, s.specialization) : null,
+            h('div', { class: 'meta' },
+              starsDisplay(s.avg_rating, s.reviews_count),
+              s.city ? h('span', {}, s.city) : null,
+              s.price_from ? h('span', {}, 'от ' + s.price_from + ' ₽') : null))),
+        ic('chevronRight', 'chevron sm')));
+    }
+  };
+  let timer;
+  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+  content.appendChild(searchField(search));
+  content.appendChild(results);
+  publicShell(content, { topbar: 'Каталог нутрициологов', back: () => location.hash = State.token ? defaultRoute() : '#/' });
+  load();
+});
+
+route('/n/:slug', async (args) => {
+  loading();
+  let p;
+  try { p = await GET('/catalog/' + args.slug); }
+  catch (e) { publicShell(h('div', { class: 'empty' }, ic('search'), h('div', {}, 'Специалист не найден')), { topbar: '' }); return; }
+
+  const ava = h('div', { class: 'ava' });
+  if (p.photo_url) ava.style.backgroundImage = `url(${p.photo_url})`; else ava.textContent = initials(p.name);
+
+  const meta = h('div', { class: 'meta', style: 'justify-content:center;margin-top:8px' });
+  if (p.city) meta.appendChild(h('span', { class: 'info-chip' }, p.city));
+  if (p.experience_years) meta.appendChild(h('span', { class: 'info-chip' }, ic('clock', 'sm'), 'опыт ' + p.experience_years + ' лет'));
+  if (p.price_from) meta.appendChild(h('span', { class: 'info-chip' }, 'от ' + p.price_from + ' ₽'));
+
+  const content = h('div', { class: 'content stagger' },
+    h('div', { class: 'profile-head' },
+      ava,
+      h('h2', {}, p.name),
+      p.specialization ? h('div', { class: 'muted' }, p.specialization) : null,
+      h('div', { style: 'display:flex;justify-content:center;margin-top:8px' }, starsDisplay(p.rating.average, p.rating.count)),
+      meta),
+    p.bio ? h('div', { class: 'card' }, h('div', { class: 'section-title' }, 'О специалисте'), h('div', {}, p.bio)) : null,
+    p.credentials ? h('div', { class: 'card' }, h('div', { class: 'section-title' }, 'Образование'), h('div', {}, p.credentials)) : null,
+    reviewsCard(p.reviews)
+  );
+  publicShell(content, { topbar: '', back: () => history.length > 1 ? history.back() : (location.hash = '#/catalog') });
+});
+
+function reviewsCard(reviews) {
+  const card = h('div', { class: 'card' });
+  card.appendChild(h('div', { class: 'section-title' }, 'Отзывы (' + reviews.length + ')'));
+  if (!reviews.length) { card.appendChild(h('div', { class: 'muted small' }, 'Отзывов пока нет.')); return card; }
+  for (const r of reviews) {
+    card.appendChild(h('div', { class: 'review' },
+      h('div', { class: 'who' }, h('span', {}, r.client_name), starsDisplay(r.rating, null)),
+      r.body ? h('div', { class: 'body' }, r.body) : null));
+  }
+  return card;
 }
 
 /* ==========================================================================
@@ -1083,7 +1496,8 @@ route('/week', async () => {
   }
   content.appendChild(tabs);
   content.appendChild(bodyWrap);
-  render(shell('week', content, { topbar: data.menu.title || 'Меню на неделю' }));
+  const shopBtn = h('button', { class: 'icon-btn', 'aria-label': 'Список покупок', onclick: () => openShoppingList(data.menu.id) }, ic('inbox'));
+  render(shell('week', content, { topbar: data.menu.title || 'Меню на неделю', action: shopBtn }));
   showDay(currentDayNumber(data.menu));
 });
 
@@ -1138,6 +1552,7 @@ async function logMeal(menuId, m, status) {
 
 function showDishForClient(m) {
   sheet(m.dish_name, async (panel, close) => {
+    if (m.photo_url) panel.appendChild(h('img', { class: 'dish-hero', src: m.photo_url, alt: m.dish_name }));
     panel.appendChild(h('div', { class: 'kbju', style: 'margin-bottom:10px' },
       h('span', { class: 'pill k' }, fmt0(m.nutrition.kcal) + ' ккал'),
       h('span', { class: 'pill b' }, 'Б ' + fmt(m.nutrition.protein)),
@@ -1148,12 +1563,13 @@ function showDishForClient(m) {
     try {
       const d = await GET('/dishes/' + m.dish_id);
       panel.appendChild(h('div', { class: 'divider' }));
-      panel.appendChild(h('div', { class: 'muted small', style: 'margin-bottom:6px' }, 'Состав'));
+      panel.appendChild(h('div', { class: 'section-title', style: 'margin-bottom:6px' }, 'Состав'));
       for (const ing of d.ingredients) {
         panel.appendChild(h('div', { class: 'row-between small', style: 'padding:3px 0' },
           h('span', {}, ing.name), h('span', { class: 'muted' }, fmt(ing.grams) + ' г')));
       }
-      if (d.instructions) { panel.appendChild(h('div', { class: 'divider' })); panel.appendChild(h('div', {}, d.instructions)); }
+      const rv = recipeStepsView(d);
+      if (rv) { rv.style.padding = '0'; rv.style.boxShadow = 'none'; rv.style.border = 'none'; rv.style.margin = '10px 0 0'; panel.appendChild(rv); }
     } catch (e) { /* блюдо может быть из общей базы, доступно */ }
   });
 }
@@ -1174,12 +1590,36 @@ route('/progress', async () => {
       h('div', { class: 'row-between' },
         h('h3', { style: 'margin:0;font-size:15px' }, 'Вес'),
         h('button', { class: 'btn secondary small', onclick: () => addWeightSheet() }, ic('plus','sm'), 'Замер')),
-      p.current_weight ? h('div', { style: 'font-size:22px;font-weight:800;color:var(--green-dark);margin:6px 0' }, fmt(p.current_weight) + ' кг') : h('div', { class: 'muted small' }, 'Нет замеров'),
+      p.current_weight ? h('div', { style: 'font-size:24px;font-weight:800;color:var(--brand-700);margin:6px 0;font-family:var(--font-display)' }, fmt(p.current_weight) + ' кг') : h('div', { class: 'muted small' }, 'Нет замеров'),
       weightChart(p.weight_series)),
-    weightTable(p.weight_series)
+    weightTable(p.weight_series),
+    h('button', { class: 'btn secondary', onclick: openReviewSheet }, ic('sparkles', 'sm'), 'Оценить специалиста')
   );
   render(shell('progress', content, { topbar: 'Прогресс' }));
 });
+
+/* Клиент оставляет/меняет отзыв о своём специалисте. */
+async function openReviewSheet() {
+  let data;
+  try { data = await GET('/me/review'); } catch (e) { toast(e.message, true); return; }
+  sheet('Отзыв о специалисте', (panel, close) => {
+    if (data.specialist) {
+      panel.appendChild(specBadge(data.specialist));
+    }
+    let rating = data.review ? data.review.rating : 0;
+    panel.appendChild(h('div', { class: 'center', style: 'margin:10px 0' }, starsInput(rating, (v) => rating = v)));
+    const body = h('textarea', { placeholder: 'Поделитесь впечатлением (необязательно)' }, data.review ? (data.review.body || '') : '');
+    panel.appendChild(body);
+    panel.appendChild(h('button', { class: 'btn', style: 'margin-top:12px', onclick: async () => {
+      if (!rating) { toast('Поставьте оценку', true); return; }
+      try { await POST('/me/review', { rating, body: body.value || null }); close(); toast('Спасибо за отзыв!'); }
+      catch (e) { toast(e.message, true); }
+    } }, ic('check', 'sm'), data.review ? 'Обновить отзыв' : 'Отправить отзыв'));
+    if (data.specialist && data.specialist.slug) {
+      panel.appendChild(h('button', { class: 'btn ghost', style: 'margin-top:6px', onclick: () => { close(); location.hash = '#/n/' + data.specialist.slug; } }, 'Страница специалиста'));
+    }
+  });
+}
 
 function complianceRing(pct) {
   const p = pct == null ? 0 : pct;

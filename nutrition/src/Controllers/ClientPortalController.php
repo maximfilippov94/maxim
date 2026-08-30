@@ -10,6 +10,79 @@ use App\Request;
  */
 class ClientPortalController extends Controller
 {
+    private const ACTIVITY = ['low', 'medium', 'high'];
+    private const MEDICAL = ['pregnancy', 'diabetes', 'gi', 'eating_disorder', 'none'];
+
+    private function decodeJson(?string $json): array
+    {
+        $v = json_decode((string)$json, true);
+        return is_array($v) ? $v : [];
+    }
+
+    /** Текущее состояние анкеты клиента (для экрана онбординга). */
+    public function intake(Request $req): array
+    {
+        $auth = Auth::require($req, 'client');
+        $c = Database::one('SELECT * FROM clients WHERE id = ?', [$auth['id']]);
+        return [
+            'completed'    => !empty($c['intake_completed_at']),
+            'name'         => $c['name'],
+            'goal'         => $c['goal'],
+            'weight_kg'    => $c['weight_kg'],
+            'height_cm'    => $c['height_cm'],
+            'birth_year'   => $c['birth_year'],
+            'sex'          => $c['sex'],
+            'activity_level' => $c['activity_level'],
+            'allergies'    => $c['allergies'],
+            'dietary_prefs' => $c['dietary_prefs'],
+            'medical_flags' => $this->decodeJson($c['medical_flags']),
+        ];
+    }
+
+    /** Клиент заполняет/обновляет анкету. Целевые КБЖУ ставит специалист — здесь их нет. */
+    public function submitIntake(Request $req): array
+    {
+        $auth = Auth::require($req, 'client');
+        if ($req->input('sex') !== null && !in_array($req->input('sex'), ['m', 'f'], true)) {
+            throw new \App\HttpException('Некорректный пол', 422);
+        }
+        if ($req->input('activity_level') !== null && $req->input('activity_level') !== ''
+            && !in_array($req->input('activity_level'), self::ACTIVITY, true)) {
+            throw new \App\HttpException('Некорректная активность', 422);
+        }
+        $flags = $req->input('medical_flags', []);
+        if (!is_array($flags)) $flags = [];
+        $flags = array_values(array_intersect($flags, self::MEDICAL));
+
+        Database::exec(
+            'UPDATE clients SET goal = ?, weight_kg = ?, height_cm = ?, birth_year = ?, sex = ?,
+                    activity_level = ?, allergies = ?, dietary_prefs = ?, medical_flags = ?, intake_completed_at = ?
+             WHERE id = ?',
+            [
+                $req->input('goal'),
+                $req->input('weight_kg') !== null && $req->input('weight_kg') !== '' ? (float)$req->input('weight_kg') : null,
+                $req->input('height_cm') !== null && $req->input('height_cm') !== '' ? (int)$req->input('height_cm') : null,
+                $req->input('birth_year') !== null && $req->input('birth_year') !== '' ? (int)$req->input('birth_year') : null,
+                $req->input('sex') ?: null,
+                $req->input('activity_level') ?: null,
+                $req->input('allergies'),
+                $req->input('dietary_prefs'),
+                json_encode($flags, JSON_UNESCAPED_UNICODE),
+                gmdate('c'),
+                $auth['id'],
+            ]
+        );
+        // Первый замер веса заодно в историю.
+        if ($req->input('weight_kg')) {
+            Database::exec(
+                'INSERT INTO weight_logs (client_id, weight_kg, measured_on) VALUES (?, ?, ?)
+                 ON CONFLICT(client_id, measured_on) DO UPDATE SET weight_kg = excluded.weight_kg',
+                [$auth['id'], (float)$req->input('weight_kg'), date('Y-m-d')]
+            );
+        }
+        return ['ok' => true];
+    }
+
     /** Список опубликованных меню клиента (для «Неделя»/выбора меню). */
     public function menus(Request $req): array
     {

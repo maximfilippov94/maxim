@@ -61,16 +61,26 @@ class AuthController extends Controller
 
     // ---------- Клиент ----------
 
-    /** Клиент открывает инвайт-ссылку — узнаёт, нужно ли задать пароль. */
+    /** Клиент открывает инвайт-ссылку — узнаёт, нужно ли задать пароль, и видит своего специалиста. */
     public function inviteInfo(Request $req, array $args): array
     {
-        $client = Database::one('SELECT id, name, password_hash FROM clients WHERE invite_token = ?', [$args['token']]);
+        $client = Database::one('SELECT id, name, password_hash, specialist_id FROM clients WHERE invite_token = ?', [$args['token']]);
         if (!$client) {
             throw new HttpException('Приглашение не найдено', 404);
         }
+        $spec = Database::one(
+            'SELECT name, photo_url, specialization, slug FROM specialists WHERE id = ?',
+            [(int)$client['specialist_id']]
+        );
         return [
             'name'          => $client['name'],
             'needs_password' => empty($client['password_hash']),
+            'specialist'    => $spec ? [
+                'name' => $spec['name'],
+                'photo_url' => $spec['photo_url'],
+                'specialization' => $spec['specialization'],
+                'slug' => $spec['slug'],
+            ] : null,
         ];
     }
 

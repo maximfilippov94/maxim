@@ -171,6 +171,47 @@ class NutritionCalculator
         return ['totals' => $sum, 'deviation' => $deviation];
     }
 
+    /**
+     * Разложение пункта меню по ингредиентам в СЫРЫХ граммах (для списка покупок).
+     * В обычном режиме граммовки состава масштабируются на k = portion/base.
+     * В режиме overrides — берутся заданные граммовки (коэффициент не применяется).
+     *
+     * @return array список [ingredient_id, name, category, grams]
+     */
+    public static function ingredientGrams(array $dish, array $compositionRows, float $portionG, ?array $overrides = null): array
+    {
+        $out = [];
+        if (!empty($overrides)) {
+            foreach ($compositionRows as $row) {
+                $iid = (string)($row['ingredient_id'] ?? '');
+                $grams = ($iid !== '' && array_key_exists($iid, $overrides))
+                    ? (float)$overrides[$iid] : (float)($row['grams'] ?? 0);
+                $out[] = self::gramRow($row, $grams);
+            }
+            return $out;
+        }
+
+        $base = (float)($dish['base_portion_g'] ?? 0);
+        if ($base <= 0) {
+            $base = self::composition($compositionRows)['cooked_weight'];
+        }
+        $k = $base > 0 ? $portionG / $base : 0.0;
+        foreach ($compositionRows as $row) {
+            $out[] = self::gramRow($row, (float)($row['grams'] ?? 0) * $k);
+        }
+        return $out;
+    }
+
+    private static function gramRow(array $row, float $grams): array
+    {
+        return [
+            'ingredient_id' => (int)($row['ingredient_id'] ?? 0),
+            'name'          => $row['name'] ?? '',
+            'category'      => $row['category'] ?? null,
+            'grams'         => self::round($grams),
+        ];
+    }
+
     private static function deviation(float $actual, mixed $target): ?float
     {
         if ($target === null || $target === '') {
