@@ -30,6 +30,7 @@ use App\Controllers\AuthController;
 use App\Controllers\ClientController;
 use App\Controllers\ClientPortalController;
 use App\Controllers\DishController;
+use App\Controllers\FeedbackController;
 use App\Controllers\IngredientController;
 use App\Controllers\MealLogController;
 use App\Controllers\MenuController;
@@ -82,6 +83,10 @@ $api = '/api/v1';
 
 // health
 $r->get("$api/health", fn() => ['ok' => true, 'time' => gmdate('c')]);
+
+// обратная связь тестировщиков (отправка — без обязательной авторизации)
+$r->post("$api/feedback", [FeedbackController::class, 'submit']);
+$r->get("$api/admin/feedback", [FeedbackController::class, 'adminList']);
 
 // --- Публичный каталог нутрициологов (без авторизации) ---
 $r->get("$api/catalog/cities", [ProfileController::class, 'cities']);

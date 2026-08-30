@@ -335,6 +335,7 @@ function screenSpecialistLogin() {
     h('label', {}, 'Пароль'), pass,
     err,
     h('button', { class: 'btn', style: 'margin-top:14px', onclick: submit }, 'Войти'),
+    demoPanel(),
     h('div', { class: 'auth-switch' }, 'Нет аккаунта? ',
       h('a', { href: '#/register' }, 'Регистрация')),
     h('div', { class: 'auth-switch small' },
@@ -342,6 +343,31 @@ function screenSpecialistLogin() {
       h('a', { href: '#/catalog' }, 'Найти нутрициолога'))
   ));
   setTimeout(() => email.focus(), 50);
+}
+
+/* Быстрый демо-вход для тестировщиков — без регистрации. */
+async function demoLogin(role) {
+  const map = {
+    specialist: ['/auth/specialist/login', { email: 'nutritionist@test.com', password: '123456' }, 'specialist'],
+    client: ['/auth/client/login', { email: 'client@test.com', password: '123456' }, 'client'],
+    admin: ['/admin/login', { email: 'admin@test.com', password: '123456' }, 'admin'],
+  };
+  const [ep, creds, rl] = map[role];
+  try {
+    const r = await POST(ep, creds);
+    State.setAuth(r.token, rl, r.user);
+    if (rl === 'client') await afterClientAuth();
+    else location.hash = rl === 'admin' ? '#/admin/dashboard' : '#/clients';
+  } catch (e) { toast(e.message || 'Демо-аккаунт недоступен', true); }
+}
+
+function demoPanel() {
+  return h('div', { class: 'demo-panel' },
+    h('div', { class: 'dp-title' }, 'Демо-доступ для теста'),
+    h('div', { class: 'dp-btns' },
+      h('button', { class: 'btn secondary small', onclick: () => demoLogin('specialist') }, ic('user', 'sm'), 'Нутрициолог'),
+      h('button', { class: 'btn secondary small', onclick: () => demoLogin('client') }, ic('utensils', 'sm'), 'Клиент'),
+      h('button', { class: 'btn secondary small', onclick: () => demoLogin('admin') }, ic('grid', 'sm'), 'Админ')));
 }
 
 route('/register', () => {
@@ -1988,6 +2014,7 @@ const ADMIN_NAV = [
   ['food', 'book', 'База блюд', '#/admin/food'],
   ['reviews', 'lifebuoy', 'Отзывы', '#/admin/reviews'],
   ['support', 'chat', 'Поддержка', '#/admin/support'],
+  ['feedback', 'lifebuoy', 'Обратная связь', '#/admin/feedback'],
   ['analytics', 'chart', 'Аналитика', '#/admin/analytics'],
   ['settings', 'cog', 'Настройки', '#/admin/settings'],
 ];
@@ -2278,7 +2305,7 @@ route('/admin/nutritionist/:id', async (args) => {
       h('button', { class: 'btn ' + (isBlocked ? 'secondary' : 'danger') + ' small', style: 'align-self:flex-end', onclick: async () => {
         try { await PATCH('/admin/nutritionists/' + p.id, { blocked: !isBlocked }); toast(isBlocked ? 'Разблокирован' : 'Заблокирован'); renderAdminNutri(p.id); } catch (e) { toast(e.message, true); }
       } }, isBlocked ? 'Разблокировать' : 'Заблокировать'),
-      h('button', { class: 'btn tonal small', style: 'align-self:flex-end', onclick: () => toast('Сообщение отправлено (демо)') }, 'Написать')));
+      h('button', { class: 'btn tonal small', style: 'align-self:flex-end', onclick: () => toast('Функция в разработке') }, 'Написать')));
 
   const head = h('div', { class: 'panel', style: 'margin-bottom:14px;display:flex;align-items:center;gap:16px' },
     (() => { const a = h('div', { class: 'avatar', style: 'width:64px;height:64px;font-size:24px' }); if (p.photo_url) { a.style.backgroundImage = `url(${p.photo_url})`; a.style.backgroundSize = 'cover'; } else a.textContent = initials(p.name); return a; })(),
@@ -2393,7 +2420,7 @@ route('/admin/plans', async () => {
     h('div', { class: 'small muted' }, 'Лимит клиентов: ' + (p.client_limit ?? '∞')),
     h('div', { class: 'pfoot' }, h('span', {}, p.users + ' польз.'), h('span', { class: 'num' }, 'MRR €' + fmtNum(p.mrr)))));
   const page = h('div', { class: 'admin-page' },
-    h('div', { class: 'toolbar' }, h('div', { style: 'flex:1' }), h('button', { class: 'btn small', style: 'width:auto', onclick: () => toast('Создание тарифа (демо)') }, ic('plus', 'sm'), 'Добавить тариф')),
+    h('div', { class: 'toolbar' }, h('div', { style: 'flex:1' }), h('button', { class: 'btn small', style: 'width:auto', onclick: () => toast('Функция в разработке') }, ic('plus', 'sm'), 'Добавить тариф')),
     grid);
   render(adminShell('plans', page, { title: 'Тарифы', sub: 'Управление подписками и лимитами' }));
 });
@@ -2485,6 +2512,25 @@ route('/admin/food', () => {
   });
 });
 
+/* --- Обратная связь тестировщиков --- */
+route('/admin/feedback', async () => {
+  if (!requireAdmin()) return;
+  loading();
+  const data = await GET('/admin/feedback');
+  const head = h('div', { class: 'stat-grid', style: 'grid-template-columns:repeat(2,220px)' },
+    h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Отзывов'), h('div', { class: 'v' }, String(data.total))),
+    h('div', { class: 'stat' }, h('div', { class: 'k' }, 'Средняя оценка'), h('div', { class: 'v' }, data.avg_rating != null ? '★ ' + data.avg_rating : '—')));
+  const rows = data.items.map(f => h('div', { class: 'panel', style: 'margin-bottom:12px' },
+    h('div', { class: 'row-between', style: 'margin-bottom:6px' },
+      h('div', {}, h('b', {}, f.user_name || 'Аноним'), h('span', { class: 'muted small' }, ' · ' + (STATUS_LABEL[f.user_type] || f.user_type) + ' · ' + fmtDate(f.created_at) + ' · ' + (f.page || ''))),
+      f.rating ? h('span', { class: 'num', style: 'color:#F5B301;font-weight:800' }, '★ ' + f.rating) : null),
+    ...[['Понравилось', f.liked], ['Непонятно', f.unclear], ['Изменил бы', f.suggest], ['Не хватает', f.missing]]
+      .filter(([, v]) => v).map(([k, v]) => h('div', { class: 'small', style: 'margin-top:3px' }, h('b', {}, k + ': '), v))));
+  const page = h('div', { class: 'admin-page' }, head,
+    data.items.length ? h('div', {}, ...rows) : h('div', { class: 'empty' }, ic('chat'), h('div', {}, 'Отзывов пока нет')));
+  render(adminShell('feedback', page, { title: 'Обратная связь', sub: 'Отзывы тестировщиков MVP' }));
+});
+
 /* --- Аналитика / Настройки (заглушки-панели) --- */
 route('/admin/analytics', async () => {
   if (!requireAdmin()) return;
@@ -2514,6 +2560,45 @@ route('/admin/settings', () => {
   render(adminShell('settings', page, { title: 'Настройки', sub: 'Конфигурация платформы' }));
 });
 
+/* ==========================================================================
+   ТЕСТ-РЕЖИМ: индикатор версии + сбор обратной связи
+   ========================================================================== */
+function mountTestBadge() {
+  if (document.querySelector('.test-badge')) return;
+  const badge = h('div', { class: 'test-badge' },
+    h('span', { class: 'tag' }, 'MVP TEST'),
+    h('button', { class: 'fb', onclick: openFeedback }, ic('chat', 'sm'), 'Отзыв'));
+  document.body.appendChild(badge);
+}
+
+function openFeedback() {
+  sheet('Оставить отзыв', (panel, close) => {
+    panel.appendChild(h('div', { class: 'muted small', style: 'margin-bottom:10px' }, 'Спасибо, что тестируете NutriMenu! Ваш отзыв поможет нам сделать сервис лучше.'));
+    const liked = h('textarea', { placeholder: 'Что вам понравилось?' });
+    const unclear = h('textarea', { placeholder: 'Что было непонятно?' });
+    const suggest = h('textarea', { placeholder: 'Что бы вы изменили?' });
+    const missing = h('textarea', { placeholder: 'Чего не хватает?' });
+    let rating = 0;
+    panel.appendChild(h('label', {}, 'Что понравилось')); panel.appendChild(liked);
+    panel.appendChild(h('label', {}, 'Что было непонятно')); panel.appendChild(unclear);
+    panel.appendChild(h('label', {}, 'Что бы вы изменили')); panel.appendChild(suggest);
+    panel.appendChild(h('label', {}, 'Чего не хватает')); panel.appendChild(missing);
+    panel.appendChild(h('label', {}, 'Оценка'));
+    panel.appendChild(h('div', { style: 'display:flex;justify-content:center;margin:4px 0 6px' }, starsInput(0, (v) => rating = v)));
+    panel.appendChild(h('button', { class: 'btn', style: 'margin-top:12px', onclick: async () => {
+      const payload = {
+        liked: liked.value || null, unclear: unclear.value || null,
+        suggest: suggest.value || null, missing: missing.value || null,
+        rating: rating || null, page: location.hash || '#/',
+      };
+      // Локальная копия на случай оффлайна.
+      try { const arr = JSON.parse(localStorage.getItem('nutri_feedback') || '[]'); arr.push({ ...payload, at: new Date().toISOString() }); localStorage.setItem('nutri_feedback', JSON.stringify(arr)); } catch (e) {}
+      try { await POST('/feedback', payload); } catch (e) { /* уже сохранено локально */ }
+      close(); toast('Спасибо за отзыв!');
+    } }, ic('send', 'sm'), 'Отправить'));
+  });
+}
+
 async function boot() {
   if (State.token) {
     try {
@@ -2523,6 +2608,7 @@ async function boot() {
     } catch (e) { State.clear(); }
   }
   if (!location.hash) location.hash = defaultRoute();
+  mountTestBadge();
   router();
 }
 boot();
