@@ -175,6 +175,7 @@ $r->delete("$api/menus/{id}",         [MenuController::class, 'delete']);
 $r->post("$api/menus/{id}/publish",   [MenuController::class, 'publish']);
 $r->post("$api/menus/{id}/duplicate", [MenuController::class, 'duplicate']);
 $r->post("$api/menus/{id}/copy-day",  [MenuController::class, 'copyDay']);
+$r->post("$api/menus/{id}/copy-meal", [MenuController::class, 'copyMeal']);
 $r->get("$api/menus/{id}/shopping-list", [ShoppingController::class, 'list']);
 $r->post("$api/menus/{id}/items",              [MenuController::class, 'addItem']);
 $r->patch("$api/menus/{id}/items/{item_id}",   [MenuController::class, 'updateItem']);

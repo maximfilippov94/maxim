@@ -1076,8 +1076,11 @@ async function renderMenu(menuId) {
     const addBtn = h('button', { class: 'add-inline', 'aria-label': 'Добавить блюдо',
       onclick: () => openDishPicker(menuId, mt) }, ic('plus'));
     const count = meals.length ? h('span', { class: 'meal-count' }, meals.length + ' ' + (meals.length === 1 ? 'блюдо' : (meals.length < 5 ? 'блюда' : 'блюд'))) : null;
+    const copyBtn = meals.length && menu.days_count > 1
+      ? h('button', { class: 'add-inline meal-copy', title: 'Скопировать приём в другие дни', onclick: () => copyMealSheet(menu, currentDay, mt) }, ic('copy', 'sm'))
+      : null;
     const group = h('div', { class: 'meal-group', 'data-meal': mt },
-      h('h4', {}, h('span', { class: 'mtime' }, MEAL_TIMES[mt]), MEAL_LABELS[mt], count, h('span', { class: 'spacer' }), addBtn)
+      h('h4', {}, h('span', { class: 'mtime' }, MEAL_TIMES[mt]), MEAL_LABELS[mt], count, h('span', { class: 'spacer' }), copyBtn, addBtn)
     );
     if (!meals.length) {
       group.appendChild(h('div', { class: 'meal-empty', onclick: () => openDishPicker(menuId, mt) },
@@ -1591,6 +1594,31 @@ function copyDaySheet(menu) {
         currentDay = parseInt(to.value); close(); toast('Скопировано'); renderMenu(menu.id); }
       catch (e) { toast(e.message, true); }
     } }, 'Скопировать'));
+  });
+}
+
+/* Скопировать один приём пищи в выбранные дни (чекбоксы). */
+function copyMealSheet(menu, fromDay, mealType) {
+  sheet('Скопировать ' + (MEAL_LABELS[mealType] || 'приём'), (panel, close) => {
+    panel.appendChild(h('div', { class: 'muted small', style: 'margin-bottom:8px' },
+      MEAL_LABELS[mealType] + ' из «' + dayLabel(menu.start_date, fromDay).wd + ' · ' + dayLabel(menu.start_date, fromDay).dt + '» будет скопирован в выбранные дни (перезапишет их).'));
+    const chosen = new Set();
+    for (let d = 1; d <= menu.days_count; d++) {
+      if (d === fromDay) continue;
+      const dl = dayLabel(menu.start_date, d);
+      panel.appendChild(checkRow(dl.wd + ' · ' + dl.dt, false, (on) => { on ? chosen.add(d) : chosen.delete(d); }));
+    }
+    const selectAll = h('button', { class: 'btn ghost small', style: 'margin-top:8px', onclick: () => {
+      panel.querySelectorAll('.check-row:not(.on)').forEach(r => r.click());
+    } }, 'Выбрать все дни');
+    panel.appendChild(selectAll);
+    panel.appendChild(h('button', { class: 'btn', style: 'margin-top:10px', onclick: async () => {
+      if (!chosen.size) { toast('Выберите хотя бы один день', true); return; }
+      try {
+        await POST('/menus/' + menu.id + '/copy-meal', { from_day: fromDay, meal_type: mealType, to_days: [...chosen] });
+        close(); toast('Скопировано в ' + chosen.size + ' ' + plural(chosen.size, 'день', 'дня', 'дней')); renderMenu(menu.id);
+      } catch (e) { toast(e.message, true); }
+    } }, ic('copy', 'sm'), 'Скопировать'));
   });
 }
 

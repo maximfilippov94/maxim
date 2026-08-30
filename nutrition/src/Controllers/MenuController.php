@@ -347,6 +347,47 @@ class MenuController extends Controller
         return $this->show($req, ['id' => (int)$menu['id']]);
     }
 
+    /** Скопировать один приём пищи (напр. завтрак) в другие дни. */
+    public function copyMeal(Request $req, array $args): array
+    {
+        $auth = Auth::require($req, 'specialist');
+        $menu = Repo::menuFor((int)$args['id'], $auth);
+        $this->require($req->body, ['from_day', 'meal_type', 'to_days']);
+        $from = (int)$req->input('from_day');
+        $mealType = (string)$req->input('meal_type');
+        $toDays = array_values(array_unique(array_map('intval', (array)$req->input('to_days'))));
+        $days = (int)$menu['days_count'];
+
+        if ($from < 1 || $from > $days) {
+            throw new HttpException('День вне диапазона меню', 422);
+        }
+        $toDays = array_filter($toDays, fn($d) => $d >= 1 && $d <= $days && $d !== $from);
+        if (!$toDays) {
+            throw new HttpException('Выберите дни для копирования', 422);
+        }
+
+        Database::transaction(function () use ($menu, $from, $mealType, $toDays) {
+            $src = Database::all(
+                'SELECT * FROM menu_items WHERE menu_id = ? AND day_number = ? AND meal_type = ? ORDER BY sort_order, id',
+                [(int)$menu['id'], $from, $mealType]
+            );
+            foreach ($toDays as $to) {
+                Database::exec(
+                    'DELETE FROM menu_items WHERE menu_id = ? AND day_number = ? AND meal_type = ?',
+                    [(int)$menu['id'], $to, $mealType]
+                );
+                foreach ($src as $it) {
+                    Database::insert(
+                        'INSERT INTO menu_items (menu_id, day_number, meal_type, dish_id, portion_g, overrides, comment, sort_order)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                        [(int)$menu['id'], $to, $mealType, $it['dish_id'], $it['portion_g'], $it['overrides'], $it['comment'], $it['sort_order']]
+                    );
+                }
+            }
+        });
+        return $this->show($req, ['id' => (int)$menu['id']]);
+    }
+
     /** Дублировать всё меню (например, на следующую неделю). Возвращает новое меню. */
     public function duplicate(Request $req, array $args): array
     {
