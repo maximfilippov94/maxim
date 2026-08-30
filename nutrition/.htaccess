@@ -1,18 +1,22 @@
 # ==========================================================================
 # Запасной вариант, ЕСЛИ корень сайта нельзя переключить на подпапку public/
 # и вы залили содержимое nutrition/ прямо в корень домена.
-# Рекомендуется вместо этого указать «Каталог сайта» = .../nutrition/public.
+#
+# РЕКОМЕНДУЕТСЯ вместо этого указать «Каталог сайта» = .../public
+# (тогда этот файл не нужен — работает только public/.htaccess).
 # ==========================================================================
 Options +FollowSymLinks
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
+  # Защита от петли: если путь уже внутри public/ — больше не переписываем
+  RewriteRule ^public/ - [L]
+
   # Закрываем прямой доступ к внутренностям приложения
   RewriteRule ^(src|bin|migrations|seeds|data)(/|$) - [F]
-  RewriteRule (^|/)(config\.php|\.git) - [F]
+  RewriteRule (^|/)config\.php - [F]
 
   # Всё внутрь public/ (единая точка входа)
-  RewriteCond %{REQUEST_URI} !^/public/
   RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
