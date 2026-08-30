@@ -6,8 +6,8 @@
  *  - GET к API: network-first с откатом в кэш (оффлайн видно последнее меню);
  *  - остальные запросы (POST/PATCH/DELETE): только сеть.
  */
-const SHELL_CACHE = 'nutri-shell-v2';
-const API_CACHE = 'nutri-api-v2';
+const SHELL_CACHE = 'nutri-shell-v3';
+const API_CACHE = 'nutri-api-v3';
 
 const SHELL_ASSETS = [
   '/app/',

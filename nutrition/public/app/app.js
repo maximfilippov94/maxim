@@ -132,6 +132,15 @@ function fmt0(n) { return Math.round(n).toString(); }
 function initials(name) {
   return (name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] ? w[0].toUpperCase() : '').join('') || '?';
 }
+/* Строка макросов с цветовой кодировкой (Б синий, Ж янтарь, У фиолетовый). */
+function macroLine(n, withPortion) {
+  const parts = [];
+  if (withPortion) parts.push(h('span', { class: 'mp' }, fmt(n.portion_g) + ' г'));
+  parts.push(h('span', { class: 'mm b' }, 'Б ' + fmt(n.protein)));
+  parts.push(h('span', { class: 'mm f' }, 'Ж ' + fmt(n.fat)));
+  parts.push(h('span', { class: 'mm c' }, 'У ' + fmt(n.carbs)));
+  return h('div', { class: 'mc-macros' }, ...parts);
+}
 
 /* Нижняя шторка (bottom sheet). Возвращает функцию закрытия. */
 function sheet(title, contentBuilder) {
@@ -816,7 +825,7 @@ function mealCard(menuId, m) {
     h('div', { class: 'mc-top' },
       h('div', { class: 'mc-name' }, m.dish_name),
       h('div', { class: 'mc-kcal' }, fmt0(n.kcal) + ' ккал')),
-    h('div', { class: 'mc-macros' }, `${fmt(n.portion_g)} г · Б ${fmt(n.protein)} · Ж ${fmt(n.fat)} · У ${fmt(n.carbs)}`),
+    macroLine(n, true),
     m.comment ? h('div', { class: 'comment' }, ic('chat', 'sm'), h('span', {}, m.comment)) : null
   );
   return card;
@@ -875,7 +884,7 @@ async function openPortionEditor(menuId, m) {
     const maxP = Math.max(base * 3, portion * 2, 100);
 
     const valEl = h('div', { class: 'val' }, portion, h('span', {}, ' г'));
-    const kcalEl = h('div', { class: 'center', style: 'margin:4px 0 10px;font-weight:700;color:var(--green-dark)' }, fmt0(m.nutrition.kcal) + ' ккал');
+    const kcalEl = h('div', { class: 'center kcal-live', style: 'margin:4px 0 10px' }, fmt0(m.nutrition.kcal) + ' ккал');
     const macroEl = h('div', { class: 'center muted small' }, '');
     const slider = h('input', { type: 'range', min: '10', max: String(Math.round(maxP)), step: '5', value: String(portion) });
 
@@ -1530,7 +1539,7 @@ function clientMealCard(menuId, m) {
   card.appendChild(h('div', { class: 'mc-top' },
     h('div', { class: 'mc-name', onclick: () => showDishForClient(m) }, m.dish_name),
     h('div', { class: 'mc-kcal' }, fmt0(n.kcal) + ' ккал')));
-  card.appendChild(h('div', { class: 'mc-macros' }, `${fmt(n.portion_g)} г · Б ${fmt(n.protein)} · Ж ${fmt(n.fat)} · У ${fmt(n.carbs)}`));
+  card.appendChild(macroLine(n, true));
   if (m.comment) card.appendChild(h('div', { class: 'comment' }, ic('chat', 'sm'), h('span', {}, m.comment)));
   const actions = h('div', { class: 'btn-row', style: 'margin-top:10px' },
     h('button', { class: 'btn ' + (eaten ? '' : 'tonal') + ' small', onclick: () => logMeal(menuId, m, 'eaten') }, eaten ? ic('check', 'sm') : null, eaten ? 'Съедено' : 'Съел'),

@@ -1,98 +1,111 @@
 /* ==========================================================================
-   NutriMenu — дизайн-система. Mobile-first, health-tech стартап.
-   Фирменный emerald→lime градиент, Space Grotesk + Inter, светлая/тёмная тема,
-   мягкая моушн-система, SVG-иконки, тач-таргеты ≥44px, контраст ≥4.5:1.
+   NutriMenu — дизайн-система «Clean Nutrition × Professional Precision».
+   Прохладные slate-нейтрали, emerald→cyan градиент, Manrope + Inter,
+   цветные макро-индикаторы, мягкая моушн-система, SVG-иконки Lucide,
+   тач-таргеты ≥44px, контраст ≥4.5:1, полноценные светлая и тёмная темы.
    ========================================================================== */
 
-/* ---------- Токены темы ---------- */
+/* ---------- Токены темы (LIGHT) ---------- */
 :root {
   color-scheme: light;
   /* Бренд */
-  --brand: #0FA958;
-  --brand-600: #0C8F4A;
-  --brand-700: #0A7A3F;
-  --brand-ink: #063E22;
-  --brand-soft: #E4F6EC;
-  --g1: #10B981;           /* градиент старт */
-  --g2: #6FD743;           /* градиент конец (lime) */
+  --brand: #22C55E;
+  --brand-600: #16A34A;
+  --brand-700: #15803D;
+  --brand-ink: #052E16;
+  --brand-soft: #DCFCE7;
+  --g1: #22C55E;           /* градиент старт (green) */
+  --g2: #06B6D4;           /* градиент конец (cyan) */
   --grad: linear-gradient(135deg, var(--g1) 0%, var(--g2) 100%);
-  --grad-hero: linear-gradient(140deg, #0FB25E 0%, #17A98C 55%, #0E9F6E 100%);
+  --grad-hero: linear-gradient(140deg, #22C55E 0%, #0EA5A4 52%, #06B6D4 100%);
 
   /* Поверхности */
-  --bg: #F3F7F4;
+  --bg: #F7FAFB;
   --surface: #FFFFFF;
-  --surface-2: #EEF3EF;
-  --surface-3: #E7EFE9;
-  --glass: rgba(255,255,255,.72);
+  --surface-2: #F1F5F6;
+  --surface-3: #E9EFF2;
+  --glass: rgba(255,255,255,.74);
 
   /* Текст */
-  --text: #0E1B14;
-  --muted: #5F7269;
-  --faint: #8A9A91;
-  --line: #E3EAE5;
-  --line-strong: #D2DDD6;
+  --text: #0F172A;
+  --muted: #64748B;
+  --faint: #94A3B8;
+  --line: #E2E8F0;
+  --line-strong: #CBD5E1;
 
   /* Семантика */
-  --accent: #F5A524;       /* тёплый янтарь */
-  --over: #F0603A;         /* превышение цели */
-  --under: #2E7BE6;        /* недобор цели */
-  --danger: #E5484D;
-  --danger-soft: #FCE9E9;
+  --accent: #F59E0B;       /* тёплый янтарь (предупреждение/черновик) */
+  --over: #EF4444;         /* превышение цели по калориям */
+  --under: #3B82F6;        /* недобор цели */
+  --danger: #EF4444;
+  --danger-soft: #FEE2E2;
   --success: var(--brand);
+
+  /* Макро-индикаторы */
+  --m-protein: #3B82F6;    /* белки */
+  --m-fat: #F59E0B;        /* жиры */
+  --m-carb: #8B5CF6;       /* углеводы */
+  --m-kcal: #EF4444;       /* калории */
 
   /* На бренде */
   --on-brand: #FFFFFF;
 
   /* Радиусы / тени / ритм */
-  --r-xs: 8px; --r-sm: 12px; --r: 16px; --r-lg: 22px; --r-xl: 28px; --r-full: 999px;
-  --sh-1: 0 1px 2px rgba(9,30,20,.06), 0 1px 3px rgba(9,30,20,.05);
-  --sh-2: 0 4px 14px rgba(9,30,20,.08), 0 2px 6px rgba(9,30,20,.05);
-  --sh-3: 0 12px 32px rgba(9,30,20,.14), 0 4px 10px rgba(9,30,20,.08);
-  --sh-brand: 0 8px 22px rgba(15,169,88,.35);
+  --r-xs: 8px; --r-sm: 12px; --r: 16px; --r-lg: 20px; --r-xl: 24px; --r-full: 999px;
+  --sh-1: 0 1px 2px rgba(15,23,42,.05);
+  --sh-2: 0 4px 16px rgba(15,23,42,.08);
+  --sh-3: 0 12px 32px rgba(15,23,42,.12);
+  --sh-brand: 0 8px 22px rgba(34,197,94,.30);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
-  --nav-h: 66px;
+  --nav-h: 68px;
 
   --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Space Grotesk", var(--font-ui);
+  --font-display: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ease: cubic-bezier(.4, 0, .2, 1);
   --ease-out: cubic-bezier(.16, 1, .3, 1);
   --spring: cubic-bezier(.34, 1.56, .64, 1);
 }
 
+/* ---------- Токены темы (DARK) — специально сбалансирована, не инверсия ---------- */
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --brand: #22C55E;
-    --brand-600: #1BB454;
-    --brand-700: #16A34A;
-    --brand-ink: #C7F5D8;
-    --brand-soft: rgba(34,197,94,.16);
-    --g1: #17C06A; --g2: #7BE04A;
-    --grad-hero: linear-gradient(140deg, #0E8F52 0%, #128877 55%, #0C8259 100%);
+    --brand: #34D399;
+    --brand-600: #22C55E;
+    --brand-700: #34D399;
+    --brand-ink: #D1FAE5;
+    --brand-soft: rgba(52,211,153,.15);
+    --g1: #34D399; --g2: #22C55E;
+    --grad-hero: linear-gradient(140deg, #16A34A 0%, #0E8577 52%, #0891B2 100%);
 
-    --bg: #0C120F;
-    --surface: #141D18;
-    --surface-2: #18241E;
-    --surface-3: #1E2C24;
-    --glass: rgba(20,29,24,.7);
+    --bg: #080F14;
+    --surface: #111C27;
+    --surface-2: #162330;
+    --surface-3: #202E3A;
+    --glass: rgba(17,28,39,.72);
 
-    --text: #E9F2EC;
-    --muted: #93A89C;
-    --faint: #6E8177;
-    --line: #223129;
-    --line-strong: #2C3E33;
+    --text: #F8FAFC;
+    --muted: #CBD5E1;
+    --faint: #94A3B8;
+    --line: #293746;
+    --line-strong: #334155;
 
-    --accent: #F7B84B;
-    --over: #FF7A5A;
-    --under: #5AA0F2;
-    --danger: #F1656A;
-    --danger-soft: rgba(241,101,106,.14);
+    --accent: #FBBF24;
+    --over: #F87171;
+    --under: #60A5FA;
+    --danger: #F87171;
+    --danger-soft: rgba(248,113,113,.14);
+
+    --m-protein: #60A5FA;
+    --m-fat: #FBBF24;
+    --m-carb: #A78BFA;
+    --m-kcal: #F87171;
 
     --sh-1: 0 1px 2px rgba(0,0,0,.4);
     --sh-2: 0 6px 18px rgba(0,0,0,.5);
     --sh-3: 0 14px 34px rgba(0,0,0,.6);
-    --sh-brand: 0 8px 24px rgba(34,197,94,.28);
+    --sh-brand: 0 8px 24px rgba(52,211,153,.26);
   }
 }
 
@@ -281,13 +294,10 @@ textarea { min-height: 84px; resize: vertical; }
 /* ---------- Нутриенты: пилюли ---------- */
 .kbju { display: flex; gap: 8px; flex-wrap: wrap; }
 .pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 11px; border-radius: var(--r-full); font-size: 12.5px; font-weight: 700; font-family: var(--font-display); }
-.pill.b { background: color-mix(in srgb, var(--under) 14%, transparent); color: var(--under); }
-.pill.f { background: color-mix(in srgb, var(--accent) 18%, transparent); color: #B9781A; }
-@media (prefers-color-scheme: dark) { .pill.f { color: var(--accent); } }
-.pill.c { background: var(--brand-soft); color: var(--brand-700); }
-@media (prefers-color-scheme: dark) { .pill.c { color: var(--brand); } }
-.pill.k { background: color-mix(in srgb, #7C5CFF 14%, transparent); color: #6A4BE0; }
-@media (prefers-color-scheme: dark) { .pill.k { color: #A78BFA; } }
+.pill.b { background: color-mix(in srgb, var(--m-protein) 14%, transparent); color: var(--m-protein); }
+.pill.f { background: color-mix(in srgb, var(--m-fat) 16%, transparent); color: var(--m-fat); }
+.pill.c { background: color-mix(in srgb, var(--m-carb) 15%, transparent); color: var(--m-carb); }
+.pill.k { background: color-mix(in srgb, var(--m-kcal) 14%, transparent); color: var(--m-kcal); }
 .pill.tag { background: var(--surface-2); color: var(--muted); font-family: var(--font-ui); font-weight: 600; border: 1px solid var(--line); }
 
 /* ---------- Конструктор дня ---------- */
@@ -338,8 +348,12 @@ textarea { min-height: 84px; resize: vertical; }
 .meal-card .mc-name { flex: 1; font-weight: 600; font-size: 15.5px; }
 .meal-card .mc-kcal { font-family: var(--font-display); font-weight: 700; color: var(--brand-700); font-size: 15px; white-space: nowrap; }
 @media (prefers-color-scheme: dark) { .meal-card .mc-kcal { color: var(--brand); } }
-.meal-card .mc-macros { color: var(--muted); font-size: 12.5px; margin-top: 5px; display: flex; gap: 10px; flex-wrap: wrap; }
-.meal-card .mc-macros b { color: var(--text); font-family: var(--font-display); }
+.meal-card .mc-macros { color: var(--muted); font-size: 12.5px; margin-top: 6px; display: flex; gap: 9px; flex-wrap: wrap; align-items: center; }
+.mc-macros .mp { color: var(--faint); }
+.mc-macros .mm { font-family: var(--font-display); font-weight: 700; font-size: 12px; }
+.mc-macros .mm.b { color: var(--m-protein); }
+.mc-macros .mm.f { color: var(--m-fat); }
+.mc-macros .mm.c { color: var(--m-carb); }
 .meal-card.eaten { border-left: 4px solid var(--brand); }
 .meal-card.skipped { opacity: .55; }
 .meal-card .comment { font-size: 13px; color: var(--muted); margin-top: 8px; padding: 8px 10px; background: var(--surface-2); border-radius: var(--r-sm); display: flex; gap: 7px; }
