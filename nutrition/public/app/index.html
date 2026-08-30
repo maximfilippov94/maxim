@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+  <meta name="theme-color" content="#228b57">
+  <title>Конструктор меню</title>
+  <link rel="manifest" href="/app/manifest.json">
+  <link rel="apple-touch-icon" href="/app/icons/apple-touch-icon.png">
+  <link rel="icon" href="/app/icons/favicon-32.png" sizes="32x32">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Меню">
+  <link rel="stylesheet" href="/app/styles.css?v=1">
+</head>
+<body>
+  <div id="app">
+    <div class="boot">Загрузка…</div>
+  </div>
+
+  <!-- Контейнер для всплывающих панелей (нижние шторки, тосты) -->
+  <div id="overlay-root"></div>
+
+  <script src="/app/app.js?v=1"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/app/sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

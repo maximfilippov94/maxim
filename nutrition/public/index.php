@@ -1,0 +1,142 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Единая точка входа.
+ *
+ * Работает и как front-controller для API (/api/v1/*), и как роутер
+ * встроенного сервера PHP (php -S ... public/index.php): статику отдаёт
+ * сам сервер, всё остальное уходит в приложение.
+ */
+
+$root = dirname(__DIR__);
+
+// --- Автозагрузчик (PSR-4-ish): App\Foo\Bar -> src/Foo/Bar.php ---
+spl_autoload_register(function (string $class) use ($root) {
+    $prefix = 'App\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+    $rel = str_replace('\\', '/', substr($class, strlen($prefix)));
+    $file = $root . '/src/' . $rel . '.php';
+    if (is_file($file)) {
+        require $file;
+    }
+});
+
+use App\Auth;
+use App\Controllers\AuthController;
+use App\Controllers\ClientController;
+use App\Controllers\ClientPortalController;
+use App\Controllers\DishController;
+use App\Controllers\IngredientController;
+use App\Controllers\MealLogController;
+use App\Controllers\MenuController;
+use App\Controllers\MessageController;
+use App\Controllers\WeightController;
+use App\Database;
+use App\Request;
+use App\Response;
+use App\Router;
+
+$config = require $root . '/config.php';
+$GLOBALS['config'] = $config;
+
+$path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
+
+// --- Обслуживание статики / фронта во встроенном сервере ---
+if (PHP_SAPI === 'cli-server') {
+    // Корень -> приложение.
+    if ($path === '' || $path === '/') {
+        header('Location: /app/');
+        exit;
+    }
+    // Реальные файлы (фронт, иконки) отдаёт сам сервер.
+    $file = __DIR__ . $path;
+    if ($path !== '' && !str_starts_with($path, '/api') && is_file($file)) {
+        return false;
+    }
+    // Клиентская маршрутизация SPA: /app/<любой путь> -> app/index.html
+    if (str_starts_with($path, '/app')) {
+        $candidate = __DIR__ . $path;
+        if (!is_file($candidate)) {
+            readfile(__DIR__ . '/app/index.html');
+            exit;
+        }
+        return false;
+    }
+}
+
+Database::init($config['db_path']);
+
+$req = new Request();
+$r = new Router();
+
+// ---------------- API v1 ----------------
+$api = '/api/v1';
+
+// health
+$r->get("$api/health", fn() => ['ok' => true, 'time' => gmdate('c')]);
+
+// --- Auth ---
+$r->post("$api/auth/specialist/register", [AuthController::class, 'registerSpecialist']);
+$r->post("$api/auth/specialist/login",    [AuthController::class, 'loginSpecialist']);
+$r->post("$api/auth/client/login",        [AuthController::class, 'loginClient']);
+$r->get("$api/invite/{token}",            [AuthController::class, 'inviteInfo']);
+$r->post("$api/invite/{token}/accept",    [AuthController::class, 'acceptInvite']);
+$r->get("$api/me",                        [AuthController::class, 'me']);
+$r->post("$api/auth/logout",              [AuthController::class, 'logout']);
+
+// --- Ingredients (специалист) ---
+$r->get("$api/ingredients/categories", [IngredientController::class, 'categories']);
+$r->get("$api/ingredients",            [IngredientController::class, 'index']);
+$r->post("$api/ingredients",           [IngredientController::class, 'create']);
+$r->get("$api/ingredients/{id}",       [IngredientController::class, 'show']);
+$r->patch("$api/ingredients/{id}",     [IngredientController::class, 'update']);
+$r->delete("$api/ingredients/{id}",    [IngredientController::class, 'delete']);
+
+// --- Dishes (специалист) ---
+$r->get("$api/dishes",        [DishController::class, 'index']);
+$r->post("$api/dishes",       [DishController::class, 'create']);
+$r->get("$api/dishes/{id}",   [DishController::class, 'show']);
+$r->patch("$api/dishes/{id}", [DishController::class, 'update']);
+$r->delete("$api/dishes/{id}",[DishController::class, 'delete']);
+
+// --- Clients (специалист) ---
+$r->get("$api/clients",              [ClientController::class, 'index']);
+$r->post("$api/clients",             [ClientController::class, 'create']);
+$r->get("$api/clients/{id}",         [ClientController::class, 'show']);
+$r->patch("$api/clients/{id}",       [ClientController::class, 'update']);
+$r->delete("$api/clients/{id}",      [ClientController::class, 'delete']);
+$r->post("$api/clients/{id}/invite", [ClientController::class, 'invite']);
+$r->get("$api/clients/{id}/messages",  [MessageController::class, 'specialistList']);
+$r->post("$api/clients/{id}/messages", [MessageController::class, 'specialistSend']);
+$r->get("$api/clients/{id}/weight",    [WeightController::class, 'specialistList']);
+
+// --- Menus (специалист-конструктор) ---
+$r->get("$api/menus",                 [MenuController::class, 'index']);
+$r->post("$api/menus",                [MenuController::class, 'create']);
+$r->get("$api/menus/{id}",            [MenuController::class, 'show']);
+$r->patch("$api/menus/{id}",          [MenuController::class, 'update']);
+$r->delete("$api/menus/{id}",         [MenuController::class, 'delete']);
+$r->post("$api/menus/{id}/publish",   [MenuController::class, 'publish']);
+$r->post("$api/menus/{id}/duplicate", [MenuController::class, 'duplicate']);
+$r->post("$api/menus/{id}/copy-day",  [MenuController::class, 'copyDay']);
+$r->post("$api/menus/{id}/items",              [MenuController::class, 'addItem']);
+$r->patch("$api/menus/{id}/items/{item_id}",   [MenuController::class, 'updateItem']);
+$r->delete("$api/menus/{id}/items/{item_id}",  [MenuController::class, 'deleteItem']);
+
+// --- Meal logs (клиент отмечает съеденное) ---
+$r->post("$api/menu-items/{item_id}/log",   [MealLogController::class, 'log']);
+$r->delete("$api/menu-items/{item_id}/log", [MealLogController::class, 'delete']);
+
+// --- Кабинет клиента ---
+$r->get("$api/me/menus",    [ClientPortalController::class, 'menus']);
+$r->get("$api/me/menu",     [ClientPortalController::class, 'activeMenu']);
+$r->get("$api/me/progress", [ClientPortalController::class, 'progress']);
+$r->get("$api/me/messages", [MessageController::class, 'clientList']);
+$r->post("$api/me/messages",[MessageController::class, 'clientSend']);
+$r->get("$api/me/weight",   [WeightController::class, 'clientList']);
+$r->post("$api/me/weight",  [WeightController::class, 'clientAdd']);
+
+$r->dispatch($req);

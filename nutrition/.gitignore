@@ -1,0 +1,7 @@
+# Локальная база и её WAL-файлы — не коммитим
+/data/*.sqlite
+/data/*.sqlite-wal
+/data/*.sqlite-shm
+
+# зависимости фронта нет (без сборки)
+node_modules/
