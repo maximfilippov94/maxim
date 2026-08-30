@@ -675,16 +675,93 @@ route('/menu-list', async () => {
   render(shell('builder', content, { topbar:'Конструктор меню' }));
 });
 
-route('/analytics', () => {
+const ATTN_LABEL = { message: 'Новое сообщение', no_menu: 'Меню не создано', menu_ending: 'Меню заканчивается', no_logs: 'Не отмечает питание', no_weight: 'Давно нет замеров', weight_stall: 'Вес не меняется' };
+
+route('/analytics', async () => {
   if (!requireRole('specialist')) return;
-  const content=h('div',{class:'content dashboard-page'},h('div',{class:'dash-head'},h('div',{},h('h2',{},'Аналитика'),h('p',{},'Динамика клиентов и меню'))),h('div',{class:'dashboard-grid analytics-grid'},h('div',{class:'card'},h('h3',{},'Соблюдение плана'),h('div',{class:'big-stat'},'78%'),h('div',{class:'fake-chart large'},h('span',{},'Пн'),h('span',{},'Вт'),h('span',{},'Ср'),h('span',{},'Чт'),h('span',{},'Пт'),h('span',{},'Сб'),h('span',{},'Вс'))),h('div',{class:'card'},h('h3',{},'Изменение веса'),h('div',{class:'big-stat'},'-1.8 кг'),h('p',{class:'muted'},'Среднее изменение за неделю'))));
-  render(shell('analytics',content,{topbar:'Аналитика'}));
+  loading();
+  const { items = [] } = await GET('/clients');
+  const active = items.filter(c => c.status !== 'archived');
+  const published = active.filter(c => c.menu_status === 'published');
+  const attn = active.filter(c => c.attention && c.attention.length);
+  const compl = active.filter(c => c.compliance_pct != null);
+  const avgCompl = compl.length ? Math.round(compl.reduce((s, c) => s + c.compliance_pct, 0) / compl.length) : 0;
+  const deltas = active.filter(c => c.weight_delta != null);
+  const avgDelta = deltas.length ? deltas.reduce((s, c) => s + c.weight_delta, 0) / deltas.length : null;
+  const losing = deltas.filter(c => c.weight_delta < 0).length;
+  const gaining = deltas.filter(c => c.weight_delta > 0).length;
+  const stable = deltas.filter(c => c.weight_delta === 0).length;
+  const kcalList = active.filter(c => c.target_kcal);
+  const avgKcal = kcalList.length ? Math.round(kcalList.reduce((s, c) => s + Number(c.target_kcal), 0) / kcalList.length) : null;
+
+  // Распределение причин внимания.
+  const reasonCounts = {};
+  attn.forEach(c => c.attention.forEach(a => { reasonCounts[a.type] = (reasonCounts[a.type] || 0) + 1; }));
+  const reasonRows = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
+  const maxReason = reasonRows.length ? Math.max(...reasonRows.map(r => r[1])) : 1;
+
+  const kpi = (b, s, accent) => h('div', { class: 'mini-kpi' + (accent ? ' accent' : '') }, h('b', {}, String(b)), h('span', {}, s));
+  const bar = (label, val, max, cls) => h('div', { class: 'abar-row' },
+    h('div', { class: 'abar-label' }, label, h('b', {}, String(val))),
+    h('div', { class: 'abar-track' }, h('div', { class: 'abar-fill ' + (cls || ''), style: 'width:' + Math.round(val / max * 100) + '%' })));
+
+  const reasonsCard = h('section', { class: 'card' },
+    h('h3', {}, 'Требуют внимания — по причинам'),
+    reasonRows.length
+      ? h('div', { class: 'abars' }, ...reasonRows.map(([t, n]) => bar(ATTN_LABEL[t] || t, n, maxReason, t)))
+      : h('div', { class: 'empty dash-empty' }, ic('checkCircle'), h('div', {}, 'Проблем не обнаружено')));
+
+  const maxWD = Math.max(losing, gaining, stable, 1);
+  const weightCard = h('section', { class: 'card' },
+    h('h3', {}, 'Динамика веса клиентов'),
+    h('div', { class: 'big-stat' }, avgDelta != null ? (avgDelta > 0 ? '+' : '') + fmt(avgDelta) + ' кг' : '—'),
+    h('p', { class: 'muted', style: 'margin:0 0 12px' }, 'Среднее изменение с последнего замера'),
+    h('div', { class: 'abars' },
+      bar('Снижают вес', losing, maxWD, 'no_logs'),
+      bar('Набирают', gaining, maxWD, 'menu_ending'),
+      bar('Без изменений', stable, maxWD, 'no_menu')));
+
+  const content = h('div', { class: 'content dashboard-page' },
+    h('div', { class: 'dash-head' }, h('div', {}, h('h2', {}, 'Аналитика'), h('p', {}, 'Сводка по клиентам и меню'))),
+    h('div', { class: 'kpi-row' },
+      kpi(active.length, 'Клиентов'),
+      kpi(published.length, 'Активных меню'),
+      kpi(attn.length, 'Требуют внимания', attn.length > 0),
+      kpi(avgCompl + '%', 'Среднее соблюдение')),
+    h('div', { class: 'kpi-row' },
+      kpi(avgKcal != null ? fmt0(avgKcal) : '—', 'Средняя норма, ккал'),
+      kpi(losing, 'Снижают вес'),
+      kpi(deltas.length, 'С замерами веса'),
+      kpi(active.length - published.length, 'Без активного меню')),
+    h('div', { class: 'home-grid' }, reasonsCard, weightCard));
+  render(shell('analytics', content, { topbar: 'Аналитика' }));
 });
 
-route('/chats', () => {
+route('/chats', async () => {
   if (!requireRole('specialist')) return;
-  const content=h('div',{class:'content'},h('div',{class:'empty card'},ic('chat'),h('h3',{},'Чаты с клиентами'),h('p',{class:'muted'},'Откройте клиента, чтобы продолжить переписку.')));
-  render(shell('chats',content,{topbar:'Чаты'}));
+  loading();
+  const { items = [] } = await GET('/clients');
+  const withMsg = items.filter(c => c.status !== 'archived' && c.last_message_at)
+    .sort((a, b) => new Date(b.last_message_at) - new Date(a.last_message_at));
+  const content = h('div', { class: 'content chats-page' },
+    h('div', { class: 'section-intro' }, h('div', {}, h('h2', {}, 'Чаты'), h('p', {}, 'Переписка с клиентами'))));
+  if (!withMsg.length) {
+    content.appendChild(h('div', { class: 'empty card' }, ic('chat'), h('h3', {}, 'Пока нет переписок'), h('p', { class: 'muted' }, 'Откройте клиента и напишите первым.')));
+  } else {
+    const list = h('div', { class: 'card chat-list' });
+    withMsg.forEach(c => {
+      const mine = c.last_message_author === 'specialist';
+      list.appendChild(h('div', { class: 'chat-row' + (c.unread_messages ? ' unread' : ''), onclick: () => location.hash = '#/chat/' + c.id },
+        h('div', { class: 'avatar' }, initials(c.name)),
+        h('div', { class: 'chat-row-main' },
+          h('div', { class: 'chat-row-top' }, h('b', {}, c.name), h('span', { class: 'chat-row-time' }, timeAgo(c.last_message_at))),
+          h('div', { class: 'chat-row-msg' }, (mine ? 'Вы: ' : '') + (c.last_message || '').slice(0, 70))),
+        c.unread_messages ? h('span', { class: 'chat-unread' }, String(c.unread_messages)) : null
+      ));
+    });
+    content.appendChild(list);
+  }
+  render(shell('chats', content, { topbar: 'Чаты' }));
 });
 
 route('/settings', () => {

@@ -63,6 +63,14 @@ class ClientController extends Controller
             [$clientId]
         )['n'] ?? 0);
 
+        $lastMsg = Database::one(
+            'SELECT body, author_type, created_at FROM messages WHERE client_id = ? ORDER BY created_at DESC LIMIT 1',
+            [$clientId]
+        );
+        $out['last_message'] = $lastMsg['body'] ?? null;
+        $out['last_message_author'] = $lastMsg['author_type'] ?? null;
+        $out['last_message_at'] = $lastMsg['created_at'] ?? null;
+
         // Активное меню (опубликованное — приоритетно, иначе последнее).
         $menu = Database::one(
             "SELECT id, status, start_date, days_count FROM menus WHERE client_id = ?

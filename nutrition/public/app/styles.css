@@ -1494,6 +1494,31 @@ body { background:#f7f9fb; color:var(--text); font-size:14px; }
   .client-tabs button { padding: 10px 12px; font-size: 13px; }
 }
 
+/* Чаты: список переписок */
+.chats-page { max-width: 820px; margin: 0 auto; }
+.chat-list { padding: 4px 16px; }
+.chat-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); cursor: pointer; }
+.chat-row:first-child { border-top: 0; }
+.chat-row .avatar { width: 44px; height: 44px; min-width: 44px; border-radius: 13px; font-size: 14px; }
+.chat-row-main { min-width: 0; flex: 1; }
+.chat-row-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.chat-row-top b { font-family: var(--font-display); font-size: 14.5px; }
+.chat-row-time { font-size: 11px; color: var(--faint); white-space: nowrap; }
+.chat-row-msg { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.chat-row.unread .chat-row-msg { color: var(--text); font-weight: 600; }
+.chat-unread { background: var(--brand); color: #fff; font-size: 11px; font-weight: 800; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center; }
+
+/* Аналитика: горизонтальные бары */
+.abars { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.abar-row { display: flex; flex-direction: column; gap: 5px; }
+.abar-label { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.abar-label b { font-family: var(--font-display); color: var(--text); }
+.abar-track { height: 9px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.abar-fill { height: 100%; border-radius: 999px; background: var(--brand); transition: width .5s var(--spring); }
+.abar-fill.message { background: var(--brand); }
+.abar-fill.menu_ending, .abar-fill.no_menu { background: var(--accent); }
+.abar-fill.no_logs, .abar-fill.no_weight, .abar-fill.weight_stall { background: var(--danger); }
+
 /* ---------- Client workspace v14 ---------- */
 .client-page { max-width: 1320px; margin: 0 auto; }
 .client-hero { display:flex; justify-content:space-between; gap:24px; align-items:flex-start; padding:4px 0 20px; }
