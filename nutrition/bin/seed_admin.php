@@ -9,7 +9,7 @@ declare(strict_types=1);
  */
 
 $root = dirname(__DIR__);
-require $root . '/src/Database.php';
+require_once $root . '/src/Database.php';
 $config = require $root . '/config.php';
 
 use App\Database;

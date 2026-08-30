@@ -8,9 +8,9 @@ declare(strict_types=1);
  */
 
 $root = dirname(__DIR__);
-require $root . '/src/Database.php';
-require $root . '/src/Repo.php';
-require $root . '/src/Services/NutritionCalculator.php';
+require_once $root . '/src/Database.php';
+require_once $root . '/src/Repo.php';
+require_once $root . '/src/Services/NutritionCalculator.php';
 
 $config = require $root . '/config.php';
 

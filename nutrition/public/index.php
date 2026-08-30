@@ -57,22 +57,27 @@ if ($path === '' || $path === '/') {
     exit;
 }
 
-// --- Обслуживание статики / фронта во встроенном сервере ---
+// --- Встроенный сервер: реальные файлы отдаёт сам сервер ---
 if (PHP_SAPI === 'cli-server') {
-    // Реальные файлы (лендинг, фронт, иконки) отдаёт сам сервер.
     $file = __DIR__ . $path;
     if ($path !== '' && !str_starts_with($path, '/api') && is_file($file)) {
         return false;
     }
-    // Клиентская маршрутизация SPA: /app/<любой путь> -> app/index.html
-    if (str_starts_with($path, '/app')) {
-        $candidate = __DIR__ . $path;
-        if (!is_file($candidate)) {
-            readfile(__DIR__ . '/app/index.html');
-            exit;
-        }
-        return false;
+}
+
+// --- SPA-фолбэк: /app/<маршрут> без реального файла -> оболочка приложения ---
+// (нужно и для встроенного сервера, и для Apache/nginx)
+if (str_starts_with($path, '/app') && !str_starts_with($path, '/api')) {
+    $file = __DIR__ . $path;
+    if (!is_file($file)) {
+        header('Content-Type: text/html; charset=utf-8');
+        readfile(__DIR__ . '/app/index.html');
+        exit;
     }
+    if (PHP_SAPI === 'cli-server') {
+        return false; // встроенный сервер отдаст файл сам
+    }
+    // На Apache реальные файлы уже отданы правилом mod_rewrite; сюда доходим редко.
 }
 
 Database::init($config['db_path']);
