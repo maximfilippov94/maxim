@@ -164,9 +164,11 @@ $r->get("$api/clients/{id}",         [ClientController::class, 'show']);
 $r->patch("$api/clients/{id}",       [ClientController::class, 'update']);
 $r->delete("$api/clients/{id}",      [ClientController::class, 'delete']);
 $r->post("$api/clients/{id}/invite", [ClientController::class, 'invite']);
+$r->get("$api/clients/{id}/activity",  [ClientController::class, 'activity']);
 $r->get("$api/clients/{id}/messages",  [MessageController::class, 'specialistList']);
 $r->post("$api/clients/{id}/messages", [MessageController::class, 'specialistSend']);
 $r->get("$api/clients/{id}/weight",    [WeightController::class, 'specialistList']);
+$r->post("$api/clients/{id}/weight",   [WeightController::class, 'specialistAdd']);
 
 // --- Menus (специалист-конструктор) ---
 $r->get("$api/menus",                 [MenuController::class, 'index']);

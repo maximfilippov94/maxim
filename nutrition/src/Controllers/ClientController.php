@@ -183,7 +183,77 @@ class ClientController extends Controller
              FROM menus WHERE client_id = ? ORDER BY created_at DESC',
             [(int)$client['id']]
         );
+        $client = array_merge($client, $this->clientSignals((int)$client['id']));
         return $client;
+    }
+
+    /**
+     * Лента активности клиента (для вкладки «Обзор» и «Дневник»):
+     * отметки питания, замеры веса, сообщения, публикации меню — единым списком.
+     */
+    public function activity(Request $req, array $args): array
+    {
+        $auth = Auth::require($req, 'specialist');
+        $client = Repo::clientOwnedBy((int)$args['id'], $auth['id']);
+        $cid = (int)$client['id'];
+        $limit = min(100, max(1, (int)($req->query['limit'] ?? 40)));
+        $items = [];
+
+        $logs = Database::all(
+            "SELECT ml.status, ml.logged_at, ml.comment, mi.meal_type, d.name AS dish_name
+             FROM meal_logs ml
+             JOIN menu_items mi ON mi.id = ml.menu_item_id
+             LEFT JOIN dishes d ON d.id = mi.dish_id
+             WHERE ml.client_id = ? ORDER BY ml.logged_at DESC LIMIT ?",
+            [$cid, $limit]
+        );
+        foreach ($logs as $l) {
+            $items[] = [
+                'type' => 'meal_' . $l['status'],
+                'at' => $l['logged_at'],
+                'meal_type' => $l['meal_type'],
+                'dish' => $l['dish_name'],
+                'comment' => $l['comment'],
+            ];
+        }
+
+        $weights = Database::all(
+            'SELECT weight_kg, measured_on FROM weight_logs WHERE client_id = ? ORDER BY measured_on DESC LIMIT ?',
+            [$cid, $limit]
+        );
+        foreach ($weights as $w) {
+            $items[] = ['type' => 'weight', 'at' => $w['measured_on'], 'weight_kg' => (float)$w['weight_kg']];
+        }
+
+        $msgs = Database::all(
+            "SELECT body, author_type, created_at FROM messages WHERE client_id = ? ORDER BY created_at DESC LIMIT ?",
+            [$cid, $limit]
+        );
+        foreach ($msgs as $m) {
+            $items[] = ['type' => 'message', 'at' => $m['created_at'], 'author' => $m['author_type'], 'body' => $m['body']];
+        }
+
+        $menus = Database::all(
+            "SELECT title, published_at FROM menus WHERE client_id = ? AND published_at IS NOT NULL ORDER BY published_at DESC LIMIT ?",
+            [$cid, $limit]
+        );
+        foreach ($menus as $mn) {
+            $items[] = ['type' => 'menu_published', 'at' => $mn['published_at'], 'title' => $mn['title']];
+        }
+
+        // Сортировка по времени (строки ISO/дат сравнимы лексикографически при одинаковом формате;
+        // приводим дату-only к полуночи для корректного сравнения с ISO-датами).
+        usort($items, fn($a, $b) => strcmp($this->tsKey($b['at']), $this->tsKey($a['at'])));
+        return ['items' => array_slice($items, 0, $limit)];
+    }
+
+    private function tsKey(?string $s): string
+    {
+        $s = (string)$s;
+        if ($s === '') return '';
+        // «YYYY-MM-DD» → «YYYY-MM-DDT00:00:00» для сопоставимости с ISO-датавременем.
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $s)) return $s . 'T00:00:00';
+        return $s;
     }
 
     public function create(Request $req): array

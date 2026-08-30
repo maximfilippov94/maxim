@@ -817,21 +817,27 @@ function clientForm(client) {
   render(shell('clients', content, { topbar: client ? 'Редактирование' : 'Новый клиент', back: () => history.back() }));
 }
 
+const CLIENT_TABS = [['overview', 'Обзор'], ['menu', 'Меню'], ['progress', 'Прогресс'], ['diary', 'Дневник'], ['chat', 'Чат'], ['notes', 'Заметки']];
+let clientTab = 'overview';
+
 route('/client/:id', async (args) => {
   if (!requireRole('specialist')) return;
   loading();
-  const [c, weightData] = await Promise.all([
+  const [c, weightData, activityData] = await Promise.all([
     GET('/clients/' + args.id),
-    GET('/clients/' + args.id + '/weight').catch(() => ({ items: [] }))
+    GET('/clients/' + args.id + '/weight').catch(() => ({ items: [] })),
+    GET('/clients/' + args.id + '/activity').catch(() => ({ items: [] }))
   ]);
+  if (State.query.tab && CLIENT_TABS.some(t => t[0] === State.query.tab)) clientTab = State.query.tab;
   const menus = c.menus || [];
   const weights = weightData.items || [];
+  const activity = activityData.items || [];
   const latestWeight = weights.length ? weights[weights.length - 1] : null;
-  const previousWeight = weights.length > 1 ? weights[weights.length - 2] : null;
-  const weightDelta = latestWeight && previousWeight ? Number(latestWeight.weight_kg) - Number(previousWeight.weight_kg) : null;
+  const weightDelta = c.weight_delta;
   const activeMenu = menus.find(m => m.status === 'published') || menus[0] || null;
   const menuLabel = activeMenu ? (activeMenu.status === 'published' ? 'Активно' : 'Черновик') : 'Нет меню';
   const menuLabelClass = activeMenu && activeMenu.status === 'published' ? 'success' : 'warn';
+  let messages = null; // ленивая загрузка для вкладки «Чат»
 
   const stat = (label, value, meta, tone) => h('div', { class: 'client-stat' },
     h('div', { class: 'client-stat-label' }, label),
@@ -839,46 +845,159 @@ route('/client/:id', async (args) => {
     meta ? h('div', { class: 'client-stat-meta' }, meta) : null
   );
 
-  const menuList = h('div', { class: 'client-menu-list' });
-  if (!menus.length) {
-    menuList.appendChild(h('div', { class: 'client-empty' },
+  const body = h('div', { class: 'client-tab-body' });
+  const tabbar = h('div', { class: 'client-tabs' });
+  CLIENT_TABS.forEach(([key, label]) => {
+    const b = h('button', { class: key === clientTab ? 'active' : '', onclick: () => {
+      clientTab = key; tabbar.querySelectorAll('button').forEach(x => x.classList.remove('active')); b.classList.add('active'); renderTab();
+    } }, label, key === 'chat' && c.unread_messages ? h('span', { class: 'tab-badge' }, String(c.unread_messages)) : null);
+    tabbar.appendChild(b);
+  });
+
+  async function renderTab() {
+    body.innerHTML = '';
+    if (clientTab === 'overview') body.appendChild(tabOverview());
+    else if (clientTab === 'menu') body.appendChild(tabMenu());
+    else if (clientTab === 'progress') body.appendChild(tabProgress());
+    else if (clientTab === 'diary') body.appendChild(tabDiary());
+    else if (clientTab === 'notes') body.appendChild(tabNotes());
+    else if (clientTab === 'chat') { body.appendChild(h('div', { class: 'muted small', style: 'padding:16px' }, 'Загрузка…')); await tabChat(body); }
+  }
+
+  function tabOverview() {
+    const wrap = h('div', { class: 'client-grid' });
+    const timeline = h('div', { class: 'timeline' });
+    if (!activity.length) timeline.appendChild(h('div', { class: 'client-empty compact' }, h('div', { class: 'client-empty-icon' }, ic('clock')), h('span', {}, 'Пока нет активности')));
+    else activity.slice(0, 10).forEach(it => timeline.appendChild(activityRow(it)));
+    wrap.appendChild(h('div', { class: 'client-main-col' },
+      h('section', { class: 'card client-section' },
+        h('div', { class: 'section-head' }, h('div', {}, h('h3', {}, 'Последняя активность'), h('p', {}, 'Что происходило у клиента'))),
+        timeline)
+    ));
+    wrap.appendChild(h('div', { class: 'client-side-col' },
+      h('section', { class: 'card client-section overview-metrics' },
+        h('h3', {}, 'Показатели'),
+        h('div', { class: 'ring-wrap' }, complianceRing(c.compliance_pct), h('div', { class: 'ring-cap' }, 'Соблюдение меню')),
+        h('div', { class: 'ov-metrics' },
+          h('div', {}, h('span', {}, 'Текущий вес'), h('b', {}, latestWeight ? fmt(latestWeight.weight_kg) + ' кг' : '—')),
+          h('div', {}, h('span', {}, 'Изменение'), h('b', { class: weightDelta != null && weightDelta < 0 ? 'pos' : (weightDelta > 0 ? 'neg' : '') }, weightDelta != null ? (weightDelta > 0 ? '+' : '') + fmt(weightDelta) + ' кг' : '—')),
+          h('div', {}, h('span', {}, 'Норма'), h('b', {}, c.target_kcal ? fmt0(c.target_kcal) + ' ккал' : '—')))
+      ),
+      intakeCard(c)
+    ));
+    return wrap;
+  }
+
+  function tabMenu() {
+    const menuList = h('div', { class: 'client-menu-list' });
+    if (!menus.length) menuList.appendChild(h('div', { class: 'client-empty' },
       h('div', { class: 'client-empty-icon' }, ic('layers')),
       h('div', {}, h('b', {}, 'Меню ещё не создано'), h('span', {}, 'Соберите первый рацион на неделю')),
-      h('button', { class: 'btn small', onclick: () => createMenu(c.id) }, ic('plus','sm'), 'Создать меню')
-    ));
-  }
-  for (const m of menus) {
-    menuList.appendChild(h('div', { class: 'client-menu-row', onclick: () => location.hash = '#/menu/' + m.id },
-      h('div', { class: 'client-menu-icon' }, ic('layers','sm')),
+      h('button', { class: 'btn small', onclick: () => createMenu(c.id) }, ic('plus', 'sm'), 'Создать меню')));
+    for (const m of menus) menuList.appendChild(h('div', { class: 'client-menu-row', onclick: () => location.hash = '#/menu/' + m.id },
+      h('div', { class: 'client-menu-icon' }, ic('layers', 'sm')),
       h('div', { class: 'grow' },
         h('div', { class: 'client-menu-title' }, m.title || 'Меню на неделю'),
-        h('div', { class: 'client-menu-meta' },
-          h('span', { class: 'status-dot ' + m.status }),
-          m.status === 'published' ? 'Опубликовано' : 'Черновик',
-          ' · ' + m.days_count + ' дн. · с ' + fmtDate(m.start_date)
-        )
-      ),
-      h('span', { class: 'client-menu-arrow' }, ic('chevronRight','sm'))
-    ));
+        h('div', { class: 'client-menu-meta' }, h('span', { class: 'status-dot ' + m.status }),
+          m.status === 'published' ? 'Опубликовано' : 'Черновик', ' · ' + m.days_count + ' дн. · с ' + fmtDate(m.start_date))),
+      h('span', { class: 'client-menu-arrow' }, ic('chevronRight', 'sm'))));
+    const targets = h('div', { class: 'client-target-grid' }, ...[
+      ['Калории', c.target_kcal ? fmt0(c.target_kcal) + ' ккал' : '—'], ['Белки', c.target_protein ? fmt(c.target_protein) + ' г' : '—'],
+      ['Жиры', c.target_fat ? fmt(c.target_fat) + ' г' : '—'], ['Углеводы', c.target_carbs ? fmt(c.target_carbs) + ' г' : '—']
+    ].map(([l, v]) => h('div', { class: 'client-target' }, h('span', {}, l), h('b', {}, v))));
+    return h('div', {},
+      h('section', { class: 'card client-section' },
+        h('div', { class: 'section-head' }, h('div', {}, h('h3', {}, 'Меню'), h('p', {}, activeMenu ? 'Рацион клиента и его текущий статус' : 'У клиента пока нет активного меню')),
+          h('button', { class: 'btn secondary small', onclick: () => createMenu(c.id) }, ic('plus', 'sm'), 'Новое меню')),
+        menuList),
+      h('section', { class: 'card client-section' },
+        h('div', { class: 'section-head' }, h('div', {}, h('h3', {}, 'Цели по КБЖУ'), h('p', {}, 'Дневные ориентиры для составления меню')),
+          h('button', { class: 'btn ghost small', onclick: () => location.hash = '#/client/' + c.id + '/edit' }, 'Изменить')),
+        targets));
   }
 
-  const targetItems = [
-    ['Калории', c.target_kcal ? fmt0(c.target_kcal) + ' ккал' : '—'],
-    ['Белки', c.target_protein ? fmt(c.target_protein) + ' г' : '—'],
-    ['Жиры', c.target_fat ? fmt(c.target_fat) + ' г' : '—'],
-    ['Углеводы', c.target_carbs ? fmt(c.target_carbs) + ' г' : '—']
-  ];
+  function tabProgress() {
+    let period = 90;
+    const chartCard = h('section', { class: 'card client-section' });
+    const draw = () => {
+      const cut = Date.now() - period * 86400000;
+      const series = weights.filter(w => new Date(w.measured_on).getTime() >= cut);
+      const use = series.length >= 2 ? series : weights;
+      const first = use.length ? Number(use[0].weight_kg) : null;
+      const last = use.length ? Number(use[use.length - 1].weight_kg) : null;
+      const delta = first != null && last != null ? last - first : null;
+      chartCard.innerHTML = '';
+      const seg = h('div', { class: 'chip-row filter-chips' });
+      [[7, '7 дней'], [30, '30 дней'], [90, '90 дней']].forEach(([d, l]) => {
+        const b = h('button', { class: d === period ? 'active' : '', onclick: () => { period = d; draw(); } }, l);
+        seg.appendChild(b);
+      });
+      chartCard.appendChild(h('div', { class: 'section-head' }, h('div', {}, h('h3', {}, 'Динамика веса'), h('p', {}, use.length ? 'За выбранный период' : 'Недостаточно замеров')), seg));
+      chartCard.appendChild(h('div', { class: 'progress-stats' },
+        h('div', {}, h('span', {}, 'Текущий'), h('b', {}, last != null ? fmt(last) + ' кг' : '—')),
+        h('div', {}, h('span', {}, 'Изменение'), h('b', { class: delta != null && delta < 0 ? 'pos' : (delta > 0 ? 'neg' : '') }, delta != null ? (delta > 0 ? '+' : '') + fmt(delta) + ' кг' : '—')),
+        h('div', {}, h('span', {}, 'Соблюдение'), h('b', {}, c.compliance_pct != null ? c.compliance_pct + '%' : '—'))));
+      chartCard.appendChild(weightChart(use));
+    };
+    draw();
+    return h('div', {}, chartCard, weights.length ? weightTable(weights) : null);
+  }
 
-  const targets = h('div', { class: 'client-target-grid' }, ...targetItems.map(([label, value]) =>
-    h('div', { class: 'client-target' }, h('span', {}, label), h('b', {}, value))));
+  function tabDiary() {
+    const meals = activity.filter(it => it.type && it.type.startsWith('meal_'));
+    if (!meals.length) return h('section', { class: 'card client-section' },
+      h('div', { class: 'section-head' }, h('div', {}, h('h3', {}, 'Дневник питания'))),
+      h('div', { class: 'client-empty compact' }, h('div', { class: 'client-empty-icon' }, ic('utensils')), h('span', {}, 'Клиент ещё не отмечал приёмы пищи')));
+    const list = h('div', { class: 'timeline' });
+    meals.forEach(it => list.appendChild(activityRow(it)));
+    return h('section', { class: 'card client-section' },
+      h('div', { class: 'section-head' }, h('div', {}, h('h3', {}, 'Дневник питания'), h('p', {}, 'Что клиент отметил как съеденное или пропущенное'))),
+      list);
+  }
 
-  const intake = intakeCard(c);
-  intake.classList.add('client-intake-card');
+  async function tabChat(container) {
+    try { const r = await GET('/clients/' + c.id + '/messages'); messages = r.items || []; c.unread_messages = 0; tabbar.querySelector('.tab-badge')?.remove(); }
+    catch (e) { messages = []; }
+    container.innerHTML = '';
+    const card = h('section', { class: 'card client-section chat-card' });
+    const thread = h('div', { class: 'chat-thread inline' });
+    const paint = () => {
+      thread.innerHTML = '';
+      if (!messages.length) thread.appendChild(h('div', { class: 'client-empty compact' }, h('div', { class: 'client-empty-icon' }, ic('chat')), h('span', {}, 'Сообщений пока нет')));
+      messages.forEach(m => thread.appendChild(h('div', { class: 'bubble ' + (m.author_type === 'specialist' ? 'me' : 'them') },
+        m.body, h('span', { class: 'time' }, new Date(m.created_at).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })))));
+    };
+    paint();
+    const input = h('input', { placeholder: 'Сообщение клиенту…' });
+    const send = async () => {
+      const bodyText = input.value.trim(); if (!bodyText) return; input.value = '';
+      try { await POST('/clients/' + c.id + '/messages', { body: bodyText }); const r = await GET('/clients/' + c.id + '/messages'); messages = r.items || []; paint(); thread.scrollTop = thread.scrollHeight; }
+      catch (e) { toast(e.message, true); }
+    };
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+    card.appendChild(thread);
+    card.appendChild(h('div', { class: 'chat-inline-bar' }, input, h('button', { class: 'btn', 'aria-label': 'Отправить', onclick: send }, ic('send', 'sm'))));
+    container.appendChild(card);
+    thread.scrollTop = thread.scrollHeight;
+  }
+
+  function tabNotes() {
+    const ta = h('textarea', { class: 'notes-area', placeholder: 'Заметки специалиста о клиенте…' }, c.notes || '');
+    const saveBtn = h('button', { class: 'btn small', onclick: async () => {
+      try { await PATCH('/clients/' + c.id, { notes: ta.value }); c.notes = ta.value; toast('Заметки сохранены'); }
+      catch (e) { toast(e.message, true); }
+    } }, ic('check', 'sm'), 'Сохранить заметки');
+    return h('div', {},
+      h('section', { class: 'card client-section' },
+        h('div', { class: 'section-head' }, h('div', {}, h('h3', {}, 'Заметки'), h('p', {}, 'Личные пометки — клиент их не видит'))),
+        ta, h('div', { style: 'margin-top:10px' }, saveBtn)),
+      intakeCard(c));
+  }
 
   const actions = h('div', { class: 'client-actions' },
-    h('button', { class: 'btn', onclick: () => activeMenu ? location.hash = '#/menu/' + activeMenu.id : createMenu(c.id) }, ic('layers','sm'), activeMenu ? 'Открыть меню' : 'Собрать меню'),
-    h('button', { class: 'btn secondary', onclick: () => location.hash = '#/chat/' + c.id }, ic('chat','sm'), 'Написать'),
-    h('button', { class: 'btn secondary', onclick: () => location.hash = '#/weight/' + c.id }, ic('scale','sm'), 'История веса')
+    h('button', { class: 'btn', onclick: () => activeMenu ? location.hash = '#/menu/' + activeMenu.id : createMenu(c.id) }, ic('layers', 'sm'), activeMenu ? 'Открыть меню' : 'Собрать меню'),
+    h('button', { class: 'btn secondary', onclick: () => { clientTab = 'chat'; location.hash = '#/client/' + c.id; renderTab(); tabbar.querySelectorAll('button').forEach((x, i) => x.classList.toggle('active', CLIENT_TABS[i][0] === 'chat')); } }, ic('chat', 'sm'), 'Написать'),
+    h('button', { class: 'btn secondary', onclick: () => addWeightForClient(c.id, () => location.hash = '#/client/' + c.id) }, ic('scale', 'sm'), 'Добавить вес')
   );
 
   const content = h('div', { class: 'content client-page' },
@@ -891,63 +1010,63 @@ route('/client/:id', async (args) => {
           h('div', { class: 'client-goal' }, c.goal || 'Цель не указана'),
           h('div', { class: 'client-status-line' },
             h('span', { class: 'status-pill ' + menuLabelClass }, menuLabel),
-            c.intake_completed ? h('span', { class: 'status-pill neutral' }, ic('check','sm'), 'Анкета заполнена') : h('span', { class: 'status-pill warn' }, 'Анкета не заполнена')
+            c.intake_completed ? h('span', { class: 'status-pill neutral' }, ic('check', 'sm'), 'Анкета заполнена') : h('span', { class: 'status-pill warn' }, 'Анкета не заполнена')
           )
         )
       ),
       h('div', { class: 'client-hero-actions' },
-        h('button', { class: 'icon-btn', title: 'Изменить', onclick: () => location.hash = '#/client/' + c.id + '/edit' }, ic('edit','sm')),
-        h('button', { class: 'icon-btn', title: 'Действия', onclick: () => shareInvite(c.id) }, ic('link','sm'))
+        h('button', { class: 'icon-btn', title: 'Изменить', onclick: () => location.hash = '#/client/' + c.id + '/edit' }, ic('edit', 'sm')),
+        h('button', { class: 'icon-btn', title: 'Ссылка-приглашение', onclick: () => shareInvite(c.id) }, ic('link', 'sm'))
       )
     ),
-
     h('div', { class: 'client-stats' },
       stat('Вес', latestWeight ? fmt(latestWeight.weight_kg) + ' кг' : (c.weight_kg ? fmt(c.weight_kg) + ' кг' : '—'), latestWeight ? 'последний замер' : 'нет замеров'),
       stat('Цель', c.target_kcal ? fmt0(c.target_kcal) + ' ккал' : 'Не задана', c.target_kcal ? 'дневная норма' : 'укажите в профиле'),
-      stat('Меню', activeMenu ? activeMenu.days_count + ' дней' : 'Нет', activeMenu ? (activeMenu.status === 'published' ? 'опубликовано' : 'черновик') : 'требует действия'),
-      stat('Изменение веса', weightDelta !== null ? (weightDelta > 0 ? '+' : '') + fmt(weightDelta) + ' кг' : '—', previousWeight ? 'с последнего замера' : 'нужно 2 замера', weightDelta !== null && weightDelta < 0 ? 'positive' : '')
+      stat('Соблюдение', c.compliance_pct != null ? c.compliance_pct + '%' : '—', activeMenu ? 'по активному меню' : 'нет меню'),
+      stat('Изменение веса', weightDelta != null ? (weightDelta > 0 ? '+' : '') + fmt(weightDelta) + ' кг' : '—', weightDelta != null ? 'с последнего замера' : 'нужно 2 замера', weightDelta != null && weightDelta < 0 ? 'positive' : '')
     ),
-
     actions,
-
-    h('div', { class: 'client-grid' },
-      h('div', { class: 'client-main-col' },
-        h('section', { class: 'card client-section' },
-          h('div', { class: 'section-head' },
-            h('div', {}, h('h3', {}, 'Меню'), h('p', {}, activeMenu ? 'Рацион клиента и его текущий статус' : 'У клиента пока нет активного меню')),
-            h('button', { class: 'btn secondary small', onclick: () => createMenu(c.id) }, ic('plus','sm'), 'Новое меню')
-          ),
-          menuList
-        ),
-        h('section', { class: 'card client-section' },
-          h('div', { class: 'section-head' },
-            h('div', {}, h('h3', {}, 'Цели по КБЖУ'), h('p', {}, 'Дневные ориентиры для составления меню')),
-            h('button', { class: 'btn ghost small', onclick: () => location.hash = '#/client/' + c.id + '/edit' }, 'Изменить')
-          ),
-          targets
-        )
-      ),
-      h('div', { class: 'client-side-col' },
-        intake,
-        h('section', { class: 'card client-section client-weight-preview' },
-          h('div', { class: 'section-head' },
-            h('div', {}, h('h3', {}, 'Вес'), h('p', {}, latestWeight ? 'Последние измерения клиента' : 'Пока нет истории веса')),
-            h('button', { class: 'btn ghost small', onclick: () => location.hash = '#/weight/' + c.id }, 'Открыть')
-          ),
-          latestWeight ? h('div', { class: 'weight-highlight' }, h('b', {}, fmt(latestWeight.weight_kg) + ' кг'), h('span', {}, latestWeight.measured_on || 'Последний замер')) :
-            h('div', { class: 'client-empty compact' }, h('div', { class: 'client-empty-icon' }, ic('scale')), h('span', {}, 'Добавьте первый замер веса'))
-        )
-      )
-    ),
-
+    tabbar,
+    body,
     h('div', { class: 'client-footer-actions' },
-      h('button', { class: 'btn ghost', onclick: () => shareInvite(c.id) }, ic('link','sm'), 'Ссылка-приглашение'),
-      h('button', { class: 'btn ghost danger-text', onclick: () => archiveClient(c.id) }, ic('trash','sm'), 'В архив')
+      h('button', { class: 'btn ghost', onclick: () => shareInvite(c.id) }, ic('link', 'sm'), 'Ссылка-приглашение'),
+      h('button', { class: 'btn ghost danger-text', onclick: () => archiveClient(c.id) }, ic('trash', 'sm'), 'В архив')
     )
   );
 
   render(shell('clients', content, { topbar: c.name, back: () => location.hash = '#/clients' }));
+  renderTab();
 });
+
+/* Иконка и текст строки активности клиента. */
+function activityRow(it) {
+  const t = it.type;
+  let icon = 'clock', text = '', cls = '';
+  if (t === 'meal_eaten') { icon = 'utensils'; cls = 'ok'; text = 'Съедено: ' + (it.dish || 'блюдо') + (it.meal_type ? ' · ' + (MEAL_LABELS[it.meal_type] || '') : ''); }
+  else if (t === 'meal_skipped') { icon = 'x'; cls = 'warn'; text = 'Пропущено: ' + (it.dish || 'блюдо'); }
+  else if (t === 'meal_replaced') { icon = 'copy'; text = 'Замена: ' + (it.dish || 'блюдо'); }
+  else if (t === 'weight') { icon = 'scale'; text = 'Внесён вес: ' + fmt(it.weight_kg) + ' кг'; }
+  else if (t === 'message') { icon = 'chat'; text = (it.author === 'client' ? 'Сообщение от клиента: ' : 'Ваше сообщение: ') + (it.body || '').slice(0, 80); }
+  else if (t === 'menu_published') { icon = 'layers'; cls = 'ok'; text = 'Опубликовано меню' + (it.title ? ': ' + it.title : ''); }
+  return h('div', { class: 'timeline-row' },
+    h('div', { class: 'timeline-ic ' + cls }, ic(icon, 'sm')),
+    h('div', { class: 'grow' }, h('div', { class: 'timeline-text' }, text), h('div', { class: 'timeline-time' }, timeAgo(it.at))));
+}
+
+/* Специалист вносит замер веса клиента. */
+function addWeightForClient(clientId, onDone) {
+  sheet('Замер веса клиента', (panel, close) => {
+    const w = h('input', { type: 'number', step: '0.1', placeholder: 'Вес, кг' });
+    const d = h('input', { type: 'date', value: new Date().toISOString().slice(0, 10) });
+    panel.appendChild(h('label', {}, 'Вес, кг')); panel.appendChild(w);
+    panel.appendChild(h('label', {}, 'Дата')); panel.appendChild(d);
+    panel.appendChild(h('button', { class: 'btn', style: 'margin-top:12px', onclick: async () => {
+      if (!w.value) return;
+      try { await POST('/clients/' + clientId + '/weight', { weight_kg: parseFloat(w.value), measured_on: d.value }); close(); toast('Записано'); onDone && onDone(); router(); }
+      catch (e) { toast(e.message, true); }
+    } }, 'Сохранить'));
+  });
+}
 
 /* Карточка «Анкета клиента» на странице специалиста. */
 const MEDICAL_LABELS = { pregnancy: 'Беременность / ГВ', diabetes: 'Диабет', gi: 'Заболевания ЖКТ', eating_disorder: 'РПП' };
