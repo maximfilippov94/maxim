@@ -50,14 +50,16 @@ $GLOBALS['config'] = $config;
 
 $path = rtrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/', '/');
 
+// --- Публичная главная (лендинг) на корне — для всех SAPI ---
+if ($path === '' || $path === '/') {
+    header('Content-Type: text/html; charset=utf-8');
+    readfile(__DIR__ . '/landing.html');
+    exit;
+}
+
 // --- Обслуживание статики / фронта во встроенном сервере ---
 if (PHP_SAPI === 'cli-server') {
-    // Корень -> приложение.
-    if ($path === '' || $path === '/') {
-        header('Location: /app/');
-        exit;
-    }
-    // Реальные файлы (фронт, иконки) отдаёт сам сервер.
+    // Реальные файлы (лендинг, фронт, иконки) отдаёт сам сервер.
     $file = __DIR__ . $path;
     if ($path !== '' && !str_starts_with($path, '/api') && is_file($file)) {
         return false;
