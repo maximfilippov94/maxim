@@ -156,8 +156,23 @@ function sheet(title, contentBuilder) {
   return close;
 }
 
-/* Общий каркас: контент + нижняя навигация по роли. */
+/* Пункты навигации по роли — общие для нижней панели и sidebar. */
+function navItems() {
+  return State.role === 'specialist'
+    ? [['clients', 'users', 'Клиенты', '#/clients'],
+       ['base', 'book', 'База блюд', '#/base'],
+       ['profile', 'user', 'Профиль', '#/profile']]
+    : [['today', 'utensils', 'Сегодня', '#/today'],
+       ['week', 'calendar', 'Неделя', '#/week'],
+       ['progress', 'trending', 'Прогресс', '#/progress'],
+       ['chat', 'chat', 'Чат', '#/client-chat']];
+}
+
+/* Общий каркас: sidebar (десктоп) + экран с контентом и нижней навигацией (моб.). */
 function shell(active, contentNode, opts = {}) {
+  const layout = h('div', { class: 'layout' });
+  layout.appendChild(sidebar(active));
+
   const wrap = h('div', { class: 'screen' });
   if (opts.topbar) {
     const bar = h('div', { class: 'topbar' });
@@ -168,7 +183,8 @@ function shell(active, contentNode, opts = {}) {
   }
   wrap.appendChild(contentNode);
   wrap.appendChild(bottomNav(active));
-  return wrap;
+  layout.appendChild(wrap);
+  return layout;
 }
 
 function navButton(active, key, icon, label, hash, badge) {
@@ -180,18 +196,32 @@ function navButton(active, key, icon, label, hash, badge) {
 
 function bottomNav(active) {
   const nav = h('div', { class: 'bottom-nav' });
-  if (State.role === 'specialist') {
-    nav.appendChild(navButton(active, 'clients', 'users', 'Клиенты', '#/clients'));
-    nav.appendChild(navButton(active, 'base', 'book', 'База блюд', '#/base'));
-    nav.appendChild(navButton(active, 'profile', 'user', 'Профиль', '#/profile'));
-  } else {
-    nav.appendChild(navButton(active, 'today', 'utensils', 'Сегодня', '#/today'));
-    nav.appendChild(navButton(active, 'week', 'calendar', 'Неделя', '#/week'));
-    nav.appendChild(navButton(active, 'progress', 'trending', 'Прогресс', '#/progress'));
-    nav.appendChild(navButton(active, 'chat', 'chat', 'Чат', '#/client-chat'));
-  }
+  for (const [key, icon, label, hash] of navItems()) nav.appendChild(navButton(active, key, icon, label, hash));
   return nav;
 }
+
+/* Левый sidebar для десктопа (скрыт на мобильном через CSS). */
+function sidebar(active) {
+  const aside = h('aside', { class: 'sidebar' });
+  aside.appendChild(h('div', { class: 'brand', onclick: () => location.hash = defaultRoute(), style: 'cursor:pointer' },
+    h('span', { class: 'mark' }, ic('leaf')), h('span', { class: 'name' }, 'NutriMenu')));
+  const nav = h('nav', { class: 'nav' });
+  for (const [key, icon, label, hash] of navItems()) nav.appendChild(navButton(active, key, icon, label, hash));
+  aside.appendChild(nav);
+
+  const u = State.user || {};
+  const foot = h('div', { class: 'foot' });
+  const ava = h('div', { class: 'avatar' });
+  if (u.photo_url) { ava.style.backgroundImage = `url(${u.photo_url})`; ava.style.backgroundSize = 'cover'; ava.textContent = ''; }
+  else ava.textContent = initials(u.name || '?');
+  foot.appendChild(h('div', { class: 'who' }, ava,
+    h('div', { style: 'min-width:0' }, h('div', { class: 'nm' }, u.name || (State.role === 'client' ? 'Клиент' : 'Специалист')),
+      h('div', { class: 'sub' }, State.role === 'specialist' ? (u.plan === 'trial' ? 'Пробный период' : 'Тариф ' + (u.plan || '')) : 'Клиент'))));
+  aside.appendChild(foot);
+  return aside;
+}
+
+const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
 
 function loading() { render(h('div', { class: 'boot' }, h('div', { class: 'spinner' }))); }
 
@@ -235,6 +265,14 @@ function defaultRoute() {
 }
 
 window.addEventListener('hashchange', router);
+
+// Перерисовка при пересечении десктоп/мобайл границы (адаптивная раскладка).
+let _wasDesktop = null;
+window.addEventListener('resize', () => {
+  const now = isDesktop();
+  if (_wasDesktop === null) { _wasDesktop = now; return; }
+  if (now !== _wasDesktop) { _wasDesktop = now; router(); }
+});
 
 /* ==========================================================================
    АУТЕНТИФИКАЦИЯ
@@ -461,7 +499,7 @@ route('/clients', async () => {
   skeletonList('clients', 'Клиенты');
   const { items } = await GET('/clients');
   const active = items.filter(x => x.status !== 'archived');
-  const list = h('div', { class: 'content stagger' });
+  const list = h('div', { class: 'content stagger grid-cards' });
   if (!active.length) {
     list.appendChild(h('div', { class: 'empty' }, ic('users'), h('div', {}, 'Пока нет клиентов'), h('div', { class: 'small' }, 'Нажмите +, чтобы добавить первого')));
   }
@@ -671,6 +709,7 @@ async function createMenu(clientId) {
    СПЕЦИАЛИСТ: КОНСТРУКТОР МЕНЮ  (ЯДРО ПРОДУКТА)
    ========================================================================== */
 let currentDay = 1;
+let activeMeal = 'breakfast';
 
 route('/menu/:id', async (args) => {
   if (!requireRole('specialist')) return;
@@ -700,23 +739,97 @@ async function renderMenu(menuId) {
   // Липкая плашка итогов дня
   container.appendChild(dayTotalsBar(day, data.targets));
 
+  // Двухпанельная раскладка: слева канвас меню, справа база блюд (десктоп).
+  const desktop = isDesktop();
+  const wrap = h('div', { class: 'builder-wrap' });
+  const main = h('div', { class: 'builder-main' });
+
   // Приёмы пищи
-  const body = h('div', { class: 'content' });
+  const groupsByMeal = {};
   for (const mt of MEAL_ORDER) {
     const meals = day.meals.filter(m => m.meal_type === mt);
-    const group = h('div', { class: 'meal-group' },
-      h('h4', {}, MEAL_LABELS[mt], h('button', { class: 'add-inline', 'aria-label': 'Добавить блюдо', onclick: () => openDishPicker(menuId, mt) }, ic('plus'))));
+    const addBtn = h('button', { class: 'add-inline', 'aria-label': 'Добавить блюдо',
+      onclick: () => desktop ? setActiveMeal(mt) : openDishPicker(menuId, mt) }, ic('plus'));
+    const group = h('div', { class: 'meal-group', 'data-meal': mt },
+      h('h4', {}, MEAL_LABELS[mt], addBtn));
     if (!meals.length) {
-      group.appendChild(h('div', { class: 'meal-empty' }, 'Пусто — нажмите + чтобы добавить блюдо'));
+      group.appendChild(h('div', { class: 'meal-empty', onclick: () => desktop ? setActiveMeal(mt) : openDishPicker(menuId, mt) }, 'Пусто — нажмите + чтобы добавить блюдо'));
     }
-    for (const m of meals) {
-      group.appendChild(mealCard(menuId, m));
-    }
-    body.appendChild(group);
+    for (const m of meals) group.appendChild(mealCard(menuId, m));
+    groupsByMeal[mt] = { group, addBtn };
+    main.appendChild(group);
   }
-  container.appendChild(body);
+  wrap.appendChild(main);
+
+  // Правая панель — база блюд (только десктоп)
+  let dbApi = null;
+  if (desktop) {
+    const rail = buildFoodRail(menuId);
+    dbApi = rail.api;
+    wrap.appendChild(rail.el);
+  }
+  container.appendChild(wrap);
+
+  // Подсветка активного приёма пищи + синхронизация панели.
+  function setActiveMeal(mt) {
+    activeMeal = mt;
+    for (const key of MEAL_ORDER) {
+      groupsByMeal[key].group.classList.toggle('active-target', key === mt);
+      groupsByMeal[key].addBtn.classList.toggle('on', key === mt);
+    }
+    if (dbApi) dbApi.setTarget(mt);
+  }
 
   render(shell('clients', container, { topbar: menu.title || 'Меню', back: () => location.hash = '#/client/' + menu.client_id, action }));
+  if (desktop) setActiveMeal(MEAL_ORDER.includes(activeMeal) ? activeMeal : 'breakfast');
+}
+
+/* Добавить блюдо в приём пищи текущего дня и перерисовать. */
+async function addDishToMeal(menuId, mealType, dishId) {
+  try {
+    await POST('/menus/' + menuId + '/items', { day_number: currentDay, meal_type: mealType, dish_id: dishId });
+    toast('Добавлено'); renderMenu(menuId);
+  } catch (e) { toast(e.message, true); }
+}
+
+/* Правая панель «База блюд» для десктопного конструктора. */
+function buildFoodRail(menuId) {
+  const el = h('div', { class: 'builder-db' });
+  const target = h('div', { class: 'db-target' });
+  const head = h('div', { class: 'db-head' },
+    h('h3', {}, 'База блюд'), target);
+  const search = h('input', { placeholder: 'Поиск блюда…' });
+  head.appendChild(h('div', { class: 'search-field', style: 'margin-top:8px' }, ic('search'), search));
+  const body = h('div', { class: 'db-body' });
+  el.appendChild(head); el.appendChild(body);
+
+  const load = async () => {
+    body.innerHTML = '<div class="muted small">Загрузка…</div>';
+    const q = new URLSearchParams();
+    if (search.value.trim()) q.set('q', search.value.trim());
+    if (activeMeal) q.set('meal_type', activeMeal);
+    let data;
+    try { data = await GET('/dishes?' + q.toString()); } catch (e) { body.innerHTML = ''; body.appendChild(h('div', { class: 'muted small' }, e.message)); return; }
+    body.innerHTML = '';
+    if (!data.items.length) { body.appendChild(h('div', { class: 'empty' }, ic('search'), h('div', {}, 'Не найдено'))); return; }
+    for (const d of data.items) {
+      const thumb = h('div', { class: 'thumb' });
+      if (d.photo_url) thumb.style.backgroundImage = `url(${d.photo_url})`;
+      body.appendChild(h('div', { class: 'db-food' }, thumb,
+        h('div', { class: 'grow' }, h('h4', {}, d.name),
+          h('div', { class: 'sub' }, `${fmt0(d.kcal_100 || 0)} ккал/100г · порция ${fmt0(d.base_portion_g || 0)} г`)),
+        h('button', { class: 'addb', 'aria-label': 'Добавить', onclick: () => addDishToMeal(menuId, activeMeal, d.id) }, ic('plus'))));
+    }
+  };
+  let timer;
+  search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(load, 250); });
+
+  return {
+    el,
+    api: {
+      setTarget(mt) { target.innerHTML = ''; target.append('Добавить в: ', h('b', {}, MEAL_LABELS[mt])); load(); }
+    }
+  };
 }
 
 function dayTotalsBar(day, targets) {
@@ -1025,7 +1138,7 @@ route('/base', async () => {
   const content = h('div', { class: 'content' });
   const search = h('input', { placeholder: 'Поиск блюда…' });
   const chips = h('div', { class: 'chip-row' });
-  const results = h('div', {});
+  const results = h('div', { class: 'grid-cards' });
   let mealFilter = '';
 
   const load = async () => {
@@ -1390,7 +1503,7 @@ route('/catalog', async () => {
   loading();
   const content = h('div', { class: 'content' });
   const search = h('input', { placeholder: 'Имя или специализация…' });
-  const results = h('div', { class: 'stagger' });
+  const results = h('div', { class: 'stagger catalog-grid' });
 
   const load = async () => {
     results.innerHTML = '';
