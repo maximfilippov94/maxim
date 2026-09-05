@@ -7,9 +7,9 @@ import { Icon } from './Icon';
 import { haptic } from '../haptics';
 
 /** Компактная шапка: заголовок по центру, «назад» слева — как в системе.
- *  Крупный заголовок оставлен экранам-витринам («Сегодня»), а разделам
- *  он съедает экран, ради которого их и открывают. */
-export function NavBar({ title, back }: { title: string; back?: boolean }) {
+ *  Без заголовка остаётся только строка возврата: она нужна экранам
+ *  с крупным заголовком под ней, по образцу «Сегодня». */
+export function NavBar({ title, back }: { title?: string; back?: boolean }) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
   return (
@@ -17,7 +17,7 @@ export function NavBar({ title, back }: { title: string; back?: boolean }) {
       <View style={{ height: 44, justifyContent: 'center' }}>
         <Text style={{
           fontSize: 17, fontWeight: '600', color: p.text, textAlign: 'center',
-        }}>{title}</Text>
+        }}>{title ?? ''}</Text>
         {back ? (
           <Pressable
             onPress={() => { haptic.tap(); router.back(); }}

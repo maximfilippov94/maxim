@@ -7,6 +7,7 @@ import { api, WaterResponse } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListHead, ListRow } from '../ui/List';
+import { Label } from '../ui/base';
 import { Silhouette } from '../ui/Silhouette';
 import { haptic } from '../haptics';
 import { hasExpoUI } from '../native';
@@ -143,12 +144,23 @@ export default function Water() {
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title="Вода" back />
-      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+      {/* Возврат отдельной строкой, а заголовок крупный и слева — так же,
+          как на «Сегодня» и остальных экранах кабинета. */}
+      <NavBar back />
+      <ScrollView
+        /* Растягиваем содержимое на всю высоту: иначе при короткой
+           истории фигура жмётся кверху, а внизу остаётся пустота. */
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 24 }}
         showsVerticalScrollIndicator={false}>
 
+        <View style={{ paddingHorizontal: S.lg }}>
+          <Label>Питьевой режим</Label>
+          <Text style={{ ...FONT.h1, color: p.text, marginTop: S.xs }}>Вода</Text>
+        </View>
+
         <Animated.View entering={FadeInDown.duration(240)}
-          style={{ alignItems: 'center', paddingTop: S.lg, paddingBottom: S.xl }}>
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center',
+            paddingTop: S.lg, paddingBottom: S.lg }}>
           {/* Пустая часть — та же вода, но бледная: на вашем рисунке это
               светло-голубой, и фигура читается даже при нулевом уровне.
               Цвет поверхности здесь не годится — он сливается с фоном. */}
