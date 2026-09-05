@@ -18,7 +18,18 @@ import { haptic } from '../../src/haptics';
 export default function ClientTabs() {
   const { p } = useApp();
   return (
-    <NativeTabs tintColor={p.primary}>
+    /* Материал и цвета задаём явно. Панель системная, а переключатель
+       темы наш: UIKit о нём не знает и берёт оформление у телефона —
+       оттого на светлой теме панель выходила серой, если система была
+       в тёмном режиме. */
+    <NativeTabs
+      tintColor={p.primary}
+      blurEffect={p.name === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
+      iconColor={{ default: p.text2, selected: p.primary }}
+      labelStyle={{
+        default: { color: p.text2 },
+        selected: { color: p.primary },
+      }}>
       {/* Системная полка над панелью — место для быстрого действия.
           Раньше «+» была отдельной плавающей кнопкой рядом. */}
       <NativeTabs.BottomAccessory>
