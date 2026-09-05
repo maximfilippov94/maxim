@@ -2,4 +2,5 @@
 .claude/worktrees/
 
 # служебные снимки экрана от проверок
-nt_*.png
+*.png
+!site/**/*.png

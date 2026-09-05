@@ -3,6 +3,7 @@ import { View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator } 
 import { Image } from 'expo-image';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { useApp } from '../store';
 import { api, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from '../api';
 import { S, R, FONT } from '../theme';
@@ -172,6 +173,37 @@ export default function Today() {
             <Bar value={items.length ? doneCount / items.length : 0} height={4} />
           </View>
         </Card>
+      </Animated.View>
+
+      {/* Вода — коротко: сколько выпито из нормы. Подробности и силуэт
+          на отдельном экране, здесь важен только сам факт. */}
+      <Animated.View entering={FadeInDown.delay(140).duration(280)}>
+        <Pressable onPress={() => { haptic.tap(); router.push('/water'); }}
+          style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1, marginBottom: S.md })}>
+          <Card>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+              <View style={{ flex: 1 }}>
+                <Label>Вода</Label>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
+                  <Text style={{ fontSize: 22, fontWeight: '700', color: p.text }}>
+                    {data?.water?.ml ?? 0}
+                  </Text>
+                  <Muted style={{ marginLeft: 4 }}>
+                    из {data?.water?.goal_ml ?? 2000} мл
+                  </Muted>
+                </View>
+              </View>
+              <Icon name="chevr" size={15} color={p.text3} width={2} />
+            </View>
+            <View style={{ marginTop: 9 }}>
+              <Bar
+                value={data?.water?.goal_ml ? (data.water.ml / data.water.goal_ml) : 0}
+                color={p.mc}
+                height={4}
+              />
+            </View>
+          </Card>
+        </Pressable>
       </Animated.View>
 
       {/* Приёмы пищи */}

@@ -15,6 +15,30 @@ import { haptic } from '../../src/haptics';
  * Плата за это — перелистывание страниц пальцем. У системной панели его
  * нет: у Apple и в Телеграме вкладки тоже переключаются только нажатием.
  */
+/**
+ * Быстрые действия — системное меню, а не своя всплывашка: раскрытие,
+ * стекло и отклик на нажатие делает сама система. Состав повторяет
+ * быстрые действия из веба, ничего нового здесь не заводится.
+ */
+function QuickAdd() {
+  const { p } = useApp();
+  const { Host, Menu, Button, Image, Text: SwiftText } = require('@expo/ui/swift-ui');
+  const go = (to: '/weight' | '/water') => { haptic.tap(); router.push(to); };
+  return (
+    <Host style={{ height: 52 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}>
+      <Menu>
+        <Button systemImage="plus.circle.fill" label="Записать" />
+        <Button systemImage="scalemass" onPress={() => go('/weight')}>
+          <SwiftText>Вес</SwiftText>
+        </Button>
+        <Button systemImage="drop.fill" onPress={() => go('/water')}>
+          <SwiftText>Воду</SwiftText>
+        </Button>
+      </Menu>
+    </Host>
+  );
+}
+
 export default function ClientTabs() {
   const { p } = useApp();
   return (
@@ -33,18 +57,7 @@ export default function ClientTabs() {
       {/* Системная полка над панелью — место для быстрого действия.
           Раньше «+» была отдельной плавающей кнопкой рядом. */}
       <NativeTabs.BottomAccessory>
-        <Pressable
-          onPress={() => { haptic.tap(); router.push('/weight'); }}
-          style={({ pressed }) => ({
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-            gap: 8, paddingVertical: 12, paddingHorizontal: 18,
-            opacity: pressed ? 0.6 : 1,
-          })}>
-          <Icon name="plus" size={19} color={p.primary} width={2.2} />
-          <Text style={{ fontSize: 15, fontWeight: '600', color: p.primary }}>
-            Записать вес
-          </Text>
-        </Pressable>
+        <QuickAdd />
       </NativeTabs.BottomAccessory>
 
       <NativeTabs.Trigger name="index">

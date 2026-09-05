@@ -84,6 +84,7 @@ export interface TodayResponse {
   items: MealItem[];
   totals: Totals;
   weight?: { last: number; delta: number } | null;
+  water?: { ml: number; goal_ml: number } | null;
 }
 export interface Me {
   user: {
@@ -91,6 +92,7 @@ export interface Me {
     specialist_id?: number | null;
     target_kcal?: number; target_protein?: number; target_fat?: number; target_carbs?: number;
     weight_kg?: number; goal?: string; avatar_url?: string | null;
+    sex?: string | null; water_goal_ml?: number | null;
   };
   user_type: 'client' | 'specialist' | 'admin';
 }
@@ -137,4 +139,13 @@ export interface ServicesResponse {
   services: Service[];
   payments_enabled: boolean;
   note?: string | null;
+}
+
+/* ---------- Питьевой режим ---------- */
+
+export interface WaterDay { logged_on: string; ml: number }
+export interface WaterResponse {
+  goal_ml: number;
+  today_ml: number;
+  history: WaterDay[];
 }

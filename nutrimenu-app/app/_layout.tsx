@@ -24,6 +24,7 @@ function Root() {
         <Stack.Screen name="progress" />
         <Stack.Screen name="shopping" />
         <Stack.Screen name="services" />
+        <Stack.Screen name="water" />
         {/* Системная шторка iOS с фиксаторами высоты: тянется пальцем,
             фон остаётся видимым — привычное поведение, а не своё окно. */}
         <Stack.Screen
