@@ -37,7 +37,7 @@ export default function Water() {
 
   useEffect(() => {
     api<WaterResponse>('/client/water')
-      .then(r => { setD(r); fill.value = withSpring(r.goal_ml ? r.today_ml / r.goal_ml : 0, { damping: 18 }); })
+      .then(r => { setD({ ...r, history: r.history ?? [] }); fill.value = withSpring(r.goal_ml ? r.today_ml / r.goal_ml : 0, { damping: 18 }); })
       /* 404 здесь означает не «нет данных», а «на сервере ещё нет этого
          раздела»: приложение обновляется само, сервер — руками. */
       .catch(e => setErr(e.status === 404

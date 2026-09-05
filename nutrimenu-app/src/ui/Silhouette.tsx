@@ -44,16 +44,18 @@ export function Silhouette({ fill, sex, water, line, size = 260 }: {
   const phase = useDerivedValue(() =>
     withRepeat(withTiming(1, { duration: 2800, easing: Easing.linear }), -1, false), []);
 
-  const clamp = (v: number) => Math.max(0, Math.min(1, v));
-
+  /* Ограничение считаем на месте, а не отдельной функцией: код анимации
+     исполняется на своём потоке, и обычную функцию оттуда не вызвать —
+     приложение падает. В браузере этого потока нет, поэтому там такая
+     ошибка не проявляется вовсе. */
   const level = useAnimatedProps(() => {
-    const top = BOT - clamp(fill.value) * BODY_H;
+    const top = BOT - Math.max(0, Math.min(1, fill.value)) * BODY_H;
     return { y: top, height: Math.max(0, H - top) };
   });
 
   /* Гребень: четыре дуги шириной в полхолста, съезжающие вбок */
   const wave = useAnimatedProps(() => {
-    const top = BOT - clamp(fill.value) * BODY_H;
+    const top = BOT - Math.max(0, Math.min(1, fill.value)) * BODY_H;
     const x = -W + phase.value * W;
     const a = 13, half = W / 2;
     return {
