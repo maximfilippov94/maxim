@@ -9,6 +9,7 @@ import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListHead, ListRow } from '../ui/List';
 import { Label } from '../ui/base';
 import { Silhouette } from '../ui/Silhouette';
+import { Counter } from '../ui/Counter';
 import { haptic } from '../haptics';
 import { hasExpoUI } from '../native';
 import { Loading, Fail } from './Shopping';
@@ -172,7 +173,7 @@ export default function Water() {
           <Silhouette fill={fill} sex={me?.user?.sex}
             water={p.mc} base={p.mc + '33'} height={sil} />
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: S.lg }}>
-            <Text style={{ ...FONT.num, color: p.text }}>{d.today_ml}</Text>
+            <Counter value={d.today_ml} style={{ ...FONT.num, color: p.text }} />
             <Text style={{ ...FONT.body, color: p.text3 }}>из {d.goal_ml} мл</Text>
           </View>
           <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>
