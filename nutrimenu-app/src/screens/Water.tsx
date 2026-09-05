@@ -38,7 +38,11 @@ export default function Water() {
   useEffect(() => {
     api<WaterResponse>('/client/water')
       .then(r => { setD(r); fill.value = withSpring(r.goal_ml ? r.today_ml / r.goal_ml : 0, { damping: 18 }); })
-      .catch(e => setErr(e.message));
+      /* 404 здесь означает не «нет данных», а «на сервере ещё нет этого
+         раздела»: приложение обновляется само, сервер — руками. */
+      .catch(e => setErr(e.status === 404
+        ? 'Сервер ещё не знает про питьевой режим. Обновите его — раздел появится.'
+        : e.message));
   }, [fill]);
 
   /* Уровень поднимается сразу, запрос идёт следом: ждать сеть ради
@@ -77,7 +81,7 @@ export default function Water() {
 
         <Animated.View entering={FadeInDown.duration(240)}
           style={{ alignItems: 'center', paddingTop: S.lg, paddingBottom: S.xl }}>
-          <Silhouette fill={fill} sex={me?.user?.sex} water={p.mc} dim={p.inset} size={250} />
+          <Silhouette fill={fill} sex={me?.user?.sex} water={p.mc} line={p.text2} size={280} />
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: S.lg }}>
             <Text style={{ ...FONT.num, color: p.text }}>{d.today_ml}</Text>
             <Text style={{ ...FONT.body, color: p.text3 }}>из {d.goal_ml} мл</Text>

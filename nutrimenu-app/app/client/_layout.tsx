@@ -22,18 +22,16 @@ import { haptic } from '../../src/haptics';
  */
 function QuickAdd() {
   const { p } = useApp();
-  const { Host, Menu, Button, Image, Text: SwiftText } = require('@expo/ui/swift-ui');
+  const { Host, Menu, Button } = require('@expo/ui/swift-ui');
   const go = (to: '/weight' | '/water') => { haptic.tap(); router.push(to); };
   return (
     <Host style={{ height: 52 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}>
-      <Menu>
-        <Button systemImage="plus.circle.fill" label="Записать" />
-        <Button systemImage="scalemass" onPress={() => go('/weight')}>
-          <SwiftText>Вес</SwiftText>
-        </Button>
-        <Button systemImage="drop.fill" onPress={() => go('/water')}>
-          <SwiftText>Воду</SwiftText>
-        </Button>
+      {/* Подпись самой кнопки задаётся свойством label, дети — это пункты
+          меню. Если отдать подпись первым ребёнком, кнопка остаётся
+          безымянной и выглядит пустой капсулой. */}
+      <Menu label="Записать" systemImage="plus.circle.fill">
+        <Button label="Вес" systemImage="scalemass" onPress={() => go('/weight')} />
+        <Button label="Воду" systemImage="drop.fill" onPress={() => go('/water')} />
       </Menu>
     </Host>
   );
