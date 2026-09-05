@@ -1,8 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
+import { hasExpoUI } from '../native';
 import { useApp } from '../store';
 import { ThemePref, S, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
@@ -48,15 +49,37 @@ export default function More() {
           <View style={{ paddingHorizontal: 18, paddingVertical: 14 }}>
             {/* Системный сегментированный переключатель: на iOS это настоящий
                 UISegmentedControl, на Android — Material. Своя реализация
-                всегда выдаёт себя мелочами анимации. */}
-            <SegmentedControl
-              values={THEMES.map(t => t.label)}
-              selectedIndex={idx}
-              onValueChange={(v) => pick(THEMES.findIndex(t => t.label === v))}
-              tintColor={p.primary}
-              appearance={p.name === 'light' ? 'light' : 'dark'}
-              style={{ height: 40 }}
-            />
+                всегда выдаёт себя мелочами анимации, поэтому она только
+                запасная — там, где нативных компонентов нет (Expo Go). */}
+            {hasExpoUI ? (
+              <SegmentedControl
+                values={THEMES.map(t => t.label)}
+                selectedIndex={idx}
+                onValueChange={(v) => pick(THEMES.findIndex(t => t.label === v))}
+                tintColor={p.primary}
+                appearance={p.name === 'light' ? 'light' : 'dark'}
+                style={{ height: 40 }}
+              />
+            ) : (
+              <View style={{
+                flexDirection: 'row', height: 40, borderRadius: 10,
+                backgroundColor: p.inset, padding: 3,
+              }}>
+                {THEMES.map((t, i) => (
+                  <Pressable key={t.key} onPress={() => pick(i)}
+                    style={({ pressed }) => ({
+                      flex: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: i === idx ? p.primary : 'transparent',
+                      opacity: pressed && i !== idx ? 0.6 : 1,
+                    })}>
+                    <Text numberOfLines={1} style={{
+                      fontSize: 13, fontWeight: i === idx ? '600' : '400',
+                      color: i === idx ? p.onPrimary : p.text2,
+                    }}>{t.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
             <Text style={{ ...FONT.small, color: p.text3, marginTop: 12 }}>
               Настройка запоминается на этом устройстве.
             </Text>

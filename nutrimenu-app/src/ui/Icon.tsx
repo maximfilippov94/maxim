@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { SymbolView, SymbolViewProps } from 'expo-symbols';
+import { hasSymbols } from '../native';
 
 /** Контуры для Android и веба: сетка 24×24, обводка 1.75. */
 export const PATHS: Record<string, string> = {
@@ -53,7 +54,9 @@ export function Icon({ name, size = 22, color = '#fff', width = 1.75, animate }:
   /** Анимировать появление символа — только на iOS */
   animate?: boolean;
 }) {
-  if (Platform.OS === 'ios' && SF[name]) {
+  /* Без нативного модуля SymbolView нарисует красную заглушку вместо
+     иконки, поэтому спрашиваем, а не полагаемся на платформу. */
+  if (Platform.OS === 'ios' && hasSymbols && SF[name]) {
     return (
       <SymbolView
         name={SF[name]}
