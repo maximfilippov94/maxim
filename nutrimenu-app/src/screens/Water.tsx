@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useApp } from '../store';
@@ -30,6 +30,10 @@ const isoToday = () => {
 export default function Water() {
   const { p, me } = useApp();
   const today = isoToday();
+  /* Фигура занимает столько, сколько остаётся под цифрами и кнопками:
+     на маленьком экране она уменьшится, но не залезет под них. */
+  const { height: winH } = useWindowDimensions();
+  const sil = Math.max(240, Math.min(430, winH - 430));
   const insets = useSafeAreaInsets();
   const [d, setD] = useState<WaterResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -81,7 +85,11 @@ export default function Water() {
 
         <Animated.View entering={FadeInDown.duration(240)}
           style={{ alignItems: 'center', paddingTop: S.lg, paddingBottom: S.xl }}>
-          <Silhouette fill={fill} sex={me?.user?.sex} water={p.mc} line={p.text2} size={280} />
+          {/* Пустая часть — та же вода, но бледная: на вашем рисунке это
+              светло-голубой, и фигура читается даже при нулевом уровне.
+              Цвет поверхности здесь не годится — он сливается с фоном. */}
+          <Silhouette fill={fill} sex={me?.user?.sex}
+            water={p.mc} base={p.mc + '33'} height={sil} />
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: S.lg }}>
             <Text style={{ ...FONT.num, color: p.text }}>{d.today_ml}</Text>
             <Text style={{ ...FONT.body, color: p.text3 }}>из {d.goal_ml} мл</Text>
