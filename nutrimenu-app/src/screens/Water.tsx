@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useApp } from '../store';
@@ -9,6 +9,7 @@ import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListHead, ListRow } from '../ui/List';
 import { Silhouette } from '../ui/Silhouette';
 import { haptic } from '../haptics';
+import { hasExpoUI } from '../native';
 import { Loading, Fail } from './Shopping';
 
 /* Ходовые объёмы: стакан, кружка, бутылка. Четвёртой кнопкой отмена —
@@ -27,13 +28,76 @@ const isoToday = () => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
+/**
+ * Кнопки объёмов — системные, в том же исполнении, что «Записать» на
+ * панели: стеклянная капсула, нажатие и отклик от самой системы. Своя
+ * заливка рядом с ней выглядит нарисованной.
+ */
+function Steps({ onAdd }: { onAdd: (ml: number) => void }) {
+  const { p } = useApp();
+  if (!hasExpoUI || Platform.OS !== 'ios') {
+    return (
+      <View>
+        <StepsPlain onAdd={onAdd} />
+        <CancelPlain onAdd={onAdd} />
+      </View>
+    );
+  }
+  const { Host, VStack, HStack, Button } = require('@expo/ui/swift-ui');
+  const { buttonStyle, buttonBorderShape, frame } = require('@expo/ui/swift-ui/modifiers');
+  return (
+    <Host style={{ height: 108 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}>
+      <VStack spacing={10} modifiers={[frame({ maxWidth: 9999 })]}>
+        <HStack spacing={10}>
+          {STEPS.map(ml => (
+            <Button key={ml} label={`+${ml}`} onPress={() => onAdd(ml)}
+              modifiers={[buttonStyle('glassProminent'), buttonBorderShape('capsule')]} />
+          ))}
+        </HStack>
+        {/* Промахнуться легко, а ждать до завтра из-за лишнего стакана глупо */}
+        <Button label={`Отменить ${STEPS[0]} мл`} onPress={() => onAdd(-STEPS[0])}
+          modifiers={[buttonStyle('plain')]} />
+      </VStack>
+    </Host>
+  );
+}
+
+/** Запасной вид там, где системных компонентов нет */
+function StepsPlain({ onAdd }: { onAdd: (ml: number) => void }) {
+  const { p } = useApp();
+  return (
+    <View style={{ flexDirection: 'row', gap: S.md, paddingHorizontal: 16 }}>
+      {STEPS.map(ml => (
+        <Pressable key={ml} onPress={() => onAdd(ml)}
+          style={({ pressed }) => ({
+            flex: 1, paddingVertical: 14, borderRadius: R.pill,
+            alignItems: 'center', backgroundColor: p.primary,
+            transform: [{ scale: pressed ? 0.97 : 1 }],
+          })}>
+          <Text style={{ ...FONT.h3, color: p.onPrimary }}>+{ml}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function CancelPlain({ onAdd }: { onAdd: (ml: number) => void }) {
+  const { p } = useApp();
+  return (
+    <Pressable onPress={() => onAdd(-STEPS[0])} hitSlop={10}
+      style={({ pressed }) => ({ alignSelf: 'center', marginTop: S.lg, opacity: pressed ? 0.5 : 1 })}>
+      <Text style={{ ...FONT.small, color: p.text3 }}>Отменить последние {STEPS[0]} мл</Text>
+    </Pressable>
+  );
+}
+
 export default function Water() {
   const { p, me } = useApp();
   const today = isoToday();
   /* Фигура занимает столько, сколько остаётся под цифрами и кнопками:
      на маленьком экране она уменьшится, но не залезет под них. */
   const { height: winH } = useWindowDimensions();
-  const sil = Math.max(240, Math.min(430, winH - 430));
+  const sil = Math.max(280, Math.min(520, winH - 360));
   const insets = useSafeAreaInsets();
   const [d, setD] = useState<WaterResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -99,24 +163,9 @@ export default function Water() {
           </Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(60).duration(240)}
-          style={{ flexDirection: 'row', gap: S.md, paddingHorizontal: 16 }}>
-          {STEPS.map(ml => (
-            <Pressable key={ml} onPress={() => add(ml)}
-              style={({ pressed }) => ({
-                flex: 1, paddingVertical: 14, borderRadius: R.md,
-                alignItems: 'center', backgroundColor: p.primary,
-                transform: [{ scale: pressed ? 0.97 : 1 }],
-              })}>
-              <Text style={{ ...FONT.h3, color: p.onPrimary }}>+{ml}</Text>
-            </Pressable>
-          ))}
+        <Animated.View entering={FadeInDown.delay(60).duration(240)}>
+          <Steps onAdd={add} />
         </Animated.View>
-
-        <Pressable onPress={() => add(-STEPS[0])} hitSlop={10}
-          style={({ pressed }) => ({ alignSelf: 'center', marginTop: S.lg, opacity: pressed ? 0.5 : 1 })}>
-          <Text style={{ ...FONT.small, color: p.text3 }}>Отменить последние {STEPS[0]} мл</Text>
-        </Pressable>
 
         {/* Сегодняшний день в истории не показываем: он уже наверху
             крупной цифрой, а в списке отставал бы на один глоток. */}

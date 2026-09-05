@@ -3,7 +3,7 @@ import { View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator } 
 import { Image } from 'expo-image';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from '../api';
 import { S, R, FONT } from '../theme';
@@ -25,6 +25,10 @@ export default function Today() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  /* Вода и вес меняются на других экранах, а этот остаётся в памяти —
+     без перечитывания при возврате он показывал бы вчерашнее число. */
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const onRefresh = useCallback(async () => {
     setBusy(true); await load(); setBusy(false);

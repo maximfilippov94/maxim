@@ -1,28 +1,29 @@
 import React from 'react';
-import { View } from 'react-native';
-import { Image } from 'expo-image';
+import Svg, { Defs, Mask, Image as SvgImage, Rect, Path, G } from 'react-native-svg';
 import Animated, {
-  useAnimatedStyle, useDerivedValue, withRepeat, withTiming, Easing, SharedValue,
+  useAnimatedProps, useDerivedValue, withRepeat, withTiming, Easing, SharedValue,
 } from 'react-native-reanimated';
 
-/* Рисунки присланы обводкой; внутренняя область достроена из контура,
-   чтобы фигуру можно было заливать. Пропорции у мужской и женской
-   разные — держим их отдельно, иначе слои не совпадут по краю. */
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+
+/* Рисунки присланы обводкой; внутренняя область достроена из контура.
+   Пропорции у мужской и женской разные — держим отдельно. */
 const FIG = {
   f: { src: require('../../assets/body-f.png'), ratio: 409 / 1283 },
   m: { src: require('../../assets/body-m.png'), ratio: 483 / 1281 },
 };
 
+/* Работаем в сетке 1000 по высоте: с целыми числами удобнее считать
+   волну, а сама фигура растягивается до нужного размера. */
+const H = 1000;
+
 /**
  * Силуэт, наполняющийся водой.
  *
- * Два одинаковых рисунка друг на друге: нижний окрашен приглушённо —
- * это пустое тело, верхний цветом воды и обрезан по уровню. Обрезка
- * идёт контейнером, прижатым к низу, поэтому граница воды всегда
- * горизонтальна, а края — точно по фигуре.
- *
- * Уровень слегка покачивается сам по себе: неподвижная вода выглядит
- * залитым цветом, а лёгкое движение читается как жидкость.
+ * Фигура задаёт маску, и всё, что внутри, обрезается точно по её краю.
+ * Благодаря этому граница воды может быть какой угодно формы — здесь
+ * это бегущая волна, а не прямая полоса: прямая читается как заливка,
+ * волна — как жидкость.
  */
 export function Silhouette({ fill, sex, water, base, height = 340 }: {
   /** Доля заполнения, 0…1 */
@@ -34,29 +35,41 @@ export function Silhouette({ fill, sex, water, base, height = 340 }: {
   height?: number;
 }) {
   const fig = sex === 'm' ? FIG.m : FIG.f;
-  const width = height * fig.ratio;
+  const W = Math.round(H * fig.ratio);
 
-  /* Бесконечное покачивание: −1…1, период около трёх секунд */
-  const bob = useDerivedValue(() =>
-    withRepeat(withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }), -1, true), []);
+  /* Фаза бега волны: один проход слева направо, бесконечно */
+  const phase = useDerivedValue(() =>
+    withRepeat(withTiming(1, { duration: 3200, easing: Easing.linear }), -1, false), []);
 
-  const level = useAnimatedStyle(() => {
+  const wave = useAnimatedProps(() => {
     const v = Math.max(0, Math.min(1, fill.value));
-    /* Покачивание не трогает пустое и полное: там колыхаться нечему */
-    const sway = v > 0.02 && v < 0.98 ? (bob.value * 2 - 1) * 3 : 0;
-    return { height: Math.max(0, v * height + sway) };
+    const top = H - v * H;
+    /* У краёв волне взяться неоткуда: пустое тело и полное — ровные */
+    const a = v > 0.02 && v < 0.98 ? H * 0.021 : 0;
+    /* Волна вдвое шире фигуры и уезжает на свою длину — стык незаметен */
+    const len = W * 2;
+    const x = -len + phase.value * len;
+    const q = len / 4;
+    return {
+      d: `M${x} ${top} q${q / 2} ${-a} ${q} 0 t${q} 0 t${q} 0 t${q} 0 t${q} 0 t${q} 0`
+        + ` L${x + len * 1.5} ${H} L${x} ${H} Z`,
+    };
   });
 
   return (
-    <View style={{ width, height }}>
-      <Image source={fig.src} tintColor={base} contentFit="fill"
-        style={{ width, height, position: 'absolute', bottom: 0 }} />
-      <Animated.View style={[{
-        position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden',
-      }, level]}>
-        <Image source={fig.src} tintColor={water} contentFit="fill"
-          style={{ width, height, position: 'absolute', bottom: 0 }} />
-      </Animated.View>
-    </View>
+    <Svg width={height * fig.ratio} height={height} viewBox={`0 0 ${W} ${H}`}>
+      <Defs>
+        <Mask id="body" maskUnits="userSpaceOnUse" x={0} y={0} width={W} height={H}>
+          <SvgImage href={fig.src} x={0} y={0} width={W} height={H}
+            preserveAspectRatio="none" />
+        </Mask>
+      </Defs>
+      {/* Пустое тело */}
+      <Rect x={0} y={0} width={W} height={H} fill={base} mask="url(#body)" />
+      {/* Вода: всё, что ниже волны, обрезано по фигуре */}
+      <G mask="url(#body)">
+        <AnimatedPath fill={water} animatedProps={wave} />
+      </G>
+    </Svg>
   );
 }
