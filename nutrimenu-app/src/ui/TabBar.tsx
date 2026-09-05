@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, interpolate, SharedValue } from 'react-nati
 import { useApp } from '../store';
 import { Glass, hasLiquidGlass } from './Glass';
 import { Icon } from './Icon';
+import { TabBarNative, canNativeTabs } from './TabBarNative';
 
 export interface TabDef { key: string; label: string; icon: string }
 
@@ -12,9 +13,7 @@ export interface TabDef { key: string; label: string; icon: string }
  * а из непрерывного смещения пейджера. Иначе она прыгает после отпускания,
  * и жест перестаёт ощущаться связанным с интерфейсом.
  */
-export function TabBar({
-  tabs, progress, active, onSelect, width, height = 62, gap = 6,
-}: {
+interface BarProps {
   tabs: TabDef[];
   progress: SharedValue<number>;
   /** Активная вкладка. Отдельно от progress: цвет меняется по факту
@@ -24,7 +23,31 @@ export function TabBar({
   width: number;
   height?: number;
   gap?: number;
-}) {
+}
+
+/**
+ * Где есть системные компоненты — панель собирается из них: линзу, которая
+ * преломляет содержимое под собой и перетекает между вкладками, руками не
+ * сделать. Везде остальное — своя реализация ниже.
+ */
+export function TabBar(props: BarProps) {
+  const { p } = useApp();
+  const { tabs, active, onSelect, width, height = 62 } = props;
+  if (canNativeTabs) {
+    return (
+      <Glass plain radius={height / 2} style={{ width, height }}
+        tint={p.name === 'light' ? 'rgba(255,255,255,0.62)' : 'rgba(255,255,255,0.05)'}>
+        <TabBarNative tabs={tabs} active={active} onSelect={onSelect}
+          width={width} height={height} />
+      </Glass>
+    );
+  }
+  return <TabBarRN {...props} />;
+}
+
+function TabBarRN({
+  tabs, progress, active, onSelect, width, height = 62, gap = 6,
+}: BarProps) {
   const { p } = useApp();
   const inner = width - gap * 2;
   const item = inner / tabs.length;

@@ -31,7 +31,7 @@ export const PATHS: Record<string, string> = {
  *  весу с системным шрифтом и анимируются штатно. Везде остальное — контуры. */
 /* Только контурные начертания: в системе есть и залитые, но смесь
    тяжёлых и лёгких иконок в одном ряду читается как небрежность. */
-const SF: Record<string, SymbolViewProps['name']> = {
+export const SF: Record<string, SymbolViewProps['name']> = {
   home: 'house',
   cal: 'calendar',
   chat: 'bubble.left',
