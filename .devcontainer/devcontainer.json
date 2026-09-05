@@ -1,7 +1,7 @@
 {
   "name": "NutriMenu app (Expo)",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
-  "postCreateCommand": "cd nutrimenu-app && npm install",
+  "postCreateCommand": "sudo apt-get update -qq && sudo apt-get install -y -qq libnspr4 libnss3 || true; cd nutrimenu-app && npm install",
   "forwardPorts": [8081],
   "portsAttributes": { "8081": { "label": "Expo" } },
   "customizations": {
