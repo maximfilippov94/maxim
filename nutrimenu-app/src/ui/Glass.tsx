@@ -74,16 +74,15 @@ export function Glass({
 export function GlassGroup({
   children, spacing = 12, style,
 }: { children: React.ReactNode; spacing?: number; style?: ViewStyle }) {
+  /* Раскладку задаём одинаково для обеих веток: у GlassContainer свои
+     правила расстановки детей, и без этого кнопка уезжала под панель. */
+  const row: ViewStyle = { flexDirection: 'row', alignItems: 'center', gap: spacing };
   if (hasLiquidGlass && GlassContainerRaw) {
     return (
-      <GlassContainerRaw spacing={spacing} style={style}>
+      <GlassContainerRaw spacing={spacing} style={[row, style]}>
         {children}
       </GlassContainerRaw>
     );
   }
-  return (
-    <View style={[{ flexDirection: 'row', alignItems: 'center', gap: spacing }, style]}>
-      {children}
-    </View>
-  );
+  return <View style={[row, style]}>{children}</View>;
 }

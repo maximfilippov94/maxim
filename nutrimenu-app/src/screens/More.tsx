@@ -38,7 +38,7 @@ export default function More() {
         <ListGroup style={{ marginTop: 8 }}>
           <ListRow first icon="weight" label="Прогресс и замеры"
             onPress={() => router.push('/progress')} />
-          <ListRow icon="bowl" label="Список покупок"
+          <ListRow icon="cart" label="Список покупок"
             onPress={() => router.push('/shopping')} />
           <ListRow icon="tag" label="Услуги и цены"
             onPress={() => router.push('/services')} />

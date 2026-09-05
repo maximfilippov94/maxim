@@ -13,6 +13,7 @@ export const PATHS: Record<string, string> = {
   plus: 'M12 5.2v13.6M5.2 12h13.6',
   check: 'M5.4 12.6 9.8 17l8.8-9.4',
   video: 'M4.3 7.6a2 2 0 0 1 2-2h7.2a2 2 0 0 1 2 2v8.8a2 2 0 0 1-2 2H6.3a2 2 0 0 1-2-2ZM15.5 10.9l3.4-2.4a.7.7 0 0 1 1.1.6v5.8a.7.7 0 0 1-1.1.6l-3.4-2.4Z',
+  cart: 'M3.2 4.4h2.1l2.2 9.8a1.6 1.6 0 0 0 1.6 1.3h7.5a1.6 1.6 0 0 0 1.6-1.2l1.4-5.9H6.2M9.6 19.6a1.1 1.1 0 1 0 0-2.2 1.1 1.1 0 0 0 0 2.2ZM17.2 19.6a1.1 1.1 0 1 0 0-2.2 1.1 1.1 0 0 0 0 2.2Z',
   bowl: 'M3.8 10.6h16.4a8.2 8.2 0 0 1-8.2 8.2 8.2 8.2 0 0 1-8.2-8.2ZM8.4 7.4c0-1 .8-1.6.8-2.6M12 7.4c0-1 .8-1.6.8-2.6M15.6 7.4c0-1 .8-1.6.8-2.6',
   chevr: 'M9.5 5.8 15.7 12l-6.2 6.2',
   moon: 'M20.4 14.8A8.7 8.7 0 0 1 9.2 3.6a8.7 8.7 0 1 0 11.2 11.2Z',
@@ -28,22 +29,25 @@ export const PATHS: Record<string, string> = {
 
 /** На iOS берём системные SF Symbols: их рисовал Apple, они совпадают по
  *  весу с системным шрифтом и анимируются штатно. Везде остальное — контуры. */
+/* Только контурные начертания: в системе есть и залитые, но смесь
+   тяжёлых и лёгких иконок в одном ряду читается как небрежность. */
 const SF: Record<string, SymbolViewProps['name']> = {
-  home: 'house.fill',
+  home: 'house',
   cal: 'calendar',
-  chat: 'bubble.left.fill',
+  chat: 'bubble.left',
   kebab: 'ellipsis',
   plus: 'plus',
   check: 'checkmark',
-  video: 'video.fill',
+  video: 'video',
   bowl: 'fork.knife',
+  cart: 'cart',
   chevr: 'chevron.right',
-  moon: 'moon.fill',
-  sun: 'sun.max.fill',
+  moon: 'moon',
+  sun: 'sun.max',
   device: 'iphone',
-  weight: 'scalemass.fill',
+  weight: 'scalemass',
   close: 'xmark',
-  tag: 'tag.fill',
+  tag: 'tag',
   back: 'chevron.left',
   user: 'person.crop.circle',
   exit: 'rectangle.portrait.and.arrow.right',

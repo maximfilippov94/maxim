@@ -43,13 +43,13 @@ export function TabBar({
         position: 'absolute', top: gap, left: 0,
         width: item, height: height - gap * 2,
       }, lens]}>
-        {/* На «Фарфоре» панель почти белая, и белая линза на ней пропадала.
-            Светлому стеклу нужна тёмная подсветка, а не ещё более светлая. */}
+        {/* Подсветку задаём всегда, в том числе под системным стеклом: без
+            неё линза сливается с панелью и активный пункт ничем не отмечен.
+            На «Фарфоре» панель почти белая — там подсветка тёмная. */}
         <Glass
           radius={(height - gap * 2) / 2}
           style={{ flex: 1 }}
-          tint={hasLiquidGlass ? undefined
-            : (p.name === 'light' ? 'rgba(14,17,22,0.07)' : 'rgba(255,255,255,0.1)')}
+          tint={p.name === 'light' ? 'rgba(14,17,22,0.07)' : 'rgba(255,255,255,0.1)'}
           edge={hasLiquidGlass ? undefined
             : (p.name === 'light' ? 'rgba(14,17,22,0.11)' : undefined)}
         />
