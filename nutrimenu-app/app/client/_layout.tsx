@@ -25,7 +25,8 @@ function QuickAdd() {
   const { Host, Menu, Button } = require('@expo/ui/swift-ui');
   const go = (to: '/weight' | '/water') => { haptic.tap(); router.push(to); };
   return (
-    <Host style={{ height: 52 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}>
+    <Host style={{ height: 52 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}
+      seedColor={p.primary}>
       {/* Подпись самой кнопки задаётся свойством label, дети — это пункты
           меню. Если отдать подпись первым ребёнком, кнопка остаётся
           безымянной и выглядит пустой капсулой. */}

@@ -47,12 +47,17 @@ function Steps({ onAdd }: { onAdd: (ml: number) => void }) {
   const { Host, VStack, HStack, Button } = require('@expo/ui/swift-ui');
   const { buttonStyle, buttonBorderShape, frame } = require('@expo/ui/swift-ui/modifiers');
   return (
-    <Host style={{ height: 108 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}>
+    <Host style={{ height: 108 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}
+      /* Акцент приложения передаём внутрь: иначе система красит кнопки
+         своим синим, а не нашим цветом. */
+      seedColor={p.primary}>
       <VStack spacing={10} modifiers={[frame({ maxWidth: 9999 })]}>
         <HStack spacing={10}>
           {STEPS.map(ml => (
             <Button key={ml} label={`+${ml}`} onPress={() => onAdd(ml)}
-              modifiers={[buttonStyle('glassProminent'), buttonBorderShape('capsule')]} />
+              /* Прозрачное стекло, как у «Записать»: заливка (glassProminent)
+                 спорит с фигурой и тянет внимание на себя. */
+              modifiers={[buttonStyle('glass'), buttonBorderShape('capsule')]} />
           ))}
         </HStack>
         {/* Промахнуться легко, а ждать до завтра из-за лишнего стакана глупо */}
