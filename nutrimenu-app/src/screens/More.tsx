@@ -3,7 +3,8 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
-import { hasExpoUI } from '../native';
+import { hasExpoUI, hasSymbols, hasMeshGradient, isExpoGo } from '../native';
+import { hasLiquidGlass } from '../ui/Glass';
 import { useApp } from '../store';
 import { ThemePref, S, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
@@ -83,6 +84,17 @@ export default function More() {
             <Text style={{ ...FONT.small, color: p.text3, marginTop: 12 }}>
               Настройка запоминается на этом устройстве.
             </Text>
+            {/* Expo Go содержит не весь SDK, и какой эффект подменён запасным
+                вариантом, со стороны не видно. Строка нужна на время тестов
+                и показывается только в Expo Go — в своей сборке её нет. */}
+            {isExpoGo ? (
+              <Text style={{ ...FONT.small, color: p.text3, marginTop: 6 }}>
+                Expo Go · стекло {hasLiquidGlass ? 'системное' : 'заменено размытием'}
+                {' · '}символы {hasSymbols ? 'системные' : 'свои'}
+                {' · '}градиент {hasMeshGradient ? 'сетчатый' : 'линейный'}
+                {' · '}компоненты {hasExpoUI ? 'системные' : 'свои'}
+              </Text>
+            ) : null}
           </View>
         </ListGroup>
 
