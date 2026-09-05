@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "NutriMenu",
+    "slug": "nutrimenu",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "nutrimenu",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ru.nutrimenu.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Камера нужна для видеозвонков со специалистом и фото блюд.",
+        "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонков со специалистом.",
+        "NSPhotoLibraryUsageDescription": "Доступ к фото нужен, чтобы прикреплять снимки к сообщениям и прогрессу."
+      }
+    },
+    "android": {
+      "package": "ru.nutrimenu.app",
+      "adaptiveIcon": { "backgroundColor": "#070A08" },
+      "permissions": ["CAMERA", "RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"]
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": { "typedRoutes": true }
+  }
+}

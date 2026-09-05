@@ -1,0 +1,12 @@
+{
+  "name": "NutriMenu app (Expo)",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "postCreateCommand": "cd nutrimenu-app && npm install",
+  "forwardPorts": [8081],
+  "portsAttributes": { "8081": { "label": "Expo" } },
+  "customizations": {
+    "vscode": {
+      "extensions": ["expo.vscode-expo-tools", "dbaeumer.vscode-eslint"]
+    }
+  }
+}
