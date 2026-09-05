@@ -3,7 +3,7 @@
  * и оба читаются из хранилища при старте.
  */
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { useColorScheme } from 'react-native';
+import { Appearance, Platform, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PALETTES, Palette, ThemeName, ThemePref } from './theme';
 import { api, loadToken, setToken, Me } from './api';
@@ -42,6 +42,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resolved: ThemeName =
     themePref === 'auto' ? (system === 'light' ? 'light' : 'dark') : themePref;
+
+  /**
+   * Сообщаем системе, в каком режиме считает себя приложение.
+   *
+   * Системные элементы — панель вкладок, шторки, поля ввода — берут
+   * оформление не у нас, а у операционной системы. Пока она не знала
+   * о нашем переключателе, панель оставалась тёмной на светлой теме
+   * и выглядела серой поверх светлого экрана. Задать ей материал не
+   * помогает: на iOS 26 она рисуется жидким стеклом и цвет берёт из
+   * режима всего приложения.
+   *
+   * «Как в системе» возвращает значение «не задано» — иначе выбранный
+   * однажды режим закрепился бы навсегда: системное значение мы читаем
+   * оттуда же.
+   */
+  useEffect(() => {
+    /* В react-native-web этой функции нет, а системных элементов,
+       которым она нужна, там и не бывает. */
+    if (Platform.OS === 'web' || typeof Appearance.setColorScheme !== 'function') return;
+    Appearance.setColorScheme(themePref === 'auto' ? 'unspecified' : themePref);
+  }, [themePref]);
 
   const setThemePref = useCallback((t: ThemePref) => {
     setPref(t);
