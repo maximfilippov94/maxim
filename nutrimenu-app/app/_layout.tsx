@@ -20,7 +20,7 @@ function Root() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
-        <Stack.Screen name="client/index" />
+        <Stack.Screen name="client" />
         <Stack.Screen name="progress" />
         <Stack.Screen name="shopping" />
         <Stack.Screen name="services" />
