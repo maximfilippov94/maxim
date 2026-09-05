@@ -37,21 +37,27 @@ export function TabBar({
   }));
 
   return (
-    <Glass radius={height / 2} style={{ width, height }}>
+    <Glass radius={height / 2} style={{ width, height }}
+      tint={p.name === 'light' ? 'rgba(14,17,22,0.05)' : undefined}>
       {/* Линза под подписями: она подсвечивает активный пункт, а не закрывает его */}
+      {/* Линза повторяет приём системного переключателя: выбранный пункт
+          светлее дорожки, а не темнее. На белом фоне белое пятно само по
+          себе не читается, поэтому его отделяет тень — так же, как система
+          отделяет свой сегмент. */}
       <Animated.View style={[{
         position: 'absolute', top: gap, left: 0,
         width: item, height: height - gap * 2,
+        ...(p.name === 'light' ? {
+          shadowColor: p.shadow, shadowOpacity: 0.16, shadowRadius: 5,
+          shadowOffset: { width: 0, height: 2 }, elevation: 3,
+        } : null),
       }, lens]}>
-        {/* Подсветку задаём всегда, в том числе под системным стеклом: без
-            неё линза сливается с панелью и активный пункт ничем не отмечен.
-            На «Фарфоре» панель почти белая — там подсветка тёмная. */}
         <Glass
           radius={(height - gap * 2) / 2}
           style={{ flex: 1 }}
-          tint={p.name === 'light' ? 'rgba(14,17,22,0.07)' : 'rgba(255,255,255,0.1)'}
+          tint={p.name === 'light' ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.18)'}
           edge={hasLiquidGlass ? undefined
-            : (p.name === 'light' ? 'rgba(14,17,22,0.11)' : undefined)}
+            : (p.name === 'light' ? 'rgba(14,17,22,0.06)' : undefined)}
         />
       </Animated.View>
 

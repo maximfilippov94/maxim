@@ -1,6 +1,8 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import PagerView from 'react-native-pager-view';
-import Animated, { useEvent, useHandler } from 'react-native-reanimated';
+import Animated, {
+  useEvent, useHandler, useSharedValue, withTiming, Easing,
+} from 'react-native-reanimated';
 import type { PagerHandle, PagerProps } from './Pager';
 
 const AnimatedPager = Animated.createAnimatedComponent(PagerView);
@@ -18,11 +20,28 @@ function usePagerScrollHandler(handlers: { onPageScroll: (e: any) => void }) {
 export const Pager = forwardRef<PagerHandle, PagerProps>(
   ({ progress, onIndex, children }, ref) => {
     const pager = useRef<PagerView>(null);
-    useImperativeHandle(ref, () => ({ setPage: (i) => pager.current?.setPage(i) }));
+    /* При жесте позиция берётся из прокрутки, при нажатии её ведём сами:
+       программная смена страницы почти не шлёт событий прокрутки, и линза
+       не ехала, а переставлялась. Пока ведём — прокрутку не слушаем,
+       иначе две силы тянут одно значение и картинка дёргается. */
+    const driving = useSharedValue(0);
+
+    useImperativeHandle(ref, () => ({
+      setPage: (i) => {
+        driving.value = 1;
+        progress.value = withTiming(
+          i,
+          { duration: 260, easing: Easing.out(Easing.cubic) },
+          (finished) => { 'worklet'; if (finished) driving.value = 0; },
+        );
+        pager.current?.setPage(i);
+      },
+    }));
 
     const onScroll = usePagerScrollHandler({
       onPageScroll: (e) => {
         'worklet';
+        if (driving.value) return;
         progress.value = e.position + e.offset;
       },
     });

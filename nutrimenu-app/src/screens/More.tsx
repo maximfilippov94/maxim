@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { hasExpoUI, hasSymbols, hasMeshGradient, isExpoGo } from '../native';
-import { hasLiquidGlass, hasHostedGlass } from '../ui/Glass';
+import { hasLiquidGlass } from '../ui/Glass';
 import { useApp } from '../store';
 import { ThemePref, S, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
@@ -89,8 +89,7 @@ export default function More() {
                 и показывается только в Expo Go — в своей сборке её нет. */}
             {isExpoGo ? (
               <Text style={{ ...FONT.small, color: p.text3, marginTop: 6 }}>
-                Expo Go · стекло {hasLiquidGlass ? 'системное'
-                  : hasHostedGlass ? 'системное через @expo/ui' : 'размытие'}
+                Expo Go · стекло {hasLiquidGlass ? 'системное' : 'размытие'}
                 {' · '}символы {hasSymbols ? 'системные' : 'свои'}
                 {' · '}градиент {hasMeshGradient ? 'сетчатый' : 'линейный'}
                 {' · '}компоненты {hasExpoUI ? 'системные' : 'свои'}
