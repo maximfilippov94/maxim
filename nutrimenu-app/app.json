@@ -12,16 +12,30 @@
       "bundleIdentifier": "ru.nutrimenu.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Камера нужна для видеозвонков со специалистом и фото блюд.",
-        "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонков со специалистом.",
+        "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонков и голосовых сообщений специалисту.",
         "NSPhotoLibraryUsageDescription": "Доступ к фото нужен, чтобы прикреплять снимки к сообщениям и прогрессу."
       }
     },
     "android": {
       "package": "ru.nutrimenu.app",
-      "adaptiveIcon": { "backgroundColor": "#070A08" },
-      "permissions": ["CAMERA", "RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS"]
+      "adaptiveIcon": {
+        "backgroundColor": "#070A08"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ]
     },
-    "plugins": ["expo-router", "expo-secure-store"],
-    "experiments": { "typedRoutes": true }
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-image-picker",
+      "expo-audio",
+      "expo-video"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

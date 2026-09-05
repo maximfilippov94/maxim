@@ -4,15 +4,20 @@ import { router } from 'expo-router';
 import { useApp } from '../src/store';
 import { api } from '../src/api';
 import { S, R, FONT } from '../src/theme';
-import { Btn, Muted } from '../src/ui/base';
+import { Label, Muted } from '../src/ui/base';
 import { Icon } from '../src/ui/Icon';
+import { SysButton, SysDate } from '../src/ui/system';
 import { haptic } from '../src/haptics';
+
+const ymd = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /** Открывается системной шторкой: её видно поверх экрана, её можно тянуть,
  *  и она не выбивает пользователя из контекста, как полноэкранное окно. */
 export default function WeightSheet() {
   const { p, me } = useApp();
   const [value, setValue] = useState('');
+  const [date, setDate] = useState(new Date());
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -23,7 +28,9 @@ export default function WeightSheet() {
     }
     setBusy(true); setErr(null);
     try {
-      await api('/client/weight', { method: 'POST', body: { weight_kg: v } });
+      await api('/client/weight', {
+        method: 'POST', body: { weight_kg: v, measured_on: ymd(date) },
+      });
       haptic.success();
       router.back();
     } catch (e: any) {
@@ -56,8 +63,20 @@ export default function WeightSheet() {
           fontSize: 30, fontWeight: '700', letterSpacing: -0.8,
         }}
       />
+
+      {/* Взвешиваются утром, а записывают когда придётся — системный
+          календарь позволяет отнести замер к нужному дню. */}
+      <View style={{ marginTop: S.lg }}>
+        <Label>Дата</Label>
+        <View style={{ marginTop: S.sm }}>
+          <SysDate value={date} onChange={setDate} max={new Date()} />
+        </View>
+      </View>
+
       {err && <Text style={{ ...FONT.small, color: p.danger, marginTop: S.md }}>{err}</Text>}
-      <Btn title="Сохранить" onPress={save} loading={busy} style={{ marginTop: S.xl }} />
+      <View style={{ marginTop: S.xl }}>
+        <SysButton label="Сохранить" variant="prominent" disabled={busy} onPress={save} />
+      </View>
     </View>
   );
 }

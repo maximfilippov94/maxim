@@ -9,6 +9,7 @@ import { api, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from
 import { S, R, FONT } from '../theme';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
+import { Empty } from '../ui/system';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
 
@@ -212,18 +213,8 @@ export default function Today() {
 
       {/* Приёмы пищи */}
       {items.length === 0 ? (
-        <Card style={{ alignItems: 'center', paddingVertical: S.xxl }}>
-          <View style={{ width: 52, height: 52, borderRadius: R.lg, backgroundColor: p.primarySoft,
-            alignItems: 'center', justifyContent: 'center', marginBottom: S.lg }}>
-            <Icon name="bowl" size={24} color={p.primary} />
-          </View>
-          <Text style={{ ...FONT.h3, color: p.text, textAlign: 'center' }}>
-            На сегодня меню не назначено
-          </Text>
-          <Muted style={{ textAlign: 'center', marginTop: S.sm, lineHeight: 18 }}>
-            Как только специалист назначит меню на этот день, блюда появятся здесь.
-          </Muted>
-        </Card>
+        <Empty icon="fork.knife" title="На сегодня меню не назначено"
+          note="Как только специалист назначит меню на этот день, блюда появятся здесь." />
       ) : MEAL_ORDER.map((mt, gi) => {
         const group = items.filter(x => x.meal_type === mt);
         if (!group.length) return null;
@@ -242,11 +233,17 @@ export default function Today() {
               {group.map((x, i) => {
                 const done = x.log_status === 'eaten';
                 return (
-                  <View key={x.id} style={{
+                  /* Строка открывает блюдо: состав, рецепт и граммовка —
+                     всё, чего не помещается в список. Галочка справа
+                     остаётся быстрым способом отметить, не заходя внутрь. */
+                  <Pressable key={x.id}
+                    onPress={() => { haptic.tap(); router.push(`/dish/${x.id}`); }}
+                    style={({ pressed }) => ({
                     flexDirection: 'row', alignItems: 'center', gap: S.md,
                     paddingVertical: 9, paddingHorizontal: 12,
                     borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
-                  }}>
+                    backgroundColor: pressed ? p.ov1 : 'transparent',
+                  })}>
                     {x.photo_url
                       ? <Image
                           source={{ uri: x.photo_url }}
@@ -282,7 +279,7 @@ export default function Today() {
                       })}>
                       {done && <Icon name="check" size={13} color={p.onPrimary} width={2.6} />}
                     </Pressable>
-                  </View>
+                  </Pressable>
                 );
               })}
             </Card>

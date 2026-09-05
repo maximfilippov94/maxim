@@ -36,8 +36,12 @@ export async function api<T = any>(
   opt: { method?: string; body?: any } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
-  let body: string | undefined;
-  if (opt.body !== undefined) {
+  let body: string | FormData | undefined;
+  if (opt.body instanceof FormData) {
+    /* Границу multipart проставляет сам fetch — свой Content-Type тут
+       ломает разбор файла на сервере. */
+    body = opt.body;
+  } else if (opt.body !== undefined) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(opt.body);
   }
@@ -148,4 +152,113 @@ export interface WaterResponse {
   goal_ml: number;
   today_ml: number;
   history: WaterDay[];
+}
+
+/* ---------- Неделя и чат ---------- */
+
+export interface WeekResponse {
+  menu: { id: number; title: string; days_count: number; start_date: string } | null;
+  items: (MealItem & { day_number: number })[];
+  days: Record<string, Totals>;
+}
+
+export interface ChatMessage {
+  id: number;
+  author_type: 'client' | 'specialist';
+  body: string;
+  attachment_url?: string | null;
+  kind?: string | null;
+  created_at: string;
+}
+export interface ChatResponse { messages: ChatMessage[] }
+
+/* ---------- Блюдо ---------- */
+
+export interface DishIngredient {
+  ingredient_name: string;
+  grams: number;
+  kcal: number; protein: number; fat: number; carbs: number;
+}
+export interface DishItem extends MealItem {
+  instructions?: string | null;
+  /** Порция блюда по умолчанию: от неё сервер считает границы своей граммовки */
+  base_portion_g?: number | null;
+  ingredients: DishIngredient[];
+}
+export interface Replacement {
+  id: number; name: string; photo_url?: string | null;
+  kcal_100: number; protein_100: number; fat_100: number; carbs_100: number;
+  base_portion_g?: number | null;
+}
+
+/* ---------- Награды и баллы ---------- */
+
+export interface GamTask { key: string; label: string; reward: number; done: boolean; progress: string }
+export interface GamAchievement { key: string; icon: string; label: string; hint: string; unlocked: boolean }
+export interface GamReward { key: string; label: string; cost: number; discount_pct: number }
+export interface GamRedemption {
+  reward_key: string; discount_pct: number; points_cost: number;
+  code: string; status: string; created_at: string;
+}
+export interface GamWeekDay { label: string; date: string; pct: number | null; logged: number }
+export interface Gamification {
+  balance: number; earned: number; spent: number;
+  streak: number; eaten: number; perfect_days: number;
+  level: number; level_title: string; level_base: number; level_next: number;
+  tasks: GamTask[];
+  achievements: GamAchievement[];
+  rewards: GamReward[];
+  redemptions: GamRedemption[];
+  week: GamWeekDay[];
+}
+
+/* ---------- Профиль, уведомления, специалист ---------- */
+
+export interface Preferences {
+  likes?: string; dislikes?: string; excluded?: string;
+  allowed_replacements?: number; notes?: string | null;
+}
+export interface Notice {
+  id: number; type: string; title: string;
+  body?: string | null; read_at?: string | null; created_at: string;
+}
+export interface Specialist {
+  id: number; name: string; avatar_url?: string | null; profession?: string;
+}
+export interface Checkin {
+  week_start: string; ease_score: number; wellbeing_score?: number | null;
+  difficulties?: string | null; comment?: string | null; created_at: string;
+}
+
+/** Списки предпочтений приходят строкой JSON — разбираем в одном месте. */
+export const parseList = (v?: string | null): string[] => {
+  if (!v) return [];
+  try { const a = JSON.parse(v); return Array.isArray(a) ? a.map(String) : []; }
+  catch { return []; }
+};
+
+/* ---------- Каталог специалистов ---------- */
+
+export interface CatalogSpecialist {
+  id: number; name: string; avatar_url?: string | null;
+  profession?: string; bio?: string | null; city?: string | null;
+  rating?: number | null; reviews_count?: number | null;
+  price?: number | null; price_unit?: string | null;
+  experience_years?: number | null;
+  specializations?: string | null;
+}
+
+/** Ссылка на файл с сервера: он отдаёт их относительным путём. */
+export const mediaUrl = (u?: string | null) =>
+  !u ? null : /^https?:/i.test(u) ? u : API_BASE + u;
+
+/** Что за вложение пришло — по расширению файла. */
+export type AttachKind = 'image' | 'video' | 'audio' | 'file';
+export function attachKind(url?: string | null): AttachKind | null {
+  if (!url) return null;
+  const e = url.split('?')[0].split('.').pop()?.toLowerCase() ?? '';
+  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'avif'].includes(e)) return 'image';
+  if (['mp4', 'mov', 'm4v'].includes(e)) return 'video';
+  if (['m4a', 'mp3', 'aac', 'wav', 'ogg'].includes(e)) return 'audio';
+  return 'file';
 }

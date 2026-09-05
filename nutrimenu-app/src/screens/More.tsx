@@ -37,10 +37,26 @@ export default function More() {
 
         {/* Разделы — во всю ширину, без полей: список, а не набор карточек */}
         <ListGroup style={{ marginTop: 8 }}>
-          <ListRow first icon="weight" label="Прогресс и замеры"
+          <ListRow first icon="user" label="Профиль"
+            onPress={() => router.push('/profile')} />
+          <ListRow icon="weight" label="Прогресс и замеры"
             onPress={() => router.push('/progress')} />
           <ListRow icon="cart" label="Список покупок"
             onPress={() => router.push('/shopping')} />
+          <ListRow icon="drop" label="Питьевой режим"
+            onPress={() => router.push('/water')} />
+        </ListGroup>
+
+        <ListHead>Мотивация и связь</ListHead>
+        <ListGroup>
+          <ListRow first icon="gift" label="Награды и баллы"
+            onPress={() => router.push('/rewards')} />
+          <ListRow icon="bell" label="Уведомления"
+            onPress={() => router.push('/notifications')} />
+          <ListRow icon="chat" label="Мой специалист"
+            onPress={() => router.push('/specialist')} />
+          <ListRow icon="edit" label="Отчёт за неделю"
+            onPress={() => router.push('/checkin')} />
           <ListRow icon="tag" label="Услуги и цены"
             onPress={() => router.push('/services')} />
         </ListGroup>

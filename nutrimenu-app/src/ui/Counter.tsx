@@ -10,14 +10,16 @@ import {
  * Скачок читается как «подставили другое число», плавный счёт — как
  * «стало больше»; разница в ощущении, а не в данных.
  *
- * Округляем до десятков: показывать каждый миллилитр незачем, а редкие
- * обновления сами по себе сокращают перерисовки — на одинаковом
- * значении React ничего не делает.
+ * Шаг округления задаёт вызывающий: миллилитрам воды хватает десятков,
+ * граммам порции нужен каждый грамм. Редкие обновления заодно сокращают
+ * перерисовки — на одинаковом значении React ничего не делает.
  */
-export function Counter({ value, style, duration = 420 }: {
+export function Counter({ value, style, duration = 420, step = 10 }: {
   value: number;
   style?: TextStyle;
   duration?: number;
+  /** До какого шага округлять показываемое число */
+  step?: number;
 }) {
   const [shown, setShown] = useState(value);
   const v = useSharedValue(value);
@@ -27,7 +29,7 @@ export function Counter({ value, style, duration = 420 }: {
   }, [value, duration, v]);
 
   useDerivedValue(() => {
-    runOnJS(setShown)(Math.round(v.value / 10) * 10);
+    runOnJS(setShown)(Math.round(v.value / step) * step);
   });
 
   return <Text style={style}>{shown}</Text>;

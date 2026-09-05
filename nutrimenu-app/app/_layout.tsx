@@ -25,13 +25,38 @@ function Root() {
         <Stack.Screen name="shopping" />
         <Stack.Screen name="services" />
         <Stack.Screen name="water" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="rewards" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="specialist" />
+        <Stack.Screen name="dish/[id]" />
         {/* Системная шторка iOS с фиксаторами высоты: тянется пальцем,
             фон остаётся видимым — привычное поведение, а не своё окно. */}
         <Stack.Screen
           name="weight"
           options={{
             presentation: 'formSheet',
-            sheetAllowedDetents: [0.42, 0.9],
+            sheetAllowedDetents: [0.55, 0.9],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="measure"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.6, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="checkin"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.75, 0.95],
             sheetGrabberVisible: true,
             sheetCornerRadius: 24,
             gestureEnabled: true,
