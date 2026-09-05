@@ -24,7 +24,7 @@ export const hasLiquidGlass = liquidGlassAvailable && Platform.OS === 'ios';
 
 
 export function Glass({
-  children, style, radius = 28, tint, edge,
+  children, style, radius = 28, tint, edge, plain, interactive,
 }: {
   children?: React.ReactNode;
   style?: ViewStyle | ViewStyle[];
@@ -33,13 +33,28 @@ export function Glass({
   /** Цвет кромки. По умолчанию светлая — «блик на стекле»; тёмным
    *  элементам поверх светлого стекла она не подходит. */
   edge?: string;
+  /**
+   * Обычный материал вместо системного стекла. Нужен подложкам: стекло
+   * на стекле система не рисует — второму слою уже нечего преломлять,
+   * фон забрал первый. У системного переключателя дорожка тоже не
+   * стеклянная, стеклянный только бегунок.
+   */
+  plain?: boolean;
+  /** Живое стекло: преломляет и тянется за движением. Для бегунков. */
+  interactive?: boolean;
 }) {
   const { p } = useApp();
   const shape: ViewStyle = { borderRadius: radius, overflow: 'hidden' };
 
-  if (hasLiquidGlass && GlassView) {
+  if (hasLiquidGlass && GlassView && !plain) {
     return (
-      <GlassView style={[shape, style]} glassEffectStyle="regular" tintColor={tint}>
+      <GlassView
+        style={[shape, style]}
+        glassEffectStyle="regular"
+        isInteractive={interactive}
+        /* У приложения своя тема, и стекло должно слушать её, а не систему */
+        colorScheme={p.name === 'light' ? 'light' : 'dark'}
+        tintColor={tint}>
         {children}
       </GlassView>
     );

@@ -60,7 +60,7 @@ export default function ClientShell() {
       <GlassGroup
         spacing={gap}
         style={{ position: 'absolute', left: 14, right: 14, bottom: insets.bottom + 12 }}>
-        <TabBar tabs={TABS} progress={progress} onSelect={select} width={barWidth} />
+        <TabBar tabs={TABS} progress={progress} active={page} onSelect={select} width={barWidth} />
         <Pressable
           onPress={() => { haptic.tap(); router.push('/weight'); }}
           style={({ pressed }) => ({
