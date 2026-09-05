@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Platform, StyleSheet, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useApp } from '../store';
+import { hasExpoUI } from '../native';
 
 /* На iOS 26 доступен системный Liquid Glass — настоящее преломление того,
    что под панелью. Ниже 26-й и на Android его нет, поэтому подставляем
@@ -22,6 +23,16 @@ try {
 
 export const hasLiquidGlass = liquidGlassAvailable && Platform.OS === 'ios';
 
+/**
+ * Второй заход за настоящим стеклом. Материал даёт не только
+ * expo-glass-effect: тот же системный эффект есть в SwiftUI-компонентах
+ * @expo/ui, а они доступны там, где первого пакета нет — в Expo Go.
+ * Кладём SwiftUI-хост подложкой, содержимое остаётся обычным React Native.
+ * Эффект появился в iOS 26, ниже его просто нет.
+ */
+const iosMajor = Platform.OS === 'ios' ? parseInt(String(Platform.Version), 10) || 0 : 0;
+export const hasHostedGlass = !hasLiquidGlass && hasExpoUI && iosMajor >= 26;
+
 export function Glass({
   children, style, radius = 28, tint, edge,
 }: {
@@ -41,6 +52,32 @@ export function Glass({
       <GlassView style={[shape, style]} glassEffectStyle="regular" tintColor={tint}>
         {children}
       </GlassView>
+    );
+  }
+
+  if (hasHostedGlass) {
+    const { Host, HStack, Spacer } = require('@expo/ui/swift-ui');
+    const { frame, glassEffect } = require('@expo/ui/swift-ui/modifiers');
+    return (
+      <View style={[shape, style]}>
+        {/* Хост не перехватывает нажатия — они уходят детям ниже. Рамку
+            задаём с запасом: SwiftUI прижмёт её к предложенному размеру,
+            а лишнее всё равно обрежет overflow родителя. */}
+        <Host style={StyleSheet.absoluteFill} pointerEvents="none">
+          <HStack
+            modifiers={[
+              frame({ maxWidth: 9999, maxHeight: 9999 }),
+              glassEffect({
+                glass: { variant: 'regular', tint },
+                shape: 'roundedRectangle',
+                cornerRadius: radius,
+              }),
+            ]}>
+            <Spacer />
+          </HStack>
+        </Host>
+        {children}
+      </View>
     );
   }
 
