@@ -36,29 +36,50 @@ export function TabBarNative({ tabs, active, onSelect, width, height }: {
 
   const { Host, Namespace, GlassEffectContainer, HStack, VStack, Image, Text } =
     require('@expo/ui/swift-ui');
-  const { frame, glassEffect, glassEffectId, onTapGesture, foregroundStyle, font } =
-    require('@expo/ui/swift-ui/modifiers');
+  const { frame, glassEffect, glassEffectId, onTapGesture, foregroundStyle, font,
+    animation, Animation } = require('@expo/ui/swift-ui/modifiers');
 
-  const item = width / tabs.length;
+  /* Небольшой отступ от краёв: иначе капсула крайней вкладки упирается
+     в край панели и выглядит срезанной. */
+  const pad = 6;
+  const inner = width - pad * 2;
+  const item = inner / tabs.length;
 
   return (
-    <Host style={{ width, height }}>
+    <Host
+      style={{ width, height }}
+      /* У приложения свой переключатель темы, и SwiftUI внутри должен
+         слушать его, а не системную настройку. */
+      colorScheme={p.name === 'light' ? 'light' : 'dark'}>
       <Namespace id={ns}>
         <GlassEffectContainer spacing={10}>
-          <HStack spacing={0} modifiers={[frame({ width, height })]}>
+          <HStack
+            spacing={0}
+            modifiers={[
+              frame({ width: inner, height }),
+              /* Перетекание: смена активной вкладки должна происходить
+                 внутри анимации, иначе стекло возникает на новом месте
+                 скачком, а не перелетает туда. */
+              animation(Animation.spring({ duration: 0.4, bounce: 0.18 }), active),
+            ]}>
             {tabs.map((t, i) => {
               const on = i === active;
               const color = on ? p.primary : p.text;
               /* Порядок важен: сначала размер, потом стекло по этому
                  размеру, и только затем нажатие. */
-              const mods: any[] = [frame({ width: item, height: height - 12 })];
-              if (on) {
-                mods.push(glassEffect({
-                  glass: { variant: 'regular', interactive: true },
+              /* Стекло вешаем на все вкладки, у невыбранных — пустое:
+                 GlassEffectContainer работает со стеклянными детьми,
+                 а обычные внутри него гасит. Опознаётся оно постоянным
+                 именем, и оттого перелетает к новой вкладке, а не
+                 появляется там заново. */
+              const mods: any[] = [
+                frame({ width: item, height: height - 14 }),
+                glassEffect({
+                  glass: on ? { variant: 'regular', interactive: true } : { variant: 'identity' },
                   shape: 'capsule',
-                }));
-                mods.push(glassEffectId(t.key, ns));
-              }
+                }),
+              ];
+              if (on) mods.push(glassEffectId('active', ns));
               mods.push(onTapGesture(() => onSelect(i)));
 
               return (
