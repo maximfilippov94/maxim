@@ -6,7 +6,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Appearance, Platform, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PALETTES, Palette, ThemeName, ThemePref } from './theme';
-import { api, loadToken, setToken, Me } from './api';
+import { api, loadToken, setToken, Me, SignUp } from './api';
 
 interface Ctx {
   p: Palette;
@@ -14,7 +14,8 @@ interface Ctx {
   setThemePref: (t: ThemePref) => void;
   me: Me | null;
   ready: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<Me>;
+  signUp: (data: SignUp) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
 }
@@ -74,6 +75,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       method: 'POST', body: { email: email.trim(), password },
     });
     await setToken(r.token);
+    const m = await api<Me>('/me');
+    setMe(m);
+    /* Роль нужна вызывающему сразу: специалиста и клиента ждут разные экраны. */
+    return m;
+  }, []);
+
+  /* Регистрация сразу возвращает сессию — отдельного входа не нужно. */
+  const signUp = useCallback(async (data: SignUp) => {
+    const r = await api<{ token: string }>('/auth/register', { method: 'POST', body: data });
+    await setToken(r.token);
     setMe(await api<Me>('/me'));
   }, []);
 
@@ -90,7 +101,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <C.Provider value={{
       p: PALETTES[resolved], themePref, setThemePref,
-      me, ready, signIn, signOut, refreshMe,
+      me, ready, signIn, signUp, signOut, refreshMe,
     }}>
       {children}
     </C.Provider>

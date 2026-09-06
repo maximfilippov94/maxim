@@ -27,12 +27,7 @@ export async function pickPhoto(square = false): Promise<PickedPhoto | null> {
   return { uri: a.uri, name: a.fileName ?? `photo.${ext}`, type };
 }
 
-/** Файл в теле запроса — так его принимает PHP в $_FILES. */
-export function photoForm(field: string, ph: PickedPhoto) {
-  const fd = new FormData();
-  fd.append(field, { uri: ph.uri, name: ph.name, type: ph.type } as any);
-  return fd;
-}
+
 
 /** Фото или видео для переписки — без обрезки: кадр отправляют как снят. */
 export async function pickMedia(video = true): Promise<PickedPhoto | null> {
@@ -70,9 +65,3 @@ function asFile(a: ImagePicker.ImagePickerAsset): PickedPhoto {
   };
 }
 
-/** Готовая форма для POST /client/attachment. */
-export function fileForm(ph: PickedPhoto) {
-  const fd = new FormData();
-  fd.append('file', { uri: ph.uri, name: ph.name, type: ph.type } as any);
-  return fd;
-}

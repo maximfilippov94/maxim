@@ -151,12 +151,15 @@ function Attach({ onPick }: { onPick: (from: AttachSource) => void }) {
   const [open, setOpen] = useState(false);
 
   if (sysNative) {
-    const { Host, Menu, Button } = require('@expo/ui/swift-ui');
+    const { Host, Menu, Button, Image: SImage } = require('@expo/ui/swift-ui');
     const m = require('@expo/ui/swift-ui/modifiers');
+    /* Подпись передаём картинкой, а не через systemImage: без текстовой
+       подписи система рисует меню пустым кружком. */
     return (
       <Host style={{ width: 50, height: 50 }}
         colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
-        <Menu systemImage="paperclip"
+        <Menu
+          label={<SImage systemName="paperclip" size={21} />}
           modifiers={[m.buttonStyle('glass'), m.buttonBorderShape('circle'),
             m.frame({ width: 50, height: 50 })]}>
           <Button label="Фото или видео" systemImage="photo.on.rectangle"

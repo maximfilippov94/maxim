@@ -1,0 +1,132 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { SegmentedControl } from '@expo/ui/community/segmented-control';
+import { hasExpoUI } from '../../native';
+import { useApp } from '../../store';
+import { api, SpProfile, PROFESSION } from '../../api';
+import { ThemePref, S, FONT } from '../../theme';
+import { NavBar } from '../../ui/NavBar';
+import { ListGroup, ListRow, ListHead } from '../../ui/List';
+import { Face } from '../../ui/Face';
+import { haptic } from '../../haptics';
+
+const THEMES: { key: ThemePref; label: string }[] = [
+  { key: 'dark', label: 'Тёмная' },
+  { key: 'light', label: 'Светлая' },
+  { key: 'auto', label: 'Как в системе' },
+];
+
+export default function SpMore() {
+  const { p, themePref, setThemePref, me, signOut } = useApp();
+  const insets = useSafeAreaInsets();
+  const [pr, setPr] = useState<SpProfile | null>(null);
+  const idx = Math.max(0, THEMES.findIndex(t => t.key === themePref));
+
+  useEffect(() => {
+    api<{ profile: SpProfile }>('/specialist/profile')
+      .then(r => setPr(r.profile)).catch(() => {});
+  }, []);
+
+  const pick = useCallback((i: number) => {
+    haptic.select(); setThemePref(THEMES[i].key);
+  }, [setThemePref]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: p.bg }}>
+      <NavBar title="Ещё" />
+      <ScrollView style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
+        showsVerticalScrollIndicator={false}>
+
+        <ListGroup style={{ marginTop: 8 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14,
+            paddingHorizontal: 18, paddingVertical: 14 }}>
+            <Face url={pr?.avatar_url ?? me?.user?.avatar_url} name={pr?.name ?? me?.user?.name ?? 'С'} size={46} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, color: p.text }}>
+                {pr?.name ?? me?.user?.name ?? '—'}
+              </Text>
+              <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>
+                {PROFESSION[pr?.profession ?? 'nutritionist'] ?? 'Специалист'}
+                {pr?.email ? ` · ${pr.email}` : ''}
+              </Text>
+            </View>
+          </View>
+        </ListGroup>
+
+        {/* Код приглашения — то, чем специалист заводит клиента: он вводит
+            его в своём приложении и попадает под ведение. */}
+        {pr?.join_code ? (
+          <>
+            <ListHead>Приглашение</ListHead>
+            <ListGroup>
+              <ListRow first icon="tag" label="Код для клиента" value={pr.join_code} action />
+              <View style={{ paddingHorizontal: 18, paddingBottom: 14 }}>
+                <Text style={{ ...FONT.small, color: p.text3, lineHeight: 17 }}>
+                  Клиент вводит его при регистрации или в разделе «Мой специалист».
+                </Text>
+              </View>
+            </ListGroup>
+          </>
+        ) : null}
+
+        <ListHead>Работа</ListHead>
+        <ListGroup>
+          <ListRow first icon="bowl" label="База блюд"
+            onPress={() => router.push('/sp-dishes')} />
+          <ListRow icon="tag" label="Услуги и цены"
+            onPress={() => router.push('/services')} />
+          <ListRow icon="bell" label="Уведомления"
+            onPress={() => router.push('/sp-notifications')} />
+        </ListGroup>
+
+        <ListHead>Оформление</ListHead>
+        <ListGroup>
+          <View style={{ paddingHorizontal: 18, paddingVertical: 14 }}>
+            {hasExpoUI ? (
+              <SegmentedControl
+                values={THEMES.map(t => t.label)}
+                selectedIndex={idx}
+                onValueChange={(v) => pick(THEMES.findIndex(t => t.label === v))}
+                tintColor={p.primary}
+                appearance={p.name === 'light' ? 'light' : 'dark'}
+                style={{ height: 40 }}
+              />
+            ) : (
+              <View style={{ flexDirection: 'row', height: 40, borderRadius: 10,
+                backgroundColor: p.inset, padding: 3 }}>
+                {THEMES.map((t, i) => (
+                  <Pressable key={t.key} onPress={() => pick(i)}
+                    style={({ pressed }) => ({
+                      flex: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center',
+                      backgroundColor: i === idx ? p.primary : 'transparent',
+                      opacity: pressed && i !== idx ? 0.6 : 1,
+                    })}>
+                    <Text numberOfLines={1} style={{
+                      fontSize: 13, fontWeight: i === idx ? '600' : '400',
+                      color: i === idx ? p.onPrimary : p.text2,
+                    }}>{t.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        </ListGroup>
+
+        <ListHead>Аккаунт</ListHead>
+        <ListGroup>
+          <ListRow first icon="exit" label="Выйти" danger action
+            onPress={() => { haptic.warn(); signOut(); }} />
+        </ListGroup>
+
+        <Text style={{ ...FONT.small, color: p.text3, paddingHorizontal: 18,
+          paddingTop: 16, lineHeight: 17 }}>
+          Составление меню, шаблоны и аналитика пока живут в браузере — здесь
+          меню можно смотреть, править порции и публиковать.
+        </Text>
+      </ScrollView>
+    </View>
+  );
+}

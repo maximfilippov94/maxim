@@ -21,6 +21,12 @@ function Root() {
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
         <Stack.Screen name="client" />
+        <Stack.Screen name="sp" />
+        <Stack.Screen name="sp-client/[id]" />
+        <Stack.Screen name="sp-chat/[id]" />
+        <Stack.Screen name="sp-dishes" />
+        <Stack.Screen name="sp-notifications" />
+        <Stack.Screen name="register" />
         <Stack.Screen name="progress" />
         <Stack.Screen name="shopping" />
         <Stack.Screen name="services" />

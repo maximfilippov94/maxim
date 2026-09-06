@@ -43,17 +43,24 @@ export function SysButton({ label, onPress, variant = 'plainGlass', icon, width,
   if (!sysNative) {
     return <SysButtonPlain label={label} onPress={onPress} variant={variant} disabled={disabled} />;
   }
-  const { Host, Button } = require('@expo/ui/swift-ui');
+  const { Host, Button, HStack, Text: SText, Image: SImage } = require('@expo/ui/swift-ui');
   const m = require('@expo/ui/swift-ui/modifiers');
   const style = variant === 'prominent' ? 'glassProminent' : variant === 'quiet' ? 'plain' : 'glass';
-  const mods = [m.frame({ maxWidth: 9999 }), m.buttonStyle(style), m.buttonBorderShape('capsule')];
+  const mods = [m.buttonStyle(style), m.buttonBorderShape('capsule')];
   if (disabled) mods.push(m.disabled(true));
   return (
     <Host style={{ height, width }} colorScheme={p.name === 'light' ? 'light' : 'dark'}
       seedColor={variant === 'destructive' ? p.danger : p.primary}>
-      <Button label={label} systemImage={icon as any} onPress={onPress}
+      {/* Ширину задаёт подпись изнутри: рамка снаружи кнопку не растянет —
+          SwiftUI отдаст ей ровно её собственный размер и поставит по центру. */}
+      <Button onPress={onPress}
         role={variant === 'destructive' ? 'destructive' : undefined}
-        modifiers={mods} />
+        modifiers={mods}>
+        <HStack spacing={7} modifiers={[m.frame({ maxWidth: width ? undefined : 9999 })]}>
+          {icon ? <SImage systemName={icon} size={16} /> : <></>}
+          <SText modifiers={[m.font({ size: 16, weight: 'semibold' })]}>{label}</SText>
+        </HStack>
+      </Button>
     </Host>
   );
 }
@@ -93,8 +100,11 @@ export function Empty({ icon, title, note, height = 240 }: {
   const { p } = useApp();
   if (sysNative) {
     const { Host, ContentUnavailableView } = require('@expo/ui/swift-ui');
+    /* Без заданной ширины хост берёт «идеальный» размер вёрстки SwiftUI —
+       он шире экрана, и пояснение обрезается по краю. Ширину задаём мы,
+       переносы дальше расставляет система. */
     return (
-      <Host style={{ minHeight: height }} matchContents
+      <Host style={{ width: '100%', minHeight: height }}
         colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
         <ContentUnavailableView title={title} systemImage={icon} description={note} />
       </Host>

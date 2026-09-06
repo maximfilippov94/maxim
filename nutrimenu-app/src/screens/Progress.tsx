@@ -11,7 +11,8 @@ import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListHead, ListRow } from '../ui/List';
 import { Muted } from '../ui/base';
 import { SysButton, SysChart, Empty } from '../ui/system';
-import { pickPhoto, photoForm } from '../photo';
+import { pickPhoto } from '../photo';
+import { uploadFile } from '../upload';
 import { kg, plural } from '../format';
 import { haptic } from '../haptics';
 import { Loading, Fail } from './Shopping';
@@ -48,7 +49,7 @@ export default function Progress() {
     try {
       const ph = await pickPhoto();
       if (ph) {
-        await api('/client/progress/photo', { method: 'POST', body: photoForm('photo', ph) });
+        await uploadFile('/client/progress/photo', ph, 'photo');
         haptic.success();
         await load();
       }

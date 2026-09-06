@@ -25,24 +25,29 @@ const when = (s: string) => {
     + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 };
 
-export default function Notices() {
+export default function Notices({ role = 'client' }: { role?: 'client' | 'specialist' }) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
   const [list, setList] = useState<Notice[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const base = role === 'specialist' ? '/specialist' : '/client';
 
   const load = useCallback(async () => {
-    try { setList((await api<{ notifications: Notice[] }>('/client/notifications')).notifications ?? []); }
+    try { setList((await api<{ notifications: Notice[] }>(base + '/notifications')).notifications ?? []); }
     catch (e: any) { setErr(e.message); }
-  }, []);
+  }, [base]);
   useEffect(() => { load(); }, [load]);
 
   const readAll = useCallback(async () => {
     haptic.tap();
     setList(l => l && l.map(n => ({ ...n, read_at: n.read_at ?? 'now' })));
-    try { await api('/client/notifications/read', { method: 'POST' }); }
-    catch { load(); }
-  }, [load]);
+    /* Отметку «прочитано» серверу шлёт только клиентский кабинет: у
+       специалиста уведомления общие по всем клиентам и не гасятся оптом. */
+    if (role === 'client') {
+      try { await api('/client/notifications/read', { method: 'POST' }); }
+      catch { load(); }
+    }
+  }, [role, load]);
 
   if (err) return <Fail title="Уведомления" text={err} />;
   if (!list) return <Loading title="Уведомления" />;
@@ -85,7 +90,9 @@ export default function Notices() {
                       {n.body}
                     </Text>
                   ) : null}
-                  <Muted style={{ marginTop: 4 }}>{when(n.created_at)}</Muted>
+                  <Muted style={{ marginTop: 4 }}>
+                    {[n.client_name, when(n.created_at)].filter(Boolean).join(' · ')}
+                  </Muted>
                 </View>
               </Card>
             </Animated.View>

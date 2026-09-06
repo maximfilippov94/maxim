@@ -21,9 +21,15 @@ export function Label({ children }: { children: React.ReactNode }) {
   return <Text style={{ ...FONT.label, color: p.text3, textTransform: 'uppercase' }}>{children}</Text>;
 }
 
-export function Muted({ children, style }: { children: React.ReactNode; style?: TextStyle }) {
+export function Muted({ children, style, numberOfLines }: {
+  children: React.ReactNode; style?: TextStyle; numberOfLines?: number;
+}) {
   const { p } = useApp();
-  return <Text style={[{ ...FONT.small, color: p.text3 }, style]}>{children}</Text>;
+  return (
+    <Text numberOfLines={numberOfLines} style={[{ ...FONT.small, color: p.text3 }, style]}>
+      {children}
+    </Text>
+  );
 }
 
 export function Btn({ title, onPress, variant = 'primary', loading, icon, style }: {

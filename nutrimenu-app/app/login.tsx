@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useApp } from '../src/store';
 import { S, R, FONT } from '../src/theme';
 import { Btn, Muted } from '../src/ui/base';
+import { Pressable } from 'react-native';
 import { haptic } from '../src/haptics';
 import { Aurora } from '../src/ui/Aurora';
 
@@ -19,9 +20,9 @@ export default function Login() {
   async function submit() {
     setErr(null); setBusy(true);
     try {
-      await signIn(email, pass);
+      const me = await signIn(email, pass);
       haptic.success();
-      router.replace('/client');
+      router.replace(me.user_type === 'specialist' ? '/sp' : '/client');
     } catch (e: any) {
       haptic.error();
       setErr(e?.message ?? 'Не удалось войти');
@@ -67,9 +68,15 @@ export default function Login() {
 
         <Btn title="Войти" onPress={submit} loading={busy} style={{ marginTop: S.xl }} />
 
-        <Muted style={{ marginTop: S.xl, textAlign: 'center', lineHeight: 18 }}>
-          Кабинет специалиста и панель владельца пока работают в браузере — приложение
-          сейчас делается для клиентов.
+        <Pressable onPress={() => { haptic.tap(); router.push('/register'); }} hitSlop={10}
+          style={({ pressed }) => ({ marginTop: S.xl, opacity: pressed ? 0.5 : 1 })}>
+          <Text style={{ ...FONT.body, color: p.primary, textAlign: 'center' }}>
+            Создать аккаунт
+          </Text>
+        </Pressable>
+
+        <Muted style={{ marginTop: S.lg, textAlign: 'center', lineHeight: 18 }}>
+          Панель владельца работает в браузере.
         </Muted>
       </ScrollView>
     </KeyboardAvoidingView>

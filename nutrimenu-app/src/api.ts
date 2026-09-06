@@ -221,6 +221,8 @@ export interface Preferences {
 export interface Notice {
   id: number; type: string; title: string;
   body?: string | null; read_at?: string | null; created_at: string;
+  /** В кабинете специалиста уведомления приходят по разным клиентам */
+  client_name?: string | null;
 }
 export interface Specialist {
   id: number; name: string; avatar_url?: string | null; profession?: string;
@@ -262,3 +264,87 @@ export function attachKind(url?: string | null): AttachKind | null {
   if (['m4a', 'mp3', 'aac', 'wav', 'ogg'].includes(e)) return 'audio';
   return 'file';
 }
+
+/* ---------- Регистрация ---------- */
+
+export interface SignUpProfile {
+  sex?: 'm' | 'f';
+  age?: number;
+  height_cm?: number;
+  weight_kg?: number;
+  activity_level?: 'low' | 'light' | 'medium' | 'high' | 'athlete';
+  goal?: string;
+}
+export interface SignUp {
+  role: 'client' | 'specialist';
+  name: string;
+  email: string;
+  password: string;
+  /** Профессия специалиста */
+  profession?: 'nutritionist' | 'trainer' | 'coach';
+  /** Анкета клиента: по ней считается предварительная норма */
+  profile?: SignUpProfile;
+}
+
+/* ---------- Кабинет специалиста ---------- */
+
+export interface SpAttention {
+  id: number; name: string; avatar_url?: string | null;
+  weight_kg?: number | null; unread: number; skips: number;
+  reasons: string[];
+}
+export interface SpDashboard {
+  clients: number;
+  published_menus: number;
+  unread_messages: number;
+  avg_adherence: number;
+  avg_weight_delta: number | null;
+  meals_today: number;
+  meals_week: number;
+  active_week: number;
+  menus_ending: number;
+  no_menu: number;
+  attention: SpAttention[];
+}
+export interface SpClient {
+  id: number; name: string; email?: string | null; phone?: string | null;
+  avatar_url?: string | null;
+  sex?: string | null; birth_year?: number | null;
+  height_cm?: number | null; weight_kg?: number | null;
+  goal?: string | null; notes?: string | null; status?: string;
+  target_kcal?: number | null; target_protein?: number | null;
+  target_fat?: number | null; target_carbs?: number | null;
+  /* Считанные поля списка */
+  unread?: number;
+  menu_status?: string | null;
+  last_activity?: string | null;
+  eaten7?: number; logged7?: number;
+  last_msg?: string | null; last_msg_at?: string | null;
+  compliance?: number | null;
+  points?: number | null; streak?: number | null;
+}
+export interface SpMenu {
+  id: number; client_id: number; title: string;
+  start_date: string; days_count: number; status: string;
+  published_at?: string | null;
+}
+export interface SpMenuItem extends MealItem {
+  day_number: number;
+  base_portion_g?: number | null;
+  comment?: string | null;
+}
+export interface Dish {
+  id: number; name: string; photo_url?: string | null;
+  base_portion_g?: number | null; cook_minutes?: number | null;
+  kcal_100: number; protein_100: number; fat_100: number; carbs_100: number;
+  meal_types?: string | null;
+}
+export interface SpProfile {
+  id: number; name: string; email: string; avatar_url?: string | null;
+  profession?: string | null; join_code?: string | null;
+  plan?: string | null; bio?: string | null; city?: string | null;
+}
+
+export const PROFESSION: Record<string, string> = {
+  nutritionist: 'Нутрициолог', trainer: 'Тренер', coach: 'Коуч',
+};
