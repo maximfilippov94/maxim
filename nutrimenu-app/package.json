@@ -1,5 +1,5 @@
 {
-  "name": "nutrimenu",
+  "name": "equa",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -28,6 +28,7 @@
     "expo-mesh-gradient": "~57.0.1",
     "expo-router": "~57.0.19",
     "expo-secure-store": "~57.0.3",
+    "expo-splash-screen": "^57.0.8",
     "expo-status-bar": "~57.0.1",
     "expo-symbols": "~57.0.2",
     "expo-video": "~57.0.3",

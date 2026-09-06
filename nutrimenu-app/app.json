@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "NutriMenu",
-    "slug": "nutrimenu",
+    "name": "EQUA",
+    "slug": "equa",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "nutrimenu",
+    "scheme": "equa",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "ru.nutrimenu.app",
+      "bundleIdentifier": "ru.equa.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Камера нужна для видеозвонков со специалистом и фото блюд.",
         "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонков и голосовых сообщений специалисту.",
@@ -17,9 +17,10 @@
       }
     },
     "android": {
-      "package": "ru.nutrimenu.app",
+      "package": "ru.equa.app",
       "adaptiveIcon": {
-        "backgroundColor": "#070A08"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2E7D63"
       },
       "permissions": [
         "CAMERA",
@@ -32,10 +33,23 @@
       "expo-secure-store",
       "expo-image-picker",
       "expo-audio",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/adaptive-icon.png",
+          "imageWidth": 190,
+          "resizeMode": "contain",
+          "backgroundColor": "#2E7D63",
+          "dark": {
+            "backgroundColor": "#121820"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "icon": "./assets/icon.png"
   }
 }
