@@ -13,7 +13,10 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Камера нужна для видеозвонков со специалистом и фото блюд.",
         "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонков и голосовых сообщений специалисту.",
-        "NSPhotoLibraryUsageDescription": "Доступ к фото нужен, чтобы прикреплять снимки к сообщениям и прогрессу."
+        "NSPhotoLibraryUsageDescription": "Доступ к фото нужен, чтобы прикреплять снимки к сообщениям и прогрессу.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
       }
     },
     "android": {
@@ -25,7 +28,8 @@
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS"
+        "MODIFY_AUDIO_SETTINGS",
+        "POST_NOTIFICATIONS"
       ]
     },
     "plugins": [
@@ -33,6 +37,13 @@
       "expo-secure-store",
       "expo-image-picker",
       "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "color": "#2E7D63",
+          "defaultChannel": "default"
+        }
+      ],
       "expo-video",
       [
         "expo-splash-screen",

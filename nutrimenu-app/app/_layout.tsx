@@ -3,7 +3,13 @@ import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Notifications from 'expo-notifications';
 import { AppProvider, useApp } from '../src/store';
+import { setupNotificationHandler } from '../src/push';
+
+/* Пока приложение открыто, уведомление всё равно показываем баннером:
+   иначе новое сообщение теряется, если человек смотрит другой экран. */
+setupNotificationHandler();
 
 /** Экраны, куда пускают без сессии. Всё остальное её требует. */
 const OPEN = ['welcome', 'login', 'register', 'forgot'];
@@ -20,6 +26,21 @@ function Root() {
     const first = segments[0] ?? '';
     if (!OPEN.includes(first)) router.replace('/welcome');
   }, [ready, me, segments]);
+
+  /* Нажали на уведомление — открываем тот экран, о котором оно.
+     Сервер кладёт адрес в data.screen; без сессии никуда не ведём:
+     охранник выше всё равно вернёт на вход. */
+  useEffect(() => {
+    if (!ready || !me) return;
+    const open = (r: Notifications.NotificationResponse | null) => {
+      const screen = (r?.notification?.request?.content?.data as any)?.screen;
+      if (typeof screen === 'string' && screen.startsWith('/')) router.push(screen as any);
+    };
+    /* Приложение было закрыто и его подняли нажатием на уведомление */
+    Notifications.getLastNotificationResponseAsync().then(open).catch(() => {});
+    const sub = Notifications.addNotificationResponseReceivedListener(open);
+    return () => sub.remove();
+  }, [ready, me]);
 
   if (!ready) {
     return (

@@ -7,6 +7,7 @@ import { Appearance, Platform, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PALETTES, Palette, ThemeName, ThemePref } from './theme';
 import { api, loadToken, setToken, Me, SignUp } from './api';
+import { registerPush, unregisterPush } from './push';
 
 interface Ctx {
   p: Palette;
@@ -36,7 +37,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (saved) setPref(saved);
       const t = await loadToken();
       if (t) {
-        try { setMe(await api<Me>('/me')); }
+        try { setMe(await api<Me>('/me')); registerPush(); }
         catch { await setToken(null); }   /* протухший токен — молча выходим */
       }
       setReady(true);
@@ -79,6 +80,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await setToken(r.token);
     const m = await api<Me>('/me');
     setMe(m);
+    /* Телефон привязываем к вошедшему: напоминания приходят только своему. */
+    registerPush();
     /* Роль нужна вызывающему сразу: специалиста и клиента ждут разные экраны. */
     return m;
   }, []);
@@ -87,6 +90,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await setToken(t);
     const m = await api<Me>('/me');
     setMe(m);
+    registerPush();
     return m;
   }, []);
 
@@ -95,9 +99,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const r = await api<{ token: string }>('/auth/register', { method: 'POST', body: data });
     await setToken(r.token);
     setMe(await api<Me>('/me'));
+    registerPush();
   }, []);
 
   const signOut = useCallback(async () => {
+    /* Отписываем телефон до выхода: после сброса токена сервер уже не
+       поймёт, чью подписку убирать. */
+    await unregisterPush();
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* всё равно выходим */ }
     await setToken(null);
     setMe(null);

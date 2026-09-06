@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
@@ -9,6 +9,7 @@ import { NavBar } from '../ui/NavBar';
 import { Card, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Empty, SysButton } from '../ui/system';
+import { registerPush, PushState } from '../push';
 import { Loading, Fail } from './Shopping';
 import { haptic } from '../haptics';
 
@@ -24,6 +25,45 @@ const when = (s: string) => {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
     + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 };
+
+/**
+ * Почему уведомления молчат.
+ *
+ * Показываем плашку только когда что-то мешает: если push работает,
+ * человеку об этом знать незачем. Молчащие уведомления без объяснения
+ * хуже отсутствующих — их считают поломкой приложения.
+ */
+function PushNote() {
+  const { p } = useApp();
+  const [st, setSt] = useState<PushState | null>(null);
+
+  /* При открытии экрана только смотрим состояние: системный запрос
+     разрешения показывают один раз, и тратить его здесь нельзя. */
+  useEffect(() => { registerPush(false).then(setSt).catch(() => {}); }, []);
+
+  if (!st || st.ok) return null;
+
+  const act = st.reason === 'denied'
+    ? { label: 'Открыть настройки', run: () => Linking.openSettings() }
+    : st.reason === 'error'
+      ? { label: 'Попробовать снова', run: () => { haptic.tap(); registerPush().then(setSt); } }
+      : null;
+
+  return (
+    <Card style={{ marginTop: S.md, marginBottom: S.sm, gap: S.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+        <Icon name="bell" size={16} color={p.text3} />
+        <Text style={{ ...FONT.h3, color: p.text }}>Уведомления не приходят</Text>
+      </View>
+      <Muted style={{ lineHeight: 19 }}>{st.message}</Muted>
+      {act ? (
+        <View style={{ marginTop: 2 }}>
+          <SysButton label={act.label} onPress={act.run} height={44} />
+        </View>
+      ) : null}
+    </Card>
+  );
+}
 
 export default function Notices({ role = 'client' }: { role?: 'client' | 'specialist' }) {
   const { p } = useApp();
@@ -58,12 +98,18 @@ export default function Notices({ role = 'client' }: { role?: 'client' | 'specia
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <NavBar title="Уведомления" back />
       {list.length === 0 ? (
-        <Empty icon="bell" title="Уведомлений нет"
-          note="Здесь появятся напоминания, новости меню и звонки специалиста." />
+        <ScrollView contentContainerStyle={{
+          flexGrow: 1, paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
+        }} showsVerticalScrollIndicator={false}>
+          <PushNote />
+          <Empty icon="bell" title="Уведомлений нет"
+            note="Здесь появятся напоминания, новости меню и звонки специалиста." />
+        </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={{
           paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
         }} showsVerticalScrollIndicator={false}>
+          <PushNote />
           {unread ? (
             <View style={{ marginTop: S.md, marginBottom: S.md }}>
               <SysButton label={`Отметить прочитанными (${unread})`} onPress={readAll} height={46} />
