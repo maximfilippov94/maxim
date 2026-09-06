@@ -15,6 +15,8 @@ interface Ctx {
   me: Me | null;
   ready: boolean;
   signIn: (email: string, password: string) => Promise<Me>;
+  /** Вход через Apple, Google или VK: сессию выдал сервер, пароля нет */
+  signInWithToken: (token: string) => Promise<Me>;
   signUp: (data: SignUp) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
@@ -81,6 +83,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return m;
   }, []);
 
+  const signInWithToken = useCallback(async (t: string) => {
+    await setToken(t);
+    const m = await api<Me>('/me');
+    setMe(m);
+    return m;
+  }, []);
+
   /* Регистрация сразу возвращает сессию — отдельного входа не нужно. */
   const signUp = useCallback(async (data: SignUp) => {
     const r = await api<{ token: string }>('/auth/register', { method: 'POST', body: data });
@@ -101,7 +110,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <C.Provider value={{
       p: PALETTES[resolved], themePref, setThemePref,
-      me, ready, signIn, signUp, signOut, refreshMe,
+      me, ready, signIn, signInWithToken, signUp, signOut, refreshMe,
     }}>
       {children}
     </C.Provider>

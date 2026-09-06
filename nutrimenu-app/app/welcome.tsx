@@ -2,7 +2,7 @@
  * Заставка перед входом — разворот из брендбука: кадр с листьями во весь
  * экран, логотип по центру, слоган под ним и две кнопки внизу.
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,12 +11,14 @@ import { router } from 'expo-router';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { S, R, FONT } from '../src/theme';
 import { Logo } from '../src/ui/Logo';
+import { SocialAuth } from '../src/ui/SocialAuth';
 import { haptic } from '../src/haptics';
 
 const GREEN = '#2E7D63';
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
+  const [err, setErr] = useState<string | null>(null);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#121820' }}>
@@ -47,6 +49,10 @@ export default function Welcome() {
         <BigButton title="Войти" filled onPress={() => { haptic.tap(); router.push('/login'); }} />
         <BigButton title="Зарегистрироваться"
           onPress={() => { haptic.tap(); router.push('/register'); }} />
+        {err ? (
+          <Text style={{ ...FONT.small, color: '#FFB8B3', textAlign: 'center' }}>{err}</Text>
+        ) : null}
+        <SocialAuth onError={setErr} />
       </Animated.View>
     </View>
   );

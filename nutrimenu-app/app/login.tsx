@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useApp } from '../src/store';
 import { S, R, FONT } from '../src/theme';
 import { AuthShell, Field, AuthButton, Note, ON_PHOTO } from '../src/ui/AuthShell';
+import { SocialAuth } from '../src/ui/SocialAuth';
 import { Icon } from '../src/ui/Icon';
 import { haptic } from '../src/haptics';
 
@@ -59,6 +60,8 @@ export default function Login() {
       <View style={{ marginTop: S.sm }}>
         <AuthButton title={busy ? 'Входим…' : 'Войти'} onPress={submit} loading={busy} />
       </View>
+
+      <SocialAuth onError={setErr} />
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: S.xl }}>
         <Note>Ещё нет аккаунта?</Note>
