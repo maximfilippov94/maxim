@@ -86,7 +86,10 @@ export interface MealItem {
 export interface TodayResponse {
   menu: { id: number; title: string; target_kcal?: number } | null;
   items: MealItem[];
+  /** Съедено: только отмеченные приёмы */
   totals: Totals;
+  /** Весь день по плану — столько будет, если съесть всё назначенное */
+  plan_totals?: Totals;
   weight?: { last: number; delta: number } | null;
   water?: { ml: number; goal_ml: number } | null;
 }

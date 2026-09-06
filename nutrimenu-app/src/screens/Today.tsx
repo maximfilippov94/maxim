@@ -78,6 +78,7 @@ export default function Today() {
   };
   const items = data?.items ?? [];
   const doneCount = items.filter(x => x.log_status === 'eaten').length;
+  const plan = round(data?.plan_totals?.kcal);
 
   const macros: [string, number, number, string][] = [
     ['Белки', data?.totals?.protein ?? 0, targets.protein, p.mp],
@@ -125,6 +126,14 @@ export default function Today() {
         <View style={{ marginTop: S.lg }}>
           <Bar value={target ? eaten / target : 0} />
         </View>
+        {/* Наверху — съеденное, иначе «осталось» не о чем говорит. План
+            дня рядом: видно, сколько ещё предстоит по меню. */}
+        {plan ? (
+          <Muted style={{ marginTop: S.md }}>
+            По плану на день {round(plan)} ккал
+            {eaten < plan ? ` · осталось съесть ${round(plan - eaten)}` : ''}
+          </Muted>
+        ) : null}
       </Card>
       </Animated.View>
 
