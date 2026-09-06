@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, DishItem, Replacement, MEAL_TITLES } from '../api';
+import { api, mediaUrl, DishItem, Replacement, MEAL_TITLES } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -132,9 +132,9 @@ export default function Dish() {
           {x.dish_name}
         </Text>
 
-        {x.photo_url ? (
+        {mediaUrl(x.photo_url) ? (
           <Animated.View entering={FadeInDown.duration(240)}>
-            <Image source={{ uri: x.photo_url }}
+            <Image source={{ uri: mediaUrl(x.photo_url)! }}
               style={{ width: '100%', height: 200, borderRadius: R.lg, backgroundColor: p.inset,
                 marginBottom: S.md }}
               contentFit="cover" transition={220} cachePolicy="memory-disk" />

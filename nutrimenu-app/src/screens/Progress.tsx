@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
-import { api, ProgressResponse } from '../api';
+import { api, mediaUrl, ProgressResponse } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListHead, ListRow } from '../ui/List';
@@ -208,7 +208,7 @@ export default function Progress() {
               }}>
                 {photos.map((ph, i) => (
                   <View key={ph.id} style={{ width: '31.5%' }}>
-                    <Image source={{ uri: ph.photo_url }}
+                    <Image source={{ uri: mediaUrl(ph.photo_url)! }}
                       style={{ width: '100%', aspectRatio: 0.75, borderRadius: R.md,
                         backgroundColor: p.inset }}
                       contentFit="cover" transition={200} cachePolicy="memory-disk" />
