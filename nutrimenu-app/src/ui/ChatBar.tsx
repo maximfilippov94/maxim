@@ -15,6 +15,7 @@ import {
   useAudioRecorder, useAudioRecorderState, RecordingPresets,
   setAudioModeAsync, requestRecordingPermissionsAsync,
 } from 'expo-audio';
+import { File } from 'expo-file-system';
 import { useApp } from '../store';
 import { S, R, FONT } from '../theme';
 import { Glass } from './Glass';
@@ -28,6 +29,17 @@ const mmss = (ms: number) => {
   const s = Math.floor(ms / 1000);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 };
+
+/** Короче секунды — это случайное касание, а не сообщение. */
+const MIN_MS = 1000;
+/** Файл меньше этого — запись не поднялась, внутри тишина. */
+const MIN_BYTES = 1024;
+
+/** Отменённую или пустую запись убираем с устройства, чтобы не копилась. */
+function drop(uri?: string | null) {
+  if (!uri) return;
+  try { new File(uri).delete(); } catch {}
+}
 
 export function ChatBar({ value, onChange, onSend, onAttach, onVoice, busy, onError }: {
   value: string;
@@ -44,6 +56,8 @@ export function ChatBar({ value, onChange, onSend, onAttach, onVoice, busy, onEr
   const state = useAudioRecorderState(recorder, 250);
   const [rec, setRec] = useState(false);
   const has = value.trim().length > 0;
+  /* Пока не набралась секунда, отправка приглушена: видно, что рано. */
+  const long = (state.durationMillis ?? 0) >= MIN_MS;
 
   const start = useCallback(async () => {
     try {
@@ -63,12 +77,29 @@ export function ChatBar({ value, onChange, onSend, onAttach, onVoice, busy, onEr
 
   const finish = useCallback(async (send: boolean) => {
     try {
+      /* Длительность читаем до остановки: после stop счётчик обнуляется. */
+      const ms = recorder.getStatus?.().durationMillis ?? 0;
       await recorder.stop();
       await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
       const uri = recorder.uri;
       setRec(false);
-      if (send && uri) { haptic.success(); onVoice(uri); }
-      else haptic.warn();
+
+      if (!send || !uri) { haptic.warn(); drop(uri); return; }
+
+      /* Секундомер иногда врёт (микрофон не успел открыться), поэтому
+         вторая проверка — по файлу: пустая запись весит десятки байт. */
+      let bytes: number | null = null;
+      try { bytes = new File(uri).size; } catch {}
+
+      if (ms < MIN_MS || (bytes !== null && bytes < MIN_BYTES)) {
+        haptic.warn();
+        drop(uri);
+        onError('Слишком короткая запись — подержите микрофон подольше');
+        return;
+      }
+
+      haptic.success();
+      onVoice(uri);
     } catch (e: any) {
       setRec(false);
       onError(e?.message ?? 'Запись не сохранилась');
@@ -88,7 +119,7 @@ export function ChatBar({ value, onChange, onSend, onAttach, onVoice, busy, onEr
         <Pressable onPress={() => finish(false)} hitSlop={10} style={{ flex: 1 }}>
           <Text style={{ ...FONT.body, color: p.text3 }}>Отменить</Text>
         </Pressable>
-        <Round icon="send" filled onPress={() => finish(true)} />
+        <Round icon="send" filled disabled={!long} onPress={() => finish(true)} />
       </Glass>
     );
   }
@@ -207,16 +238,17 @@ function Attach({ onPick }: { onPick: (from: AttachSource) => void }) {
 }
 
 /** Круглая кнопка в торце строки: отправка или микрофон. */
-function Round({ icon, onPress, filled }: {
-  icon: string; onPress: () => void; filled?: boolean;
+function Round({ icon, onPress, filled, disabled }: {
+  icon: string; onPress: () => void; filled?: boolean; disabled?: boolean;
 }) {
   const { p } = useApp();
   return (
-    <Pressable onPress={onPress}
+    <Pressable onPress={onPress} disabled={disabled}
       style={({ pressed }) => ({
         width: 40, height: 40, borderRadius: 20,
         alignItems: 'center', justifyContent: 'center',
         backgroundColor: filled ? p.primary : 'transparent',
+        opacity: disabled ? 0.4 : 1,
         transform: [{ scale: pressed ? 0.92 : 1 }],
       })}>
       <Icon name={icon} size={filled ? 18 : 21}
