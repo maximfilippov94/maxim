@@ -1,12 +1,26 @@
-import React from 'react';
-import { Stack } from 'expo-router';
+import React, { useEffect } from 'react';
+import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '../src/store';
 
+/** Экраны, куда пускают без сессии. Всё остальное её требует. */
+const OPEN = ['welcome', 'login', 'register'];
+
 function Root() {
-  const { p, ready } = useApp();
+  const { p, ready, me } = useApp();
+  const segments = useSegments();
+
+  /* Сессии не стало — возвращаем на вход. Одно место на всё приложение:
+     выход из «Ещё», просроченный токен и удалённый аккаунт приводят
+     к одному и тому же, и каждый экран не должен помнить об этом сам. */
+  useEffect(() => {
+    if (!ready || me) return;
+    const first = segments[0] ?? '';
+    if (!OPEN.includes(first)) router.replace('/welcome');
+  }, [ready, me, segments]);
+
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg, alignItems: 'center', justifyContent: 'center' }}>
