@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "codespace": "EXPO_PACKAGER_PROXY_URL=https://$CODESPACE_NAME-8081.$GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN expo start",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit"
   },
