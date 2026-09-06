@@ -69,9 +69,14 @@ export default function SpClientScreen() {
           </View>
         </View>
 
-        <View style={{ flexDirection: 'row', gap: S.md, marginBottom: S.lg }}>
+        <View style={{ gap: S.md, marginBottom: S.lg }}>
           <SysButton label="Написать" icon="bubble.left" height={46}
             onPress={() => { haptic.tap(); router.push(`/sp-chat/${cid}`); }} />
+          <SysButton label="Цели и нормы" icon="target" height={46}
+            onPress={() => {
+              haptic.tap();
+              router.push({ pathname: '/sp-client-edit', params: { id: cid } });
+            }} />
         </View>
 
         <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.md }}>
@@ -195,6 +200,20 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     finally { setBusy(false); }
   }, [menu, load]);
 
+  /* Готовое меню — заготовка для следующего клиента: собирать такой же
+     рацион заново незачем. */
+  const saveTemplate = useCallback(async () => {
+    if (!menu) return;
+    setBusy(true);
+    try {
+      await api('/specialist/templates', {
+        method: 'POST', body: { source_menu_id: menu.id, name: menu.title },
+      });
+      haptic.success(); setErr('Сохранено в шаблоны — они в разделе «Ещё».');
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось сохранить'); }
+    finally { setBusy(false); }
+  }, [menu]);
+
   /* Скопировать вчерашний день — как в вебе: рацион редко меняют каждый
      день целиком, чаще правят одно-два блюда. */
   const copyPrev = useCallback(async () => {
@@ -312,6 +331,8 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
           <SysButton label={`Скопировать день ${day - 1}`} icon="doc.on.doc"
             disabled={busy} onPress={copyPrev} />
         ) : null}
+        <SysButton label="Сохранить как шаблон" icon="doc.badge.plus"
+          disabled={busy} onPress={saveTemplate} />
         {menu.status !== 'published' ? (
           <SysButton label="Опубликовать меню" variant="prominent"
             disabled={busy} onPress={publish} />

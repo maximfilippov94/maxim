@@ -76,8 +76,18 @@ export default function SpMore() {
         <ListGroup>
           <ListRow first icon="bowl" label="База блюд"
             onPress={() => router.push('/sp-dishes')} />
+          <ListRow icon="edit" label="Шаблоны меню"
+            onPress={() => router.push('/sp-templates')} />
+          <ListRow icon="trend" label="Аналитика"
+            onPress={() => router.push('/sp-analytics')} />
           <ListRow icon="tag" label="Услуги и цены"
-            onPress={() => router.push('/services')} />
+            onPress={() => router.push('/sp-services')} />
+        </ListGroup>
+
+        <ListHead>Входящее</ListHead>
+        <ListGroup>
+          <ListRow first icon="gift" label="Заявки из каталога"
+            onPress={() => router.push('/sp-leads')} />
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/sp-notifications')} />
         </ListGroup>
@@ -117,14 +127,15 @@ export default function SpMore() {
 
         <ListHead>Аккаунт</ListHead>
         <ListGroup>
-          <ListRow first icon="exit" label="Выйти" danger action
+          <ListRow first icon="user" label="Профиль и фото"
+            onPress={() => router.push('/sp-profile')} />
+          <ListRow icon="exit" label="Выйти" danger action
             onPress={() => { haptic.warn(); signOut(); }} />
         </ListGroup>
 
         <Text style={{ ...FONT.small, color: p.text3, paddingHorizontal: 18,
           paddingTop: 16, lineHeight: 17 }}>
-          Составление меню, шаблоны и аналитика пока живут в браузере — здесь
-          меню можно смотреть, править порции и публиковать.
+          Редактирование карточек блюд и лента постов пока остаются в браузере.
         </Text>
       </ScrollView>
     </View>

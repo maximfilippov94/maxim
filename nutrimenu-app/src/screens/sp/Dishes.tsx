@@ -3,7 +3,8 @@ import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../../store';
-import { api, Dish, MEAL_TITLES } from '../../api';
+import { Image } from 'expo-image';
+import { api, mediaUrl, Dish, MEAL_TITLES } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
 import { Card, Muted } from '../../ui/base';
@@ -65,8 +66,12 @@ export default function SpDishes() {
           ) : null}
         </View>
 
+        {/* Сколько блюд со снимком — сразу видно, доехали ли фотографии
+            на сервер: имя файла легко перепутать, а молчаливый прочерк
+            в карточке об этом не скажет. */}
         <Muted style={{ marginBottom: S.md }}>
-          {list.length} {plural(list.length, ['блюдо', 'блюда', 'блюд'])} в каталоге
+          {list.length} {plural(list.length, ['блюдо', 'блюда', 'блюд'])} в каталоге ·
+          {' '}с фото {list.filter(d => d.photo_url).length}
         </Muted>
 
         {shown.length === 0 ? (
@@ -76,23 +81,35 @@ export default function SpDishes() {
           const portion = d.base_portion_g || 250;
           return (
             <Animated.View key={d.id} entering={FadeInDown.delay(Math.min(i, 10) * 20).duration(200)}>
-              <Card style={{ marginBottom: S.sm }}>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.md }}>
-                  <Text style={{ ...FONT.h3, color: p.text, flex: 1 }} numberOfLines={1}>
-                    {d.name}
-                  </Text>
-                  <Text style={{ ...FONT.h3, color: p.text }}>
-                    {round(d.kcal_100 * portion / 100)}
-                  </Text>
-                  <Muted>ккал</Muted>
+              <Card style={{ marginBottom: S.sm, flexDirection: 'row', gap: S.md }}>
+                {mediaUrl(d.photo_url) ? (
+                  <Image source={{ uri: mediaUrl(d.photo_url)! }}
+                    style={{ width: 56, height: 56, borderRadius: R.md, backgroundColor: p.inset }}
+                    contentFit="cover" transition={200} cachePolicy="memory-disk" />
+                ) : (
+                  <View style={{ width: 56, height: 56, borderRadius: R.md, backgroundColor: p.inset,
+                    alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon name="bowl" size={20} color={p.text3} />
+                  </View>
+                )}
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm }}>
+                    <Text style={{ ...FONT.h3, color: p.text, flex: 1 }} numberOfLines={1}>
+                      {d.name}
+                    </Text>
+                    <Text style={{ ...FONT.h3, color: p.text }}>
+                      {round(d.kcal_100 * portion / 100)}
+                    </Text>
+                    <Muted>ккал</Muted>
+                  </View>
+                  <Muted style={{ marginTop: 3 }} numberOfLines={1}>
+                    {[`${round(portion)} г`, meals(d.meal_types),
+                      d.cook_minutes ? `${d.cook_minutes} мин` : null].filter(Boolean).join(' · ')}
+                  </Muted>
+                  <Muted style={{ marginTop: 2 }}>
+                    На 100 г: Б {round(d.protein_100)} · Ж {round(d.fat_100)} · У {round(d.carbs_100)}
+                  </Muted>
                 </View>
-                <Muted style={{ marginTop: 3 }}>
-                  {[`${round(portion)} г`, meals(d.meal_types),
-                    d.cook_minutes ? `${d.cook_minutes} мин` : null].filter(Boolean).join(' · ')}
-                </Muted>
-                <Muted style={{ marginTop: 2 }}>
-                  На 100 г: Б {round(d.protein_100)} · Ж {round(d.fat_100)} · У {round(d.carbs_100)}
-                </Muted>
               </Card>
             </Animated.View>
           );

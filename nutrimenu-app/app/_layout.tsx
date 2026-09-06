@@ -26,6 +26,10 @@ function Root() {
         <Stack.Screen name="sp-chat/[id]" />
         <Stack.Screen name="sp-dishes" />
         <Stack.Screen name="sp-notifications" />
+        <Stack.Screen name="sp-templates" />
+        <Stack.Screen name="sp-analytics" />
+        <Stack.Screen name="sp-services" />
+        <Stack.Screen name="sp-leads" />
         <Stack.Screen name="register" />
         <Stack.Screen name="progress" />
         <Stack.Screen name="shopping" />
@@ -73,6 +77,36 @@ function Root() {
           options={{
             presentation: 'formSheet',
             sheetAllowedDetents: [0.6, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="sp-client-new"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.75, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="sp-client-edit"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.8, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="sp-profile"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.75, 0.95],
             sheetGrabberVisible: true,
             sheetCornerRadius: 24,
             gestureEnabled: true,

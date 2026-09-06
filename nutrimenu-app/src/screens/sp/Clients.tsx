@@ -79,7 +79,16 @@ export default function SpClients() {
       showsVerticalScrollIndicator={false}>
 
       <Label>{list?.length ?? 0} {plural(list?.length ?? 0, ['клиент', 'клиента', 'клиентов'])}</Label>
-      <Text style={{ ...FONT.h1, color: p.text, marginTop: S.xs, marginBottom: S.lg }}>Клиенты</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: S.xs, marginBottom: S.lg }}>
+        <Text style={{ ...FONT.h1, color: p.text, flex: 1 }}>Клиенты</Text>
+        <Pressable onPress={() => { haptic.tap(); router.push('/sp-client-new'); }} hitSlop={10}
+          style={({ pressed }) => ({
+            width: 38, height: 38, borderRadius: 19, backgroundColor: p.primary,
+            alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.75 : 1,
+          })}>
+          <Icon name="plus" size={19} color={p.onPrimary} width={2.4} />
+        </Pressable>
+      </View>
 
       <View style={{
         flexDirection: 'row', alignItems: 'center', gap: S.sm,

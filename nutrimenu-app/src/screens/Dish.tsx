@@ -10,8 +10,7 @@ import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
-import { Counter } from '../ui/Counter';
-import { SysButton, SysSlider, SysConfirm, Empty } from '../ui/system';
+import { SysButton, Empty } from '../ui/system';
 import { round } from '../format';
 import { haptic } from '../haptics';
 
@@ -25,8 +24,6 @@ export default function Dish() {
 
   const [x, setX] = useState<DishItem | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  /* Граммовку ведём отдельно от загруженного блюда: ползунок должен
-     двигаться на каждый кадр, а запрос уходит один — на отпускание. */
   const [gram, setGram] = useState(0);
   const [repl, setRepl] = useState<Replacement[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -40,28 +37,7 @@ export default function Dish() {
 
   useEffect(() => { load(); }, [load]);
 
-  /* КБЖУ пересчитываем на месте по той же пропорции, что и сервер:
-     ждать ответа, чтобы увидеть новую калорийность, — лишняя пауза. */
-  const k = x && x.portion_g ? gram / round(x.portion_g) : 1;
-  const nut = x ? {
-    kcal: x.nutrition.kcal * k, protein: x.nutrition.protein * k,
-    fat: x.nutrition.fat * k, carbs: x.nutrition.carbs * k,
-  } : null;
-
-  const savePortion = useCallback(async (v: number) => {
-    if (!x || v === round(x.portion_g)) return;
-    haptic.select();
-    try {
-      await api(`/client/menu-items/${iid}/portion`, {
-        method: 'PATCH', body: { portion_g: v },
-      });
-      await load();
-    } catch (e: any) {
-      haptic.error();
-      setGram(round(x.portion_g));
-      setErr(e?.message ?? 'Не удалось сохранить вес порции');
-    }
-  }, [x, iid, load]);
+  const nut = x?.nutrition ?? null;
 
   const log = useCallback(async (status: 'eaten' | 'planned' | 'skipped', reason?: string) => {
     setBusy(true);
@@ -141,21 +117,14 @@ export default function Dish() {
           </Animated.View>
         ) : null}
 
-        {/* Граммовка: системный ползунок. Цифры набегают, а не
-            перескакивают — так видно, насколько сдвинулась порция. */}
+        {/* Порцию назначает специалист — клиент её видит, но не меняет:
+            иначе план и отчёт по нему перестают сходиться. */}
         <Animated.View entering={FadeInDown.delay(40).duration(240)}>
           <Card style={{ marginBottom: S.md }}>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-              <Label>Порция</Label>
-              <Muted>{lo}–{hi} г</Muted>
-            </View>
+            <Label>Порция</Label>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-              <Counter value={gram} style={{ ...FONT.num, color: p.text }} step={1} />
+              <Text style={{ ...FONT.num, color: p.text }}>{gram}</Text>
               <Muted style={{ marginLeft: 6 }}>г</Muted>
-            </View>
-            <View style={{ marginTop: S.sm }}>
-              <SysSlider value={gram} min={lo} max={hi} step={5}
-                onChange={setGram} onCommit={savePortion} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: S.sm }}>
               <Text style={{ fontSize: 21, fontWeight: '700', color: p.text }}>
@@ -181,7 +150,7 @@ export default function Dish() {
                   <Text style={{ fontSize: 15, color: p.text, flex: 1 }} numberOfLines={1}>
                     {ing.ingredient_name}
                   </Text>
-                  <Muted>{round(ing.grams * k)} г</Muted>
+                  <Muted>{round(ing.grams)} г</Muted>
                 </View>
               ))}
             </Card>

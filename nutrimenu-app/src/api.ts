@@ -348,3 +348,40 @@ export interface SpProfile {
 export const PROFESSION: Record<string, string> = {
   nutritionist: 'Нутрициолог', trainer: 'Тренер', coach: 'Коуч',
 };
+
+/* ---------- Остальное в кабинете специалиста ---------- */
+
+export interface SpTemplate {
+  id: number; name: string;
+  source_menu_id: number; source_title?: string | null;
+  days_count?: number | null; items_count?: number | null;
+  created_at: string;
+}
+export interface SpLead {
+  id: number; name: string; contact?: string | null;
+  message?: string | null; read_at?: string | null; created_at: string;
+}
+export interface SpService {
+  id: number; title: string; description?: string | null;
+  kind: string; price_kop: number; period_days?: number | null;
+  is_active: number; sort_order?: number;
+}
+export interface SpSignal {
+  id: number; name: string; unread: number;
+  last_meal?: string | null; skips: number; last_weight?: string | null;
+}
+export interface NewClient {
+  name: string; email?: string | null; phone?: string | null;
+  sex?: 'm' | 'f' | null; birth_year?: number | null;
+  height_cm?: number | null; weight_kg?: number | null;
+  goal?: string | null;
+  target_kcal?: number | null; target_protein?: number | null;
+  target_fat?: number | null; target_carbs?: number | null;
+}
+export interface NewClientResult {
+  client_id: number; invite_token: string; invite_url: string;
+}
+
+export const SERVICE_KIND: Record<string, string> = {
+  subscription: 'Подписка', session: 'Разовая встреча', package: 'Пакет', other: 'Другое',
+};
