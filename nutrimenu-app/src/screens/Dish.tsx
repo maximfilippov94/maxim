@@ -110,9 +110,11 @@ export default function Dish() {
 
         {mediaUrl(x.photo_url) ? (
           <Animated.View entering={FadeInDown.duration(240)}>
+            {/* Квадрат, а не низкая полоса: снимки блюд квадратные, и от
+                тарелки в полосе оставалась только середина. */}
             <Image source={{ uri: mediaUrl(x.photo_url)! }}
-              style={{ width: '100%', height: 200, borderRadius: R.lg, backgroundColor: p.inset,
-                marginBottom: S.md }}
+              style={{ width: '100%', aspectRatio: 1, borderRadius: R.lg,
+                backgroundColor: p.inset, marginBottom: S.md }}
               contentFit="cover" transition={220} cachePolicy="memory-disk" />
           </Animated.View>
         ) : null}
