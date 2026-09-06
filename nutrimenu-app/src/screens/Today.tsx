@@ -164,20 +164,25 @@ export default function Today() {
       {/* Вес и отмечено */}
       <Animated.View entering={FadeInDown.delay(100).duration(280)}
         style={{ flexDirection: 'row', gap: S.md, marginBottom: S.md }}>
-        <Card style={{ flex: 1 }}>
-          <Label>Вес</Label>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-            <Text style={{ fontSize: 22, fontWeight: '700', color: p.text }}>
-              {data?.weight ? kg(data.weight.last) : '—'}
-            </Text>
-            {!!data?.weight && <Muted style={{ marginLeft: 3 }}>кг</Muted>}
-          </View>
-          <Muted style={{ marginTop: 2 }}>
-            {data?.weight?.delta
-              ? `${data.weight.delta > 0 ? '+' : '−'}${kg(Math.abs(data.weight.delta))} кг за период`
-              : 'Записать вес'}
-          </Muted>
-        </Card>
+        {/* Вес записывают отсюда: карточка и показывает последний, и
+            открывает запись — отдельная кнопка для этого не нужна. */}
+        <Pressable onPress={() => { haptic.tap(); router.push('/weight'); }}
+          style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.75 : 1 })}>
+          <Card>
+            <Label>Вес</Label>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: p.text }}>
+                {data?.weight ? kg(data.weight.last) : '—'}
+              </Text>
+              {!!data?.weight && <Muted style={{ marginLeft: 3 }}>кг</Muted>}
+            </View>
+            <Muted style={{ marginTop: 2 }}>
+              {data?.weight?.delta
+                ? `${data.weight.delta > 0 ? '+' : '−'}${kg(Math.abs(data.weight.delta))} кг за период`
+                : 'Записать вес'}
+            </Muted>
+          </Card>
+        </Pressable>
         <Card style={{ flex: 1 }}>
           <Label>Отмечено</Label>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>

@@ -1,10 +1,7 @@
 import React from 'react';
-import { Pressable, Text } from 'react-native';
-import { router, usePathname } from 'expo-router';
+
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useApp } from '../../src/store';
-import { Icon } from '../../src/ui/Icon';
-import { haptic } from '../../src/haptics';
 
 /**
  * Нижняя панель — настоящая системная, та же, что у Apple в своих
@@ -15,35 +12,8 @@ import { haptic } from '../../src/haptics';
  * Плата за это — перелистывание страниц пальцем. У системной панели его
  * нет: у Apple и в Телеграме вкладки тоже переключаются только нажатием.
  */
-/**
- * Быстрые действия — системное меню, а не своя всплывашка: раскрытие,
- * стекло и отклик на нажатие делает сама система. Состав повторяет
- * быстрые действия из веба, ничего нового здесь не заводится.
- */
-function QuickAdd() {
-  const { p } = useApp();
-  const { Host, Menu, Button } = require('@expo/ui/swift-ui');
-  const go = (to: '/weight' | '/water') => { haptic.tap(); router.push(to); };
-  return (
-    <Host style={{ height: 52 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}
-      seedColor={p.primary}>
-      {/* Подпись самой кнопки задаётся свойством label, дети — это пункты
-          меню. Если отдать подпись первым ребёнком, кнопка остаётся
-          безымянной и выглядит пустой капсулой. */}
-      <Menu label="Записать" systemImage="plus.circle.fill">
-        <Button label="Вес" systemImage="scalemass" onPress={() => go('/weight')} />
-        <Button label="Воду" systemImage="drop.fill" onPress={() => go('/water')} />
-      </Menu>
-    </Host>
-  );
-}
-
 export default function ClientTabs() {
   const { p } = useApp();
-  /* Полка «Записать» нужна там, где записывают: на «Сегодня» и «Неделе».
-     В чате она отжимает строку ввода от панели, а в «Ещё» просто лишняя. */
-  const path = usePathname();
-  const quick = path === '/client' || path === '/client/week';
   return (
     /* Материал и цвета задаём явно. Панель системная, а переключатель
        темы наш: UIKit о нём не знает и берёт оформление у телефона —
@@ -57,13 +27,6 @@ export default function ClientTabs() {
         default: { color: p.text2 },
         selected: { color: p.accent },
       }}>
-      {/* Системная полка над панелью — место для быстрого действия.
-          Раньше «+» была отдельной плавающей кнопкой рядом. */}
-      {quick ? (
-        <NativeTabs.BottomAccessory>
-          <QuickAdd />
-        </NativeTabs.BottomAccessory>
-      ) : null}
 
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="house" />
