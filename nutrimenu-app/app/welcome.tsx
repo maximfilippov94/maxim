@@ -12,6 +12,7 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { S, R, FONT } from '../src/theme';
 import { Logo } from '../src/ui/Logo';
 import { SocialAuth } from '../src/ui/SocialAuth';
+import { LegalNote } from '../src/ui/LegalNote';
 import { haptic } from '../src/haptics';
 
 const GREEN = '#2E7D63';
@@ -53,6 +54,7 @@ export default function Welcome() {
           <Text style={{ ...FONT.small, color: '#FFB8B3', textAlign: 'center' }}>{err}</Text>
         ) : null}
         <SocialAuth onError={setErr} />
+        <LegalNote />
       </Animated.View>
     </View>
   );

@@ -5,6 +5,7 @@ import { useApp } from '../src/store';
 import { S, R, FONT } from '../src/theme';
 import { AuthShell, Field, AuthButton, Note, ON_PHOTO } from '../src/ui/AuthShell';
 import { SocialAuth } from '../src/ui/SocialAuth';
+import { LegalNote } from '../src/ui/LegalNote';
 import { Icon } from '../src/ui/Icon';
 import { haptic } from '../src/haptics';
 
@@ -73,7 +74,9 @@ export default function Login() {
         </Pressable>
       </View>
 
-      <Note style={{ marginTop: S.xl, textAlign: 'center', color: ON_PHOTO.text3 }}>
+      <LegalNote color={ON_PHOTO.text3} link={ON_PHOTO.text2} />
+
+      <Note style={{ marginTop: S.lg, textAlign: 'center', color: ON_PHOTO.text3 }}>
         Панель владельца работает в браузере.
       </Note>
     </AuthShell>

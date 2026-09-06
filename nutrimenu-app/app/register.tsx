@@ -6,6 +6,7 @@ import { SignUpProfile } from '../src/api';
 import { S, R, FONT } from '../src/theme';
 import { Icon } from '../src/ui/Icon';
 import { AuthShell, ON_PHOTO, photoField, Note, AuthButton } from '../src/ui/AuthShell';
+import { LegalNote } from '../src/ui/LegalNote';
 import { haptic } from '../src/haptics';
 
 type Role = 'client' | 'specialist';
@@ -230,6 +231,7 @@ export default function Register() {
 
       <View style={{ marginTop: S.xl }}>
         <AuthButton title={busy ? 'Создаём…' : 'Создать аккаунт'} loading={busy} onPress={submit} />
+        <LegalNote color={ON_PHOTO.text3} link={ON_PHOTO.text2} />
       </View>
     </AuthShell>
   );

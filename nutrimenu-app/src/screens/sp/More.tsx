@@ -11,6 +11,7 @@ import { NavBar } from '../../ui/NavBar';
 import { ListGroup, ListRow, ListHead } from '../../ui/List';
 import { Face } from '../../ui/Face';
 import { haptic } from '../../haptics';
+import { openLegal } from '../../ui/legal';
 
 const THEMES: { key: ThemePref; label: string }[] = [
   { key: 'dark', label: 'Тёмная' },
@@ -123,6 +124,14 @@ export default function SpMore() {
               </View>
             )}
           </View>
+        </ListGroup>
+
+        <ListHead>Документы</ListHead>
+        <ListGroup>
+          <ListRow icon="tag" label="Пользовательское соглашение"
+            onPress={() => { haptic.tap(); openLegal('terms'); }} />
+          <ListRow icon="tag" label="Политика конфиденциальности"
+            onPress={() => { haptic.tap(); openLegal('privacy'); }} />
         </ListGroup>
 
         <ListHead>Аккаунт</ListHead>
