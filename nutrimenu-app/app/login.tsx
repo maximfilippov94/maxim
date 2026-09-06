@@ -58,7 +58,12 @@ export default function Login() {
         </View>
       ) : null}
 
-      <View style={{ marginTop: S.sm }}>
+      <Pressable onPress={() => { haptic.tap(); router.push('/forgot'); }} hitSlop={10}
+        style={({ pressed }) => ({ alignSelf: 'flex-end', opacity: pressed ? 0.5 : 1 })}>
+        <Text style={{ ...FONT.small, color: ON_PHOTO.text2 }}>Забыли пароль?</Text>
+      </Pressable>
+
+      <View style={{ marginTop: S.lg }}>
         <AuthButton title={busy ? 'Входим…' : 'Войти'} onPress={submit} loading={busy} />
       </View>
 

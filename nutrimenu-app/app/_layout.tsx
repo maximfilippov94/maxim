@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppProvider, useApp } from '../src/store';
 
 /** Экраны, куда пускают без сессии. Всё остальное её требует. */
-const OPEN = ['welcome', 'login', 'register'];
+const OPEN = ['welcome', 'login', 'register', 'forgot'];
 
 function Root() {
   const { p, ready, me } = useApp();
@@ -46,6 +46,7 @@ function Root() {
         <Stack.Screen name="sp-services" />
         <Stack.Screen name="sp-leads" />
         <Stack.Screen name="register" />
+        <Stack.Screen name="forgot" />
         <Stack.Screen name="progress" />
         <Stack.Screen name="shopping" />
         <Stack.Screen name="services" />
