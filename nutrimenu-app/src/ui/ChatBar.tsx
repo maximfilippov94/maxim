@@ -64,7 +64,7 @@ export function ChatBar({ value, onChange, onSend, onAttach, onVoice, busy, onEr
   const finish = useCallback(async (send: boolean) => {
     try {
       await recorder.stop();
-      await setAudioModeAsync({ allowsRecording: false });
+      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
       const uri = recorder.uri;
       setRec(false);
       if (send && uri) { haptic.success(); onVoice(uri); }

@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withTiming, Easing,
+} from 'react-native-reanimated';
 import { useApp } from '../store';
 import { S, R, FONT } from '../theme';
 
@@ -62,10 +65,17 @@ export function Btn({ title, onPress, variant = 'primary', loading, icon, style 
 export function Bar({ value, color, height = 5 }: { value: number; color?: string; height?: number }) {
   const { p } = useApp();
   const w = Math.max(0, Math.min(1, isFinite(value) ? value : 0));
+  /* Полоса дорастает до нового значения вместе со счётчиком рядом:
+     отметил приём — видно, как показатель прибавился, а не подменился. */
+  const grow = useSharedValue(w);
+  useEffect(() => {
+    grow.value = withTiming(w, { duration: 460, easing: Easing.out(Easing.cubic) });
+  }, [w, grow]);
+  const fill = useAnimatedStyle(() => ({ width: `${grow.value * 100}%` }));
   return (
     <View style={{ height, borderRadius: height / 2, backgroundColor: p.track, overflow: 'hidden' }}>
-      <View style={{ width: `${w * 100}%`, height: '100%', borderRadius: height / 2,
-        backgroundColor: color ?? p.primary }} />
+      <Animated.View style={[{ height: '100%', borderRadius: height / 2,
+        backgroundColor: color ?? p.primary }, fill]} />
     </View>
   );
 }

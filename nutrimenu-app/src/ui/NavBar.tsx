@@ -4,20 +4,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useApp } from '../store';
 import { Icon } from './Icon';
+import { Logo } from './Logo';
 import { haptic } from '../haptics';
 
 /** Компактная шапка: заголовок по центру, «назад» слева — как в системе.
  *  Без заголовка остаётся только строка возврата: она нужна экранам
- *  с крупным заголовком под ней, по образцу «Сегодня». */
-export function NavBar({ title, back }: { title?: string; back?: boolean }) {
+ *  с крупным заголовком под ней, по образцу «Сегодня».
+ *  С `logo` вместо названия стоит знак: цвет берётся у темы — тёмный на
+ *  светлой, белый на тёмной. */
+export function NavBar({ title, back, logo }: {
+  title?: string; back?: boolean; logo?: boolean;
+}) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
   return (
     <View style={{ paddingTop: insets.top, backgroundColor: p.bg }}>
-      <View style={{ height: 44, justifyContent: 'center' }}>
-        <Text style={{
-          fontSize: 17, fontWeight: '600', color: p.text, textAlign: 'center',
-        }}>{title ?? ''}</Text>
+      <View style={{ height: 44, justifyContent: 'center', alignItems: 'center' }}>
+        {logo ? (
+          <Logo width={96} color={p.text} />
+        ) : (
+          <Text style={{
+            fontSize: 17, fontWeight: '600', color: p.text, textAlign: 'center',
+          }}>{title ?? ''}</Text>
+        )}
         {back ? (
           <Pressable
             onPress={() => { haptic.tap(); router.back(); }}

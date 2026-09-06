@@ -9,6 +9,7 @@ import { api, mediaUrl, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_T
 import { S, R, FONT } from '../theme';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
+import { Counter } from '../ui/Counter';
 import { Empty } from '../ui/system';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
@@ -112,14 +113,13 @@ export default function Today() {
         <View style={{ flexDirection: 'row', alignItems: 'flex-end',
           justifyContent: 'space-between', marginTop: S.sm }}>
           <View>
-            <Text style={{ ...FONT.num, color: p.text }}>{eaten}</Text>
+            <Counter value={eaten} step={1} style={{ ...FONT.num, color: p.text }} />
             <Muted style={{ marginTop: 2 }}>ккал / {target}</Muted>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 21, fontWeight: '700', letterSpacing: -0.5,
-              color: left >= 0 ? p.primary : p.premium }}>
-              {Math.abs(left)}
-            </Text>
+            <Counter value={Math.abs(left)} step={1}
+              style={{ fontSize: 21, fontWeight: '700', letterSpacing: -0.5,
+                color: left >= 0 ? p.primary : p.premium }} />
             <Muted style={{ marginTop: 2 }}>{left >= 0 ? 'осталось' : 'перебор'}</Muted>
           </View>
         </View>
@@ -148,7 +148,8 @@ export default function Today() {
                 <Text style={{ ...FONT.small, color: p.text2 }} numberOfLines={1}>{name}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 5 }}>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: p.text }}>{round(cur)}</Text>
+                <Counter value={round(cur)} step={1}
+                  style={{ fontSize: 17, fontWeight: '700', color: p.text }} />
                 <Muted style={{ marginLeft: 3 }}>г / {round(tgt)}</Muted>
               </View>
               <View style={{ marginTop: 7 }}>

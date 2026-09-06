@@ -21,6 +21,7 @@ import { Face } from './Face';
 import { Empty } from './system';
 import { ChatBar, AttachSource } from './ChatBar';
 import { Attachment } from './Attachment';
+import { setAudioModeAsync } from 'expo-audio';
 import { pickMedia, shootPhoto } from '../photo';
 import { uploadFile } from '../upload';
 import { haptic } from '../haptics';
@@ -90,6 +91,12 @@ export function ChatView({
   }, [endpoint]);
 
   useEffect(() => { load(); }, [load]);
+
+  /* Голосовые должны звучать и при включённом бесшумном режиме — как в
+     мессенджерах: человек нажал «играть», он ждёт звук, а не тишину. */
+  useEffect(() => {
+    setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
+  }, []);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const send = useCallback(async () => {
