@@ -7,7 +7,7 @@ import { S, R, FONT } from '../src/theme';
 import { Muted } from '../src/ui/base';
 import { Icon } from '../src/ui/Icon';
 import { Empty } from '../src/ui/system';
-import { round } from '../src/format';
+import { round, dayTitle } from '../src/format';
 import { haptic } from '../src/haptics';
 
 /**
@@ -28,7 +28,9 @@ const fits = (d: Dish, meal: string) => fitRank(d, meal) > 0;
 
 export default function AddDish() {
   const { p } = useApp();
-  const { menu, day, meal } = useLocalSearchParams<{ menu: string; day: string; meal: string }>();
+  const { menu, day, meal, start } = useLocalSearchParams<{
+    menu: string; day: string; meal: string; start?: string;
+  }>();
   const [list, setList] = useState<Dish[] | null>(null);
   const [q, setQ] = useState('');
   const [busy, setBusy] = useState(false);
@@ -76,7 +78,7 @@ export default function AddDish() {
         <View style={{ flex: 1 }}>
           <Text style={{ ...FONT.h2, color: p.text }}>Добавить блюдо</Text>
           <Muted style={{ marginTop: 2 }}>
-            День {day} · {MEAL_TITLES[String(meal)] ?? 'приём'}
+            {dayTitle(start, Number(day))} · {MEAL_TITLES[String(meal)] ?? 'приём'}
           </Muted>
         </View>
         <Pressable onPress={() => { haptic.tap(); router.back(); }} hitSlop={12}>

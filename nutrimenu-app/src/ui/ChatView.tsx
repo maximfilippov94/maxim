@@ -6,10 +6,12 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
+  View, Text, ScrollView, Keyboard, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, useAnimatedKeyboard, useAnimatedStyle,
+} from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, ChatMessage } from '../api';
@@ -64,6 +66,21 @@ export function ChatView({
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const sv = useRef<ScrollView>(null);
+
+  /* Строка ввода едет вместе с клавиатурой и прилипает к её верхнему
+     краю — как в мессенджерах. Отдельно висящая панель, из-под которой
+     выезжает клавиатура, выглядит так, будто её забыли подвинуть. */
+  const kb = useAnimatedKeyboard();
+  const rest = insets.bottom + bottomInset;
+  const pad = useAnimatedStyle(() => ({ height: Math.max(kb.height.value, rest) }));
+
+  /* Клавиатура закрывает низ переписки — подматываем ленту к концу,
+     иначе последнее сообщение оказывается под ней. */
+  useEffect(() => {
+    const sub = Keyboard.addListener('keyboardDidShow',
+      () => sv.current?.scrollToEnd({ animated: true }));
+    return () => sub.remove();
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -133,9 +150,7 @@ export function ChatView({
   const topPad = back ? S.md : insets.top + 72;
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: p.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={{ flex: 1, backgroundColor: p.bg }}>
 
       {back}
 
@@ -155,6 +170,9 @@ export function ChatView({
             paddingHorizontal: S.lg, paddingTop: topPad, paddingBottom: S.lg,
           }}
           onContentSizeChange={() => sv.current?.scrollToEnd({ animated: false })}
+          /* Потянул ленту вниз — клавиатура уезжает следом за пальцем */
+          keyboardDismissMode="interactive"
+          keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
           {(msgs ?? []).map((mm, i) => {
             const prev = (msgs ?? [])[i - 1];
@@ -203,10 +221,7 @@ export function ChatView({
         </Text>
       ) : null}
 
-      <View style={{
-        paddingHorizontal: S.lg, paddingTop: S.sm,
-        paddingBottom: insets.bottom + bottomInset,
-      }}>
+      <View style={{ paddingHorizontal: S.lg, paddingTop: S.sm, paddingBottom: S.sm }}>
         <ChatBar
           value={draft}
           onChange={t => { setDraft(t); setErr(null); }}
@@ -217,7 +232,10 @@ export function ChatView({
           onError={setErr}
         />
       </View>
-    </KeyboardAvoidingView>
+      {/* Пустое место под строкой: с закрытой клавиатурой — под панель
+          вкладок, с открытой — ровно на её высоту. */}
+      <Animated.View style={pad} />
+    </View>
   );
 }
 

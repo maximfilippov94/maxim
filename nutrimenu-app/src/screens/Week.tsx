@@ -8,19 +8,10 @@ import { S, R, FONT } from '../theme';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Empty } from '../ui/system';
-import { round, plural } from '../format';
+import { round, plural, menuDate, dayTitle, dowShort, isToday } from '../format';
 import { haptic } from '../haptics';
 import { router } from 'expo-router';
 import { Loading, Fail } from './Shopping';
-
-const DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-
-/** День меню к дате: меню начинается в start_date, дни идут подряд */
-const dateOf = (start: string, day: number) => {
-  const d = new Date(start + 'T00:00:00');
-  d.setDate(d.getDate() + day - 1);
-  return d;
-};
 
 export default function Week() {
   const { p, me } = useApp();
@@ -75,18 +66,24 @@ export default function Week() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: S.sm, paddingBottom: S.md }}>
               {Array.from({ length: menu.days_count }, (_, i) => i + 1).map(n => {
-                const dt = dateOf(menu.start_date, n);
+                const dt = menuDate(menu.start_date, n)!;
                 const on = n === day;
+                const now = isToday(dt);
                 return (
                   <Pressable key={n} onPress={() => pick(n)}
                     style={({ pressed }) => ({
                       width: 46, paddingVertical: 9, borderRadius: R.md,
                       alignItems: 'center',
                       backgroundColor: on ? p.primary : p.surface,
+                      /* Сегодня обведено: в полосе из семи чисел иначе
+                         непонятно, где ты находишься. */
+                      borderWidth: now && !on ? 1.5 : 0,
+                      borderColor: p.primary,
                       opacity: pressed && !on ? 0.7 : 1,
                     })}>
-                    <Text style={{ ...FONT.small, color: on ? p.onPrimary : p.text3 }}>
-                      {DOW[(dt.getDay() + 6) % 7]}
+                    <Text style={{ ...FONT.small,
+                      color: on ? p.onPrimary : now ? p.primary : p.text3 }}>
+                      {dowShort(dt)}
                     </Text>
                     <Text style={{ fontSize: 17, fontWeight: '700', marginTop: 1,
                       color: on ? p.onPrimary : p.text }}>
@@ -97,6 +94,14 @@ export default function Week() {
               })}
             </ScrollView>
           </Animated.View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm,
+            marginTop: S.xs, marginBottom: S.md }}>
+            <Text style={{ ...FONT.h3, color: p.text }}>
+              {dayTitle(menu.start_date, day, true)}
+            </Text>
+            {isToday(menuDate(menu.start_date, day)) ? <Muted>сегодня</Muted> : null}
+          </View>
 
           {tot ? (
             <Animated.View entering={FadeInDown.delay(40).duration(240)}>

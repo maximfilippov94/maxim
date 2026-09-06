@@ -22,3 +22,38 @@ export function plural(n: number, forms: [string, string, string]) {
 
 export const todayLabel = () =>
   new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+
+/* ——— Даты меню ———
+   Меню живёт с start_date подряд по дням, но человеку «день 4» ничего не
+   говорит — он смотрит в календарь. Считаем дату один раз здесь, чтобы
+   и клиент, и специалист называли один и тот же день одинаково. */
+
+const WD_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+const WD_FULL = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда',
+  'Четверг', 'Пятница', 'Суббота'];
+
+export function menuDate(start: string | null | undefined, day: number): Date | null {
+  if (!start) return null;
+  const d = new Date(start + 'T00:00:00');
+  if (isNaN(+d)) return null;
+  d.setDate(d.getDate() + day - 1);
+  return d;
+}
+
+/** «Ср, 9 сент.» или «Среда, 9 сентября». Без даты — прежнее «День 4». */
+export function dayTitle(start: string | null | undefined, day: number, full = false) {
+  const d = menuDate(start, day);
+  if (!d) return `День ${day}`;
+  const name = (full ? WD_FULL : WD_SHORT)[d.getDay()];
+  const md = d.toLocaleDateString('ru-RU', { day: 'numeric', month: full ? 'long' : 'short' });
+  return `${name}, ${md}`;
+}
+
+export const dowShort = (d: Date) => WD_SHORT[d.getDay()];
+
+export function isToday(d: Date | null) {
+  if (!d) return false;
+  const n = new Date();
+  return d.getDate() === n.getDate() && d.getMonth() === n.getMonth()
+    && d.getFullYear() === n.getFullYear();
+}

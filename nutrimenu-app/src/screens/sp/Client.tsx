@@ -14,7 +14,7 @@ import { Card, Label, Muted, Bar } from '../../ui/base';
 import { Icon } from '../../ui/Icon';
 import { Face } from '../../ui/Face';
 import { SysButton, SysChart, SysSlider, SysConfirm, Empty } from '../../ui/system';
-import { round, kg, plural } from '../../format';
+import { round, kg, plural, menuDate, dayTitle, dowShort, isToday } from '../../format';
 import { haptic } from '../../haptics';
 import { Loading, Fail } from '../Shopping';
 
@@ -259,18 +259,22 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
         contentContainerStyle={{ gap: S.sm, paddingBottom: S.md }}>
         {Array.from({ length: menu.days_count }, (_, i) => i + 1).map(n => {
           const on = n === day;
-          const d = new Date(menu.start_date + 'T00:00:00');
-          d.setDate(d.getDate() + n - 1);
+          const d = menuDate(menu.start_date, n)!;
+          const now = isToday(d);
           const filled = items.some(i => i.day_number === n);
           return (
             <Pressable key={n} onPress={() => { haptic.select(); setDay(n); }}
               style={({ pressed }) => ({
                 width: 46, paddingVertical: 9, borderRadius: R.md, alignItems: 'center',
                 backgroundColor: on ? p.primary : p.surface,
+                /* Сегодня обведено — видно, какой день клиент ест прямо сейчас */
+                borderWidth: now && !on ? 1.5 : 0,
+                borderColor: p.primary,
                 opacity: pressed && !on ? 0.7 : 1,
               })}>
-              <Text style={{ ...FONT.small, color: on ? p.onPrimary : p.text3 }}>
-                {['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'][(d.getDay() + 6) % 7]}
+              <Text style={{ ...FONT.small,
+                color: on ? p.onPrimary : now ? p.primary : p.text3 }}>
+                {dowShort(d)}
               </Text>
               <Text style={{ fontSize: 17, fontWeight: '700', marginTop: 1,
                 color: on ? p.onPrimary : p.text }}>{d.getDate()}</Text>
@@ -283,6 +287,14 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
           );
         })}
       </ScrollView>
+
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm,
+        marginBottom: S.md }}>
+        <Text style={{ ...FONT.h3, color: p.text }}>
+          {dayTitle(menu.start_date, day, true)}
+        </Text>
+        {isToday(menuDate(menu.start_date, day)) ? <Muted>сегодня</Muted> : null}
+      </View>
 
       <Card style={{ marginBottom: S.md }}>
         <Label>Калорийность дня</Label>
@@ -304,7 +316,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
                   haptic.tap();
                   router.push({
                     pathname: '/sp-add-dish',
-                    params: { menu: menu.id, day, meal: mt },
+                    params: { menu: menu.id, day, meal: mt, start: menu.start_date },
                   });
                 }}
                 hitSlop={10}
@@ -328,7 +340,8 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
 
       <View style={{ gap: S.md, marginTop: S.sm }}>
         {day > 1 ? (
-          <SysButton label={`Скопировать день ${day - 1}`} icon="doc.on.doc"
+          <SysButton label={`Скопировать ${dayTitle(menu.start_date, day - 1)}`}
+            icon="doc.on.doc"
             disabled={busy} onPress={copyPrev} />
         ) : null}
         <SysButton label="Сохранить как шаблон" icon="doc.badge.plus"
