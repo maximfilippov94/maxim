@@ -1,6 +1,6 @@
 import React from 'react';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { useApp } from '../../src/store';
 import { hasExpoUI } from '../../src/native';
 import { haptic } from '../../src/haptics';
@@ -28,13 +28,18 @@ function QuickAdd() {
 
 export default function SpTabs() {
   const { p } = useApp();
+  /* Полка нужна на рабочих вкладках; в чате она мешает строке ввода */
+  const path = usePathname();
+  const quick = path === '/sp' || path === '/sp/clients';
   return (
     <NativeTabs
       tintColor={p.primary}
       blurEffect={p.name === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
       iconColor={{ default: p.text2, selected: p.primary }}
       labelStyle={{ default: { color: p.text2 }, selected: { color: p.accent } }}>
-      <NativeTabs.BottomAccessory><QuickAdd /></NativeTabs.BottomAccessory>
+      {quick ? (
+        <NativeTabs.BottomAccessory><QuickAdd /></NativeTabs.BottomAccessory>
+      ) : null}
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="house" />
         <NativeTabs.Trigger.Label>Главная</NativeTabs.Trigger.Label>

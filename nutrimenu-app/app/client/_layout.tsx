@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text } from 'react-native';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useApp } from '../../src/store';
 import { Icon } from '../../src/ui/Icon';
@@ -40,6 +40,10 @@ function QuickAdd() {
 
 export default function ClientTabs() {
   const { p } = useApp();
+  /* Полка «Записать» нужна там, где записывают: на «Сегодня» и «Неделе».
+     В чате она отжимает строку ввода от панели, а в «Ещё» просто лишняя. */
+  const path = usePathname();
+  const quick = path === '/client' || path === '/client/week';
   return (
     /* Материал и цвета задаём явно. Панель системная, а переключатель
        темы наш: UIKit о нём не знает и берёт оформление у телефона —
@@ -55,9 +59,11 @@ export default function ClientTabs() {
       }}>
       {/* Системная полка над панелью — место для быстрого действия.
           Раньше «+» была отдельной плавающей кнопкой рядом. */}
-      <NativeTabs.BottomAccessory>
-        <QuickAdd />
-      </NativeTabs.BottomAccessory>
+      {quick ? (
+        <NativeTabs.BottomAccessory>
+          <QuickAdd />
+        </NativeTabs.BottomAccessory>
+      ) : null}
 
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="house" />
