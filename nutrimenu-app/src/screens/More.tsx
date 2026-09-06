@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { SegmentedControl } from '@expo/ui/community/segmented-control';
@@ -11,6 +11,7 @@ import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListRow, ListHead } from '../ui/List';
 import { haptic } from '../haptics';
 import { openLegal } from '../ui/legal';
+import { confirmDeleteAccount } from '../ui/deleteAccount';
 
 const THEMES: { key: ThemePref; label: string }[] = [
   { key: 'dark', label: 'Тёмная' },
@@ -133,6 +134,15 @@ export default function More() {
           </View>
           <ListRow icon="exit" label="Выйти" danger action
             onPress={() => { haptic.warn(); signOut(); }} />
+          {/* Удаление аккаунта — здесь же, а не письмом в поддержку:
+              человек должен уйти сам, без чужого посредничества. */}
+          <ListRow icon="close" label="Удалить аккаунт" danger action
+            onPress={() => {
+              haptic.warn();
+              confirmDeleteAccount('client',
+                () => signOut(),
+                m => Alert.alert('Не получилось', m));
+            }} />
         </ListGroup>
       </ScrollView>
     </View>
