@@ -32,7 +32,7 @@ export default function More() {
       <NavBar title="Ещё" />
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 150 }}
         showsVerticalScrollIndicator={false}>
 
         {/* Разделы — во всю ширину, без полей: список, а не набор карточек */}

@@ -60,7 +60,7 @@ export default function SpHome() {
       style={{ flex: 1, backgroundColor: p.bg }}
       contentContainerStyle={{
         paddingTop: insets.top + S.lg, paddingHorizontal: S.lg,
-        paddingBottom: insets.bottom + 100,
+        paddingBottom: insets.bottom + 150,
       }}
       refreshControl={
         <RefreshControl refreshing={busy} tintColor={p.text3}

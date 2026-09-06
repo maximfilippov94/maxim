@@ -37,7 +37,7 @@ export default function SpMore() {
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <NavBar title="Ещё" />
       <ScrollView style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 110 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 150 }}
         showsVerticalScrollIndicator={false}>
 
         <ListGroup style={{ marginTop: 8 }}>

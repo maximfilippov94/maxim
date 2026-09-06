@@ -68,6 +68,26 @@ function Root() {
             gestureEnabled: true,
           }}
         />
+        <Stack.Screen
+          name="sp-menu-new"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.6, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
+        <Stack.Screen
+          name="sp-add-dish"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.75, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
       </Stack>
     </>
   );

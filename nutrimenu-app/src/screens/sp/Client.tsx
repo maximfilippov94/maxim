@@ -93,7 +93,7 @@ export default function SpClientScreen() {
         </View>
 
         {tab === 'overview' ? <Overview c={c} /> : null}
-        {tab === 'menu' ? <MenuTab cid={cid} /> : null}
+        {tab === 'menu' ? <MenuTab cid={cid} name={c.name} /> : null}
         {tab === 'progress' ? <ProgressTab cid={cid} /> : null}
       </ScrollView>
     </View>
@@ -142,14 +142,15 @@ function Overview({ c }: { c: SpClient }) {
  * Порция меняется системным ползунком, удаление спрашивает подтверждение —
  * блюдо из чужого плана нельзя убрать «случайно».
  */
-function MenuTab({ cid }: { cid: number }) {
+function MenuTab({ cid, name }: { cid: number; name: string }) {
   const { p } = useApp();
   const [menu, setMenu] = useState<SpMenu | null | undefined>(undefined);
   const [items, setItems] = useState<SpMenuItem[]>([]);
   const [day, setDay] = useState(1);
   const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (keepDay = false) => {
     try {
       const r = await api<{ menus: SpMenu[] }>(`/specialist/menus?client_id=${cid}`);
       const m = r.menus?.[0] ?? null;
@@ -157,14 +158,21 @@ function MenuTab({ cid }: { cid: number }) {
       if (m) {
         const full = await api<{ menu: SpMenu; items: SpMenuItem[] }>(`/specialist/menus/${m.id}`);
         setItems(full.items ?? []);
-        const start = new Date(m.start_date + 'T00:00:00');
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const n = Math.floor((+today - +start) / 86400000) + 1;
-        setDay(Math.max(1, Math.min(m.days_count, n)));
-      }
+        if (!keepDay) {
+          const start = new Date(m.start_date + 'T00:00:00');
+          const today = new Date(); today.setHours(0, 0, 0, 0);
+          const n = Math.floor((+today - +start) / 86400000) + 1;
+          setDay(Math.max(1, Math.min(m.days_count, n)));
+        }
+      } else setItems([]);
+      setErr(null);
     } catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); setMenu(null); }
   }, [cid]);
+
   useEffect(() => { load(); }, [load]);
+  /* Блюдо добавляют на отдельном экране: вернувшись, надо увидеть его,
+     а не прежний список. День при этом не сбрасываем. */
+  useFocusEffect(useCallback(() => { load(true); }, [load]));
 
   const setPortion = useCallback(async (id: number, g: number) => {
     try { await api(`/specialist/menu-items/${id}`, { method: 'PATCH', body: { portion_g: g } }); }
@@ -173,23 +181,47 @@ function MenuTab({ cid }: { cid: number }) {
 
   const remove = useCallback(async (id: number) => {
     setItems(a => a.filter(x => x.id !== id));
-    try { await api(`/specialist/menu-items/${id}`, { method: 'DELETE' }); await load(); }
-    catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось убрать'); load(); }
+    try { await api(`/specialist/menu-items/${id}`, { method: 'DELETE' }); await load(true); }
+    catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось убрать'); load(true); }
   }, [load]);
 
   const publish = useCallback(async () => {
     if (!menu) return;
+    setBusy(true);
     try {
       await api(`/specialist/menus/${menu.id}/publish`, { method: 'POST' });
-      haptic.success(); await load();
+      haptic.success(); await load(true);
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось опубликовать'); }
+    finally { setBusy(false); }
   }, [menu, load]);
 
+  /* Скопировать вчерашний день — как в вебе: рацион редко меняют каждый
+     день целиком, чаще правят одно-два блюда. */
+  const copyPrev = useCallback(async () => {
+    if (!menu || day < 2) return;
+    setBusy(true);
+    try {
+      await api(`/specialist/menus/${menu.id}/copy-day`, {
+        method: 'POST', body: { from_day: day - 1, to_day: day },
+      });
+      haptic.success(); await load(true);
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось скопировать'); }
+    finally { setBusy(false); }
+  }, [menu, day, load]);
+
   if (menu === undefined) return <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />;
+
   if (!menu) {
     return (
-      <Empty icon="calendar.badge.plus" title="Меню ещё нет"
-        note="Составить меню пока можно в браузере — здесь оно уже показывается и правится." />
+      <Animated.View entering={FadeInDown.duration(220)}>
+        <Empty icon="calendar.badge.plus" title="Меню ещё нет"
+          note="Создайте план на несколько дней и заполните его блюдами." />
+        <SysButton label="Создать меню" variant="prominent" icon="plus"
+          onPress={() => {
+            haptic.tap();
+            router.push({ pathname: '/sp-menu-new', params: { client: cid, name } });
+          }} />
+      </Animated.View>
     );
   }
 
@@ -200,7 +232,7 @@ function MenuTab({ cid }: { cid: number }) {
     <Animated.View entering={FadeInDown.duration(220)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: S.sm }}>
-        <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>{menu.title}</Text>
+        <Text style={{ ...FONT.h3, color: p.text, flex: 1 }} numberOfLines={1}>{menu.title}</Text>
         <Muted>{menu.status === 'published' ? 'опубликовано' : 'черновик'}</Muted>
       </View>
 
@@ -210,6 +242,7 @@ function MenuTab({ cid }: { cid: number }) {
           const on = n === day;
           const d = new Date(menu.start_date + 'T00:00:00');
           d.setDate(d.getDate() + n - 1);
+          const filled = items.some(i => i.day_number === n);
           return (
             <Pressable key={n} onPress={() => { haptic.select(); setDay(n); }}
               style={({ pressed }) => ({
@@ -222,6 +255,11 @@ function MenuTab({ cid }: { cid: number }) {
               </Text>
               <Text style={{ fontSize: 17, fontWeight: '700', marginTop: 1,
                 color: on ? p.onPrimary : p.text }}>{d.getDate()}</Text>
+              {/* Точка под числом — день уже заполнен: видно, где дыра */}
+              <View style={{
+                width: 4, height: 4, borderRadius: 2, marginTop: 3,
+                backgroundColor: filled ? (on ? p.onPrimary : p.primary) : 'transparent',
+              }} />
             </Pressable>
           );
         })}
@@ -235,16 +273,33 @@ function MenuTab({ cid }: { cid: number }) {
 
       {err ? <Text style={{ ...FONT.small, color: p.danger, marginBottom: S.sm }}>{err}</Text> : null}
 
-      {dayItems.length === 0 ? (
-        <Empty icon="fork.knife" height={180} title="День пустой"
-          note="Добавить блюда пока можно в браузере." />
-      ) : MEAL_ORDER.map(mt => {
+      {MEAL_ORDER.map(mt => {
         const group = dayItems.filter(i => i.meal_type === mt);
-        if (!group.length) return null;
         return (
           <View key={mt} style={{ marginBottom: S.md }}>
-            <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>{MEAL_TITLES[mt]}</Text>
-            {group.map(i => (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: S.sm }}>
+              <Text style={{ ...FONT.h3, color: p.text }}>{MEAL_TITLES[mt]}</Text>
+              <Pressable
+                onPress={() => {
+                  haptic.tap();
+                  router.push({
+                    pathname: '/sp-add-dish',
+                    params: { menu: menu.id, day, meal: mt },
+                  });
+                }}
+                hitSlop={10}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
+                  opacity: pressed ? 0.5 : 1 })}>
+                <Icon name="plus" size={14} color={p.primary} width={2.4} />
+                <Text style={{ ...FONT.small, color: p.primary }}>блюдо</Text>
+              </Pressable>
+            </View>
+            {group.length === 0 ? (
+              <Card style={{ paddingVertical: 14 }}>
+                <Muted>Пусто — добавьте блюдо</Muted>
+              </Card>
+            ) : group.map(i => (
               <ItemCard key={i.id} item={i}
                 onPortion={g => setPortion(i.id, g)} onRemove={() => remove(i.id)} />
             ))}
@@ -252,9 +307,16 @@ function MenuTab({ cid }: { cid: number }) {
         );
       })}
 
-      {menu.status !== 'published' ? (
-        <SysButton label="Опубликовать меню" variant="prominent" onPress={publish} />
-      ) : null}
+      <View style={{ gap: S.md, marginTop: S.sm }}>
+        {day > 1 ? (
+          <SysButton label={`Скопировать день ${day - 1}`} icon="doc.on.doc"
+            disabled={busy} onPress={copyPrev} />
+        ) : null}
+        {menu.status !== 'published' ? (
+          <SysButton label="Опубликовать меню" variant="prominent"
+            disabled={busy} onPress={publish} />
+        ) : null}
+      </View>
     </Animated.View>
   );
 }

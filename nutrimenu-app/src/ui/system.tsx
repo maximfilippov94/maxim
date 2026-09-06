@@ -148,8 +148,11 @@ export function SysSlider({ value, min, max, step = 10, onChange, onCommit, tint
   const { p } = useApp();
   if (sysNative) {
     const { Host, Slider } = require('@expo/ui/swift-ui');
+    /* Без заданной ширины хост берёт «идеальный» размер вёрстки, а у
+       ползунка его нет — дорожка схлопывается в белую точку у края.
+       Ширину задаём мы, длину дорожки система берёт от неё. */
     return (
-      <Host style={{ height: 40 }} matchContents
+      <Host style={{ width: '100%', height: 40 }}
         colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={tint ?? p.primary}>
         <Slider
           value={value} min={min} max={max} step={step}
@@ -276,7 +279,7 @@ export function SysDate({ value, onChange, max, min }: {
     const { Host, DatePicker } = require('@expo/ui/swift-ui');
     const m = require('@expo/ui/swift-ui/modifiers');
     return (
-      <Host style={{ height: 40 }} matchContents
+      <Host style={{ width: '100%', height: 40 }}
         colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
         <DatePicker
           title=""
