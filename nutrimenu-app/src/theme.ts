@@ -1,7 +1,8 @@
 /**
- * Палитры приложения — те же значения, что в вебе.
- * Тёмная — глубокий синий с мятным акцентом, светлая — «Фарфор».
- * Отклонения от макета только по контрасту, они помечены.
+ * Палитры приложения — фирменные цвета EQUA, те же значения, что в вебе:
+ * #2E7D63 «здоровье и рост», #121820 «уверенность», #9AA3AD «баланс»,
+ * фон #F5F6F7, разделители #E5E7EB.
+ * Отклонения от брендбука только по контрасту, они помечены.
  */
 export type ThemeName = 'dark' | 'light';
 export type ThemePref = ThemeName | 'auto';
@@ -15,7 +16,10 @@ export interface Palette {
   text: string;
   text2: string;
   text3: string;
-  primary: string;      // заливка кнопок и акцент
+  primary: string;      // заливка кнопок: фирменный зелёный
+  /* Тот же зелёный, но пригодный для текста и мелких значков: на своём
+     фоне #2E7D63 даёт 3,5:1 — заливке хватает, надписи нет. */
+  accent: string;
   primaryHover: string;
   primarySoft: string;
   onPrimary: string;    // текст поверх акцентной заливки
@@ -31,23 +35,24 @@ export interface Palette {
   shadow: string;
 }
 
-/** «Тёмно-синяя» — глубокий синий с мятным акцентом. Тема по умолчанию. */
+/** Тёмная тема: фирменный #121820 и зелёный акцент. Тема по умолчанию. */
 export const NAVY: Palette = {
   name: 'dark',
-  page: '#101C2C',
-  bg: '#101C2C',
-  surface: '#1B2636',
-  inset: '#242F3F',
-  text: '#F3F5F7',
-  text2: '#8996AA',
-  text3: '#8390A2',        // прежний #6F7D91 давал 3.64:1 на карточке
-  primary: '#29D39F',
-  primaryHover: '#45E3AC',
-  primarySoft: 'rgba(41,211,159,0.13)',
-  onPrimary: '#04120C',
-  mp: '#29D39F', mf: '#F2B34D', mc: '#67A0F2',
-  premium: '#F2CD6B',
-  premiumSoft: 'rgba(242,205,107,0.14)',
+  page: '#121820',
+  bg: '#121820',
+  surface: '#1B222C',
+  inset: '#242C38',
+  text: '#F5F6F7',
+  text2: '#9AA3AD',        // фирменный «дополнительный», 6,9:1 на фоне
+  text3: '#8B95A1',
+  primary: '#2E7D63',
+  accent: '#4CA585',       // 5,9:1 на фоне; сам #2E7D63 даёт 3,5:1
+  primaryHover: '#37946F',
+  primarySoft: 'rgba(46,125,99,0.20)',
+  onPrimary: '#FFFFFF',
+  mp: '#4CA585', mf: '#E0A44A', mc: '#6FA3EE',
+  premium: '#E8C46A',
+  premiumSoft: 'rgba(232,196,106,0.14)',
   border: 'rgba(255,255,255,0.07)',
   borderSoft: 'rgba(255,255,255,0.05)',
   track: 'rgba(255,255,255,0.09)',
@@ -55,38 +60,38 @@ export const NAVY: Palette = {
   ov2: 'rgba(255,255,255,0.06)',
   ov3: 'rgba(255,255,255,0.09)',
   danger: '#E2564D',
-  videoBg: '#0B131F',
+  videoBg: '#0C1118',
   shadow: '#000000',
 };
 
 export const PORCELAIN: Palette = {
   name: 'light',
-  page: '#DFE3E8',
-  bg: '#F2F4F7',
+  page: '#E8EAED',
+  bg: '#F5F6F7',           // фирменный фон
   surface: '#FFFFFF',
-  inset: '#E7EBF0',
-  text: '#0E1116',
-  text2: '#59616C',
-  text3: '#676F7C',        // макет #949BA6 давал 2.54:1 — для текста непригодно
-  /* Зелёный взят глубже эталонного: свежий #4CAF7D даёт с белым текстом
-     2,7:1 и на кнопке нечитаем. Этот — 5,4:1 с белым и 4,9:1 на фоне,
-     то есть годится и заливкой, и акцентным текстом мелких подписей. */
-  primary: '#0E7A50',
-  primaryHover: '#0B6543',
-  primarySoft: '#E4F3EB',
+  inset: '#ECEEF1',
+  text: '#121820',         // фирменный тёмный
+  text2: '#5B6572',
+  /* Фирменный #9AA3AD на светлом фоне даёт 2,3:1 — годится разделителям
+     и неактивным элементам, но не подписям. Для текста берём глубже. */
+  text3: '#6B7480',
+  primary: '#2E7D63',      // с белым текстом 5,0:1
+  accent: '#216A52',       // 6,0:1 на фоне — для ссылок и мелких подписей
+  primaryHover: '#276B55',
+  primarySoft: '#E6F1EC',
   onPrimary: '#FFFFFF',
-  mp: '#3E9E6E', mf: '#D9962F', mc: '#4C86E0',
+  mp: '#2E7D63', mf: '#C98620', mc: '#3F79D6',
   premium: '#B4600F',
   premiumSoft: '#FBEEDA',
-  border: 'rgba(14,17,22,0.09)',
-  borderSoft: 'rgba(14,17,22,0.055)',
-  track: '#E1E5EB',
-  ov1: 'rgba(14,17,22,0.04)',
-  ov2: 'rgba(14,17,22,0.07)',
-  ov3: 'rgba(14,17,22,0.1)',
+  border: '#E5E7EB',       // фирменный разделитель
+  borderSoft: 'rgba(18,24,32,0.055)',
+  track: '#E5E7EB',
+  ov1: 'rgba(18,24,32,0.04)',
+  ov2: 'rgba(18,24,32,0.07)',
+  ov3: 'rgba(18,24,32,0.1)',
   danger: '#D3453C',
-  videoBg: '#E7EBF0',
-  shadow: '#141E2D',
+  videoBg: '#ECEEF1',
+  shadow: '#121820',
 };
 
 export const PALETTES: Record<ThemeName, Palette> = {

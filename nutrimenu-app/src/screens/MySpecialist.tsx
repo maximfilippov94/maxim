@@ -186,7 +186,7 @@ function Face({ url, name, size }: { url?: string | null; name: string; size: nu
       width: size, height: size, borderRadius: size / 2, backgroundColor: p.primarySoft,
       alignItems: 'center', justifyContent: 'center',
     }}>
-      <Text style={{ fontSize: size * 0.4, fontWeight: '700', color: p.primary }}>
+      <Text style={{ fontSize: size * 0.4, fontWeight: '700', color: p.accent }}>
         {(name || '·').trim()[0]?.toUpperCase() ?? '·'}
       </Text>
     </View>

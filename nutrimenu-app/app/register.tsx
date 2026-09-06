@@ -1,18 +1,11 @@
 import React, { useCallback, useState } from 'react';
-import {
-  View, Text, TextInput, ScrollView, Pressable,
-  KeyboardAvoidingView, Platform, StyleSheet,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, TextInput, Pressable } from 'react-native';
 import { router } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../src/store';
 import { SignUpProfile } from '../src/api';
 import { S, R, FONT } from '../src/theme';
-import { Muted } from '../src/ui/base';
 import { Icon } from '../src/ui/Icon';
-import { SysButton } from '../src/ui/system';
-import { Aurora } from '../src/ui/Aurora';
+import { AuthShell, ON_PHOTO, photoField, Note, AuthButton } from '../src/ui/AuthShell';
 import { haptic } from '../src/haptics';
 
 type Role = 'client' | 'specialist';
@@ -34,8 +27,7 @@ const ACTIVITY: [NonNullable<SignUpProfile['activity_level']>, string, string][]
 const GOALS = ['Снижение веса', 'Поддержание', 'Набор массы', 'Здоровье и энергия'];
 
 export default function Register() {
-  const { p, signUp } = useApp();
-  const insets = useSafeAreaInsets();
+  const { signUp } = useApp();
 
   const [role, setRole] = useState<Role | null>(null);
   const [name, setName] = useState('');
@@ -87,24 +79,20 @@ export default function Register() {
     } finally { setBusy(false); }
   }, [role, name, email, pass, prof, sex, age, height, weight, act, goal, signUp]);
 
-  const field = {
-    backgroundColor: p.surface, color: p.text,
-    borderRadius: R.md, paddingHorizontal: S.lg, paddingVertical: 14,
-    fontSize: 16, borderWidth: 1, borderColor: p.borderSoft,
-  } as const;
-
   const label = (t: string, top: number = S.lg) => (
-    <Text style={{ ...FONT.small, color: p.text3, marginTop: top, marginBottom: S.sm }}>{t}</Text>
+    <Text style={{ ...FONT.small, color: ON_PHOTO.text3, marginTop: top, marginBottom: S.sm }}>
+      {t}
+    </Text>
   );
 
   /* Шаг первый: кто вы. От этого зависит и анкета, и куда пустят после. */
   if (!role) {
     return (
-      <Shell insets={insets}>
-        <Text style={{ ...FONT.h1, color: p.text }}>Регистрация</Text>
-        <Muted style={{ marginTop: S.sm, marginBottom: S.xxl }}>
-          Кем вы будете пользоваться NutriMenu?
-        </Muted>
+      <AuthShell back>
+        <Text style={{ ...FONT.h1, fontSize: 28, color: ON_PHOTO.text }}>Регистрация</Text>
+        <Note style={{ marginTop: S.sm, marginBottom: S.xl }}>
+          Кем вы будете пользоваться EQUA?
+        </Note>
 
         <RoleCard
           icon="user" title="Я клиент"
@@ -118,48 +106,49 @@ export default function Register() {
           onPress={() => { haptic.tap(); setRole('specialist'); }}
         />
 
-        <Pressable onPress={() => router.back()} hitSlop={10}
-          style={({ pressed }) => ({ marginTop: S.xxl, opacity: pressed ? 0.5 : 1 })}>
-          <Text style={{ ...FONT.body, color: p.primary, textAlign: 'center' }}>
-            У меня уже есть аккаунт
-          </Text>
-        </Pressable>
-      </Shell>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: S.xxl }}>
+          <Note>Уже есть аккаунт?</Note>
+          <Pressable onPress={() => { haptic.tap(); router.replace('/login'); }} hitSlop={10}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+            <Text style={{ ...FONT.small, color: ON_PHOTO.accent, fontWeight: '600' }}>Войти</Text>
+          </Pressable>
+        </View>
+      </AuthShell>
     );
   }
 
   return (
-    <Shell insets={insets}>
+    <AuthShell>
       <Pressable onPress={() => { haptic.tap(); setRole(null); setErr(null); }} hitSlop={12}
         style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
           marginBottom: S.lg, opacity: pressed ? 0.5 : 1 })}>
-        <Icon name="back" size={18} color={p.primary} width={2.2} />
-        <Text style={{ ...FONT.body, color: p.primary }}>Другая роль</Text>
+        <Icon name="back" size={18} color={ON_PHOTO.text} width={2.2} />
+        <Text style={{ ...FONT.body, color: ON_PHOTO.text }}>Другая роль</Text>
       </Pressable>
 
-      <Text style={{ ...FONT.h1, color: p.text }}>
+      <Text style={{ ...FONT.h1, fontSize: 26, color: ON_PHOTO.text }}>
         {role === 'client' ? 'Анкета клиента' : 'Анкета специалиста'}
       </Text>
-      <Muted style={{ marginTop: S.sm }}>
+      <Note style={{ marginTop: S.sm }}>
         {role === 'client'
           ? 'По ней посчитаем предварительную норму — специалист потом уточнит.'
           : 'Кабинет специалиста откроется в браузере, вход тот же.'}
-      </Muted>
+      </Note>
 
-      {label('Имя', S.xxl)}
-      <TextInput value={name} onChangeText={setName} style={field}
+      {label('Имя', S.xl)}
+      <TextInput value={name} onChangeText={setName} style={photoField}
         placeholder={role === 'client' ? 'Анна Петрова' : 'Максим Филиппов'}
-        placeholderTextColor={p.text3} autoComplete="name" />
+        placeholderTextColor={ON_PHOTO.text3} autoComplete="name" />
 
       {label('Email')}
-      <TextInput value={email} onChangeText={setEmail} style={field}
+      <TextInput value={email} onChangeText={setEmail} style={photoField}
         autoCapitalize="none" keyboardType="email-address" autoComplete="email"
-        placeholder="you@example.com" placeholderTextColor={p.text3} />
+        placeholder="you@example.com" placeholderTextColor={ON_PHOTO.text3} />
 
       {label('Пароль')}
-      <TextInput value={pass} onChangeText={setPass} style={field}
+      <TextInput value={pass} onChangeText={setPass} style={photoField}
         secureTextEntry autoComplete="new-password"
-        placeholder="от 8 символов с цифрой" placeholderTextColor={p.text3} />
+        placeholder="от 8 символов с цифрой" placeholderTextColor={ON_PHOTO.text3} />
 
       {role === 'specialist' ? (
         <>
@@ -177,20 +166,20 @@ export default function Register() {
             <View style={{ flex: 1 }}>
               {label('Возраст')}
               <TextInput value={age} onChangeText={t => setAge(t.replace(/\D/g, ''))}
-                style={field} keyboardType="number-pad" maxLength={2}
-                placeholder="34" placeholderTextColor={p.text3} />
+                style={photoField} keyboardType="number-pad" maxLength={2}
+                placeholder="34" placeholderTextColor={ON_PHOTO.text3} />
             </View>
             <View style={{ flex: 1 }}>
               {label('Рост, см')}
               <TextInput value={height} onChangeText={t => setHeight(t.replace(/\D/g, ''))}
-                style={field} keyboardType="number-pad" maxLength={3}
-                placeholder="168" placeholderTextColor={p.text3} />
+                style={photoField} keyboardType="number-pad" maxLength={3}
+                placeholder="168" placeholderTextColor={ON_PHOTO.text3} />
             </View>
             <View style={{ flex: 1 }}>
               {label('Вес, кг')}
               <TextInput value={weight} onChangeText={setWeight}
-                style={field} keyboardType="decimal-pad" maxLength={5}
-                placeholder="67,4" placeholderTextColor={p.text3} />
+                style={photoField} keyboardType="decimal-pad" maxLength={5}
+                placeholder="67,4" placeholderTextColor={ON_PHOTO.text3} />
             </View>
           </View>
 
@@ -207,19 +196,21 @@ export default function Register() {
                     <View style={{
                       flexDirection: 'row', alignItems: 'center', gap: S.md,
                       paddingVertical: 11, paddingHorizontal: S.lg, borderRadius: R.md,
-                      backgroundColor: on ? p.primarySoft : pressed ? p.ov1 : 'transparent',
+                      backgroundColor: on ? ON_PHOTO.card
+                        : pressed ? 'rgba(255,255,255,0.06)' : 'transparent',
                     }}>
                       <View style={{
                         width: 20, height: 20, borderRadius: 10,
                         alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: on ? p.primary : 'transparent',
-                        borderWidth: on ? 0 : 1.5, borderColor: p.track,
+                        backgroundColor: on ? ON_PHOTO.primary : 'transparent',
+                        borderWidth: on ? 0 : 1.5, borderColor: ON_PHOTO.fieldBorder,
                       }}>
-                        {on ? <Icon name="check" size={11} color={p.onPrimary} width={2.6} /> : null}
+                        {on ? <Icon name="check" size={11} color="#FFFFFF" width={2.6} /> : null}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 15, color: on ? p.text : p.text2 }}>{l}</Text>
-                        <Muted style={{ marginTop: 1 }}>{hint}</Muted>
+                        <Text style={{ fontSize: 15,
+                          color: on ? ON_PHOTO.text : ON_PHOTO.text2 }}>{l}</Text>
+                        <Note style={{ marginTop: 1 }}>{hint}</Note>
                       </View>
                     </View>
                   )}
@@ -231,36 +222,16 @@ export default function Register() {
       )}
 
       {err ? (
-        <View style={{ backgroundColor: p.premiumSoft, borderRadius: R.md,
+        <View style={{ backgroundColor: 'rgba(226,86,77,0.22)', borderRadius: R.md,
           padding: S.lg, marginTop: S.lg }}>
-          <Text style={{ ...FONT.small, color: p.premium }}>{err}</Text>
+          <Text style={{ ...FONT.small, color: '#FFD9D6' }}>{err}</Text>
         </View>
       ) : null}
 
       <View style={{ marginTop: S.xl }}>
-        <SysButton label="Создать аккаунт" variant="prominent" disabled={busy} onPress={submit} />
+        <AuthButton title={busy ? 'Создаём…' : 'Создать аккаунт'} loading={busy} onPress={submit} />
       </View>
-    </Shell>
-  );
-}
-
-function Shell({ children, insets }: {
-  children: React.ReactNode; insets: { top: number; bottom: number };
-}) {
-  const { p } = useApp();
-  return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: p.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Aurora style={StyleSheet.absoluteFill} />
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1, justifyContent: 'center', padding: S.xl,
-          paddingTop: insets.top + S.xl, paddingBottom: insets.bottom + S.xxl,
-        }}
-        keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInDown.duration(260)}>{children}</Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </AuthShell>
   );
 }
 
@@ -268,27 +239,26 @@ function Shell({ children, insets }: {
 function RoleCard({ icon, title, note, onPress }: {
   icon: string; title: string; note: string; onPress: () => void;
 }) {
-  const { p } = useApp();
   return (
     <Pressable onPress={onPress}>
       {({ pressed }) => (
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: S.lg,
-          backgroundColor: p.surface, borderRadius: R.lg, padding: S.xl,
-          borderWidth: 1, borderColor: p.borderSoft,
+          backgroundColor: ON_PHOTO.card, borderRadius: R.lg, padding: S.xl,
+          borderWidth: 1, borderColor: ON_PHOTO.fieldBorder,
           transform: [{ scale: pressed ? 0.99 : 1 }],
         }}>
           <View style={{
-            width: 46, height: 46, borderRadius: 23, backgroundColor: p.primarySoft,
+            width: 46, height: 46, borderRadius: 23, backgroundColor: ON_PHOTO.primary,
             alignItems: 'center', justifyContent: 'center',
           }}>
-            <Icon name={icon} size={22} color={p.primary} />
+            <Icon name={icon} size={22} color="#FFFFFF" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ ...FONT.h2, color: p.text }}>{title}</Text>
-            <Muted style={{ marginTop: 3, lineHeight: 18 }}>{note}</Muted>
+            <Text style={{ ...FONT.h2, color: ON_PHOTO.text }}>{title}</Text>
+            <Note style={{ marginTop: 3 }}>{note}</Note>
           </View>
-          <Icon name="chevr" size={15} color={p.text3} width={2} />
+          <Icon name="chevr" size={15} color={ON_PHOTO.text3} width={2} />
         </View>
       )}
     </Pressable>
@@ -299,7 +269,6 @@ function RoleCard({ icon, title, note, onPress }: {
 function Chips({ items, value, onChange }: {
   items: [string, string][]; value: string | null; onChange: (v: string) => void;
 }) {
-  const { p } = useApp();
   return (
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
       {items.map(([k, l]) => {
@@ -308,12 +277,12 @@ function Chips({ items, value, onChange }: {
           <Pressable key={k} onPress={() => { haptic.select(); onChange(k); }}
             style={({ pressed }) => ({
               paddingHorizontal: 14, paddingVertical: 9, borderRadius: R.pill,
-              backgroundColor: on ? p.primary : p.surface,
-              borderWidth: on ? 0 : 1, borderColor: p.borderSoft,
+              backgroundColor: on ? ON_PHOTO.primary : ON_PHOTO.field,
+              borderWidth: 1, borderColor: on ? ON_PHOTO.primary : ON_PHOTO.fieldBorder,
               opacity: pressed && !on ? 0.7 : 1,
             })}>
             <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
-              color: on ? p.onPrimary : p.text2 }}>{l}</Text>
+              color: on ? '#FFFFFF' : ON_PHOTO.text2 }}>{l}</Text>
           </Pressable>
         );
       })}

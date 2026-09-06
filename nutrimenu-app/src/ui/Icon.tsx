@@ -39,6 +39,10 @@ export const PATHS: Record<string, string> = {
   mic: 'M12 3.6a2.6 2.6 0 0 1 2.6 2.6v5.2a2.6 2.6 0 0 1-5.2 0V6.2A2.6 2.6 0 0 1 12 3.6ZM6 11a6 6 0 0 0 12 0M12 17v3.4M9 20.4h6',
   play: 'M8 5.4 18.4 12 8 18.6Z',
   pause: 'M9.4 5.6v12.8M14.6 5.6v12.8',
+  mail: 'M4.4 5.8h15.2a1.6 1.6 0 0 1 1.6 1.6v9.2a1.6 1.6 0 0 1-1.6 1.6H4.4a1.6 1.6 0 0 1-1.6-1.6V7.4a1.6 1.6 0 0 1 1.6-1.6ZM3.2 7l8.8 6 8.8-6',
+  lock: 'M6.6 10.4h10.8a1.6 1.6 0 0 1 1.6 1.6v7a1.6 1.6 0 0 1-1.6 1.6H6.6A1.6 1.6 0 0 1 5 19v-7a1.6 1.6 0 0 1 1.6-1.6ZM8.2 10.4V7.8a3.8 3.8 0 0 1 7.6 0v2.6',
+  eye: 'M2.6 12S6.4 5.8 12 5.8 21.4 12 21.4 12 17.6 18.2 12 18.2 2.6 12 2.6 12ZM12 14.8a2.8 2.8 0 1 0 0-5.6 2.8 2.8 0 0 0 0 5.6Z',
+  eyeoff: 'M4 4l16 16M9.6 9.7a2.8 2.8 0 0 0 3.9 3.9M6.5 6.7C4.1 8.3 2.6 12 2.6 12s3.8 6.2 9.4 6.2c1.6 0 3-.5 4.2-1.2M17.9 15A13 13 0 0 0 21.4 12S17.6 5.8 12 5.8c-.8 0-1.5.1-2.2.3',
 };
 
 /** На iOS берём системные SF Symbols: их рисовал Apple, они совпадают по
@@ -79,6 +83,10 @@ export const SF: Record<string, SymbolViewProps['name']> = {
   mic: 'mic',
   play: 'play.fill',
   pause: 'pause.fill',
+  mail: 'envelope',
+  lock: 'lock',
+  eye: 'eye',
+  eyeoff: 'eye.slash',
 };
 
 export function Icon({ name, size = 22, color = '#fff', width = 1.75, animate }: {

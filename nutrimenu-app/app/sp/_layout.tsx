@@ -33,7 +33,7 @@ export default function SpTabs() {
       tintColor={p.primary}
       blurEffect={p.name === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
       iconColor={{ default: p.text2, selected: p.primary }}
-      labelStyle={{ default: { color: p.text2 }, selected: { color: p.primary } }}>
+      labelStyle={{ default: { color: p.text2 }, selected: { color: p.accent } }}>
       <NativeTabs.BottomAccessory><QuickAdd /></NativeTabs.BottomAccessory>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="house" />

@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, Text, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../src/store';
 import { S, R, FONT } from '../src/theme';
-import { Btn, Muted } from '../src/ui/base';
-import { Pressable } from 'react-native';
+import { AuthShell, Field, AuthButton, Note, ON_PHOTO } from '../src/ui/AuthShell';
+import { Icon } from '../src/ui/Icon';
 import { haptic } from '../src/haptics';
-import { Aurora } from '../src/ui/Aurora';
 
 export default function Login() {
-  const { p, signIn } = useApp();
-  const insets = useSafeAreaInsets();
+  const { signIn } = useApp();
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
+  const [show, setShow] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function submit() {
+    if (busy) return;
     setErr(null); setBusy(true);
     try {
       const me = await signIn(email, pass);
@@ -29,56 +28,51 @@ export default function Login() {
     } finally { setBusy(false); }
   }
 
-  const field = {
-    backgroundColor: p.surface, color: p.text,
-    borderRadius: R.md, paddingHorizontal: S.lg, paddingVertical: 14,
-    fontSize: 16, borderWidth: 1, borderColor: p.borderSoft,
-  } as const;
-
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: p.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Aurora style={StyleSheet.absoluteFill} />
-      <ScrollView contentContainerStyle={{
-        flexGrow: 1, justifyContent: 'center',
-        padding: S.xl, paddingTop: insets.top + S.xl, paddingBottom: insets.bottom + S.xl,
-      }} keyboardShouldPersistTaps="handled">
-        <Text style={{ ...FONT.h1, color: p.text }}>NutriMenu</Text>
-        <Muted style={{ marginTop: S.sm, marginBottom: S.xxl }}>
-          Войдите, чтобы открыть своё меню
-        </Muted>
+    <AuthShell back>
+      <Text style={{ ...FONT.h1, fontSize: 28, color: ON_PHOTO.text }}>Вход в аккаунт</Text>
+      <Note style={{ marginTop: S.sm, marginBottom: S.xl }}>
+        Рады видеть вас снова!{'\n'}Продолжайте путь к своим целям.
+      </Note>
 
-        <Text style={{ ...FONT.small, color: p.text3, marginBottom: S.sm }}>Email</Text>
-        <TextInput value={email} onChangeText={setEmail} style={field}
-          autoCapitalize="none" keyboardType="email-address" autoComplete="email"
-          placeholder="you@example.com" placeholderTextColor={p.text3} />
+      <Field icon="mail" value={email} onChangeText={setEmail}
+        placeholder="Email" autoCapitalize="none"
+        keyboardType="email-address" autoComplete="email" />
 
-        <Text style={{ ...FONT.small, color: p.text3, marginTop: S.lg, marginBottom: S.sm }}>Пароль</Text>
-        <TextInput value={pass} onChangeText={setPass} style={field}
-          secureTextEntry autoComplete="current-password"
-          placeholder="••••••••" placeholderTextColor={p.text3}
-          onSubmitEditing={submit} returnKeyType="go" />
+      <Field icon="lock" value={pass} onChangeText={setPass}
+        placeholder="Пароль" secureTextEntry={!show} autoComplete="current-password"
+        onSubmitEditing={submit} returnKeyType="go"
+        right={
+          <Pressable onPress={() => setShow(v => !v)} hitSlop={12}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+            <Icon name={show ? 'eye' : 'eyeoff'} size={19} color={ON_PHOTO.text3} width={1.7} />
+          </Pressable>
+        } />
 
-        {err && (
-          <View style={{ backgroundColor: p.premiumSoft, borderRadius: R.md,
-            padding: S.lg, marginTop: S.lg }}>
-            <Text style={{ ...FONT.small, color: p.premium }}>{err}</Text>
-          </View>
-        )}
+      {err ? (
+        <View style={{ backgroundColor: 'rgba(226,86,77,0.18)', borderRadius: R.md,
+          padding: S.lg, marginBottom: S.md }}>
+          <Text style={{ ...FONT.small, color: '#FFB8B3' }}>{err}</Text>
+        </View>
+      ) : null}
 
-        <Btn title="Войти" onPress={submit} loading={busy} style={{ marginTop: S.xl }} />
+      <View style={{ marginTop: S.sm }}>
+        <AuthButton title={busy ? 'Входим…' : 'Войти'} onPress={submit} loading={busy} />
+      </View>
 
-        <Pressable onPress={() => { haptic.tap(); router.push('/register'); }} hitSlop={10}
-          style={({ pressed }) => ({ marginTop: S.xl, opacity: pressed ? 0.5 : 1 })}>
-          <Text style={{ ...FONT.body, color: p.primary, textAlign: 'center' }}>
-            Создать аккаунт
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: S.xl }}>
+        <Note>Ещё нет аккаунта?</Note>
+        <Pressable onPress={() => { haptic.tap(); router.replace('/register'); }} hitSlop={10}
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+          <Text style={{ ...FONT.small, color: ON_PHOTO.accent, fontWeight: '600' }}>
+            Зарегистрироваться
           </Text>
         </Pressable>
+      </View>
 
-        <Muted style={{ marginTop: S.lg, textAlign: 'center', lineHeight: 18 }}>
-          Панель владельца работает в браузере.
-        </Muted>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Note style={{ marginTop: S.xl, textAlign: 'center', color: ON_PHOTO.text3 }}>
+        Панель владельца работает в браузере.
+      </Note>
+    </AuthShell>
   );
 }

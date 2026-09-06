@@ -51,7 +51,7 @@ export default function ClientTabs() {
       iconColor={{ default: p.text2, selected: p.primary }}
       labelStyle={{
         default: { color: p.text2 },
-        selected: { color: p.primary },
+        selected: { color: p.accent },
       }}>
       {/* Системная полка над панелью — место для быстрого действия.
           Раньше «+» была отдельной плавающей кнопкой рядом. */}

@@ -135,7 +135,7 @@ export default function AddDish() {
                     {good ? (
                       <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: R.sm,
                         backgroundColor: p.primarySoft }}>
-                        <Text style={{ ...FONT.small, color: p.primary }}>подходит</Text>
+                        <Text style={{ ...FONT.small, color: p.accent }}>подходит</Text>
                       </View>
                     ) : null}
                     <Icon name="plus" size={16} color={p.primary} width={2.2} />

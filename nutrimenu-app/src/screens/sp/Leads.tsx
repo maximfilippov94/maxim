@@ -80,7 +80,7 @@ export default function SpLeads() {
                         marginTop: S.sm, opacity: pressed ? 0.5 : 1,
                       })}>
                       <Icon name="chat" size={14} color={p.primary} />
-                      <Text style={{ ...FONT.body, color: p.primary }}>{l.contact}</Text>
+                      <Text style={{ ...FONT.body, color: p.accent }}>{l.contact}</Text>
                     </Pressable>
                   ) : null}
                   <Muted style={{ marginTop: S.sm }}>{when(l.created_at)}</Muted>

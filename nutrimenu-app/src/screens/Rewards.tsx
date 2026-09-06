@@ -65,7 +65,7 @@ export default function Rewards() {
                 paddingHorizontal: 9, paddingVertical: 3, borderRadius: R.sm,
                 backgroundColor: p.primarySoft,
               }}>
-                <Text style={{ ...FONT.small, fontWeight: '700', color: p.primary }}>
+                <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
                   Ур. {g.level}
                 </Text>
               </View>
@@ -124,7 +124,7 @@ export default function Rewards() {
                 {t.label}
               </Text>
               {t.progress ? <Muted style={{ marginRight: 8 }}>{t.progress}</Muted> : null}
-              <Text style={{ ...FONT.small, fontWeight: '700', color: p.primary }}>
+              <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
                 +{t.reward}
               </Text>
             </View>

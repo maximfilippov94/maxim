@@ -323,7 +323,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
                 style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
                   opacity: pressed ? 0.5 : 1 })}>
                 <Icon name="plus" size={14} color={p.primary} width={2.4} />
-                <Text style={{ ...FONT.small, color: p.primary }}>блюдо</Text>
+                <Text style={{ ...FONT.small, color: p.accent }}>блюдо</Text>
               </Pressable>
             </View>
             {group.length === 0 ? (

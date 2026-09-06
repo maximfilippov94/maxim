@@ -93,7 +93,7 @@ export default function SpProfileEdit() {
         <Face url={avatar} name={name || 'С'} size={84} />
         <Pressable onPress={changePhoto} disabled={busy} hitSlop={10}
           style={({ pressed }) => ({ marginTop: S.md, opacity: pressed ? 0.5 : 1 })}>
-          <Text style={{ ...FONT.body, color: p.primary }}>Сменить фото</Text>
+          <Text style={{ ...FONT.body, color: p.accent }}>Сменить фото</Text>
         </Pressable>
       </View>
 
