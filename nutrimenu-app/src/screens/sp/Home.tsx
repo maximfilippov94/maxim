@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -20,6 +20,10 @@ export default function SpHome() {
   const [d, setD] = useState<SpDashboard | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* Куда прокручивать по строке «требуют внимания»: положение списка
+     запоминаем при разметке, а не считаем на глаз. */
+  const scroll = useRef<ScrollView>(null);
+  const attentionY = useRef(0);
 
   const load = useCallback(async () => {
     try { setD(await api<SpDashboard>('/specialist/dashboard')); setErr(null); }
@@ -52,12 +56,19 @@ export default function SpHome() {
       'продлить на следующую неделю', () => router.push('/sp/clients')]);
   }
   if (d?.attention?.length) {
+    /* Список «Требуют внимания» лежит на этом же экране ниже, поэтому
+       строка не уводит в другое место, а прокручивает к нему. Раньше
+       здесь стоял пустой обработчик, и строка просто не нажималась. */
     plan.push(['flame', `${d.attention.length} ${plural(d.attention.length, ['клиент требует', 'клиента требуют', 'клиентов требуют'])} внимания`,
-      'пропали из приложения', () => {}]);
+      'пропали из приложения', () => {
+        haptic.tap();
+        scroll.current?.scrollTo({ y: Math.max(0, attentionY.current - 12), animated: true });
+      }]);
   }
 
   return (
     <ScrollView
+      ref={scroll}
       style={{ flex: 1, backgroundColor: p.bg }}
       contentContainerStyle={{
         paddingTop: insets.top + S.lg, paddingHorizontal: S.lg,
@@ -151,7 +162,9 @@ export default function SpHome() {
         </Card>
       </Animated.View>
 
-      <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+      <Text
+        onLayout={e => { attentionY.current = e.nativeEvent.layout.y; }}
+        style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
         Требуют внимания
       </Text>
       {!d?.attention?.length ? (

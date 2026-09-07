@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
@@ -198,10 +198,19 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     } catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); setMenu(null); }
   }, [cid]);
 
-  useEffect(() => { load(); }, [load]);
-  /* Блюдо добавляют на отдельном экране: вернувшись, надо увидеть его,
-     а не прежний список. День при этом не сбрасываем. */
-  useFocusEffect(useCallback(() => { load(true); }, [load]));
+  /* Одна загрузка, а не две.
+     Раньше здесь стояли useEffect и useFocusEffect сразу: первый
+     пересчитывал день на сегодняшний, второй сохранял выбранный, и
+     побеждал тот, чей ответ приходил позже. Из-за этого при открытии
+     вкладки день прыгал прямо на глазах.
+     Теперь загрузка одна: в первый раз она встаёт на сегодняшний день,
+     дальше оставляет выбранный — чтобы возвращение с экрана блюда не
+     сбрасывало день. */
+  const opened = useRef(false);
+  useFocusEffect(useCallback(() => {
+    load(opened.current);
+    opened.current = true;
+  }, [load]));
 
   /* Ползунок двигают — итог дня обязан ехать за ним. Держим граммовку
      здесь, а не внутри карточки: иначе «калорийность дня» считалась бы
@@ -373,8 +382,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
               </Card>
             ) : group.map(i => (
               <ItemCard key={i.id} item={i} grams={draft[i.id] ?? round(i.portion_g)}
-                onDrag={g => dragPortion(i.id, g)}
-                onPortion={g => setPortion(i.id, g)} onRemove={() => remove(i.id)} />
+                onRemove={() => remove(i.id)} />
             ))}
           </View>
         );
@@ -400,28 +408,32 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
 /**
  * Блюдо в меню.
  *
- * По умолчанию — фотография, название и порция: так день читается
- * взглядом, а не разбирается по ползункам. Граммовку меняют редко,
- * поэтому ползунок появляется только по нажатию на карточку.
+ * Фотография, название и порция — день читается взглядом. По нажатию
+ * открывается карточка блюда целиком: состав под эту порцию, рецепт
+ * и та же граммовка. Разворачивать ползунок прямо в строке оказалось
+ * мало: состав и рецепт всё равно приходилось искать отдельно.
  */
-function ItemCard({ item, grams, onDrag, onPortion, onRemove }: {
+function ItemCard({ item, grams, onRemove }: {
   item: SpMenuItem;
   /** Граммовка живёт в экране целиком — здесь её только показывают */
   grams: number;
-  onDrag: (g: number) => void;
-  onPortion: (g: number) => void;
   onRemove: () => void;
 }) {
   const { p } = useApp();
-  const [open, setOpen] = useState(false);
-  const g = grams;
-  const base = round(item.base_portion_g ?? 0) || round(item.portion_g) || 200;
-  const lo = Math.max(10, Math.round(base * 0.25 / 5) * 5);
-  const hi = Math.round(base * 2.5 / 5) * 5;
   const photo = mediaUrl(item.photo_url);
 
   return (
-    <Pressable onPress={() => { haptic.tap(); setOpen(v => !v); }}
+    <Pressable
+      onPress={() => {
+        haptic.tap();
+        router.push({
+          pathname: '/sp-menu-item',
+          params: {
+            item: item.id, dish: item.dish_id, meal: item.meal_type,
+            portion: round(grams), base: round(item.base_portion_g ?? 0),
+          },
+        });
+      }}
       style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
       <Card style={{ marginBottom: S.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
@@ -442,7 +454,7 @@ function ItemCard({ item, grams, onDrag, onPortion, onRemove }: {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>{item.dish_name}</Text>
             <Muted style={{ marginTop: 2 }}>
-              {g} г · {round(scaleN(item, g).kcal)} ккал
+              {grams} г · {round(scaleN(item, grams).kcal)} ккал
             </Muted>
           </View>
 
@@ -454,16 +466,6 @@ function ItemCard({ item, grams, onDrag, onPortion, onRemove }: {
             onConfirm={onRemove}
           />
         </View>
-
-        {open ? (
-          <Animated.View entering={FadeIn.duration(140)} style={{ marginTop: S.xs }}>
-            <SysSlider value={g} min={lo} max={hi} step={5}
-              onChange={onDrag} onCommit={onPortion} />
-            <Muted style={{ textAlign: 'center' }}>
-              {g === round(base) ? 'порция по рецепту' : `по рецепту ${round(base)} г`}
-            </Muted>
-          </Animated.View>
-        ) : null}
       </Card>
     </Pressable>
   );
