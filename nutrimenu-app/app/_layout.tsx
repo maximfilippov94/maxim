@@ -76,6 +76,8 @@ function Root() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="rewards" />
         <Stack.Screen name="feed" />
+        <Stack.Screen name="health" />
+        <Stack.Screen name="sp-health" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="specialist" />
         <Stack.Screen name="dish/[id]" />

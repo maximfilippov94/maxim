@@ -43,6 +43,8 @@ export default function More() {
             onPress={() => router.push('/profile')} />
           <ListRow icon="weight" label="Прогресс и замеры"
             onPress={() => router.push('/progress')} />
+          <ListRow icon="heart" label="Моё здоровье"
+            onPress={() => router.push('/health')} />
           <ListRow icon="cart" label="Список покупок"
             onPress={() => router.push('/shopping')} />
           <ListRow icon="drop" label="Питьевой режим"

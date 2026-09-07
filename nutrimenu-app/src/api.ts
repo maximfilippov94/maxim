@@ -448,6 +448,37 @@ export const PROFESSION: Record<string, string> = {
   nutritionist: 'Нутрициолог', trainer: 'Тренер', coach: 'Коуч',
 };
 
+/* ---------- Здоровье клиента ---------- */
+
+export const ALLERGY_KINDS: Record<string, string> = {
+  allergy: 'Аллергия', intolerance: 'Непереносимость', avoid: 'Избегать',
+};
+export const MED_KINDS: Record<string, string> = {
+  medicine: 'Препарат', supplement: 'БАД', vitamin: 'Витамин',
+};
+
+export interface Allergy {
+  id: number; title: string; kind: string; note?: string | null; created_at: string;
+}
+export interface Med {
+  id: number; kind: string; title: string;
+  dosage?: string | null; schedule?: string | null;
+  started_on?: string | null; ended_on?: string | null; note?: string | null;
+}
+export interface Lab {
+  id: number; title: string; taken_on?: string | null;
+  file_url?: string | null; note?: string | null; created_at: string;
+}
+export interface Recommendation {
+  id: number; body: string; created_at: string;
+}
+export interface Health {
+  allergies: Allergy[];
+  meds: Med[];
+  labs: Lab[];
+  recommendations: Recommendation[];
+}
+
 /* ---------- Лента ---------- */
 
 export interface Post {

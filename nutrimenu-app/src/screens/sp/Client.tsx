@@ -96,6 +96,11 @@ export default function SpClientScreen() {
               haptic.tap();
               router.push({ pathname: '/sp-client-edit', params: { id: cid } });
             }} />
+          <SysButton label="Здоровье" icon="heart.text.square" height={46}
+            onPress={() => {
+              haptic.tap();
+              router.push({ pathname: '/sp-health', params: { id: cid, name: c.name } });
+            }} />
         </View>
 
         <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.md }}>
