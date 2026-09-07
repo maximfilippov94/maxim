@@ -31,9 +31,29 @@ export class ApiError extends Error {
   }
 }
 
+/** Сколько ждём ответа, прежде чем считать соединение зависшим. */
+const TIMEOUT_MS = 12000;
+/** Паузы перед повторами. Две попытки сверх первой — дальше только злим. */
+const BACKOFF = [400, 1400];
+/* Общий потолок: три зависших попытки подряд — это полминуты перед
+   пустым экраном, а человек к тому времени уже решил, что сломалось.
+   Лучше сказать «нет связи» раньше, чем упрямо ждать. */
+const BUDGET_MS = 25000;
+
+/* Метод можно повторять, если повтор не создаёт ничего нового.
+   POST создаёт: отправленное сообщение или пост, дошедшие до сервера
+   в момент обрыва, вторая попытка продублировала бы. */
+const REPEATABLE = ['GET', 'HEAD', 'PUT', 'DELETE'];
+
+/* Коды, за которыми стоит не отказ, а «сейчас не могу»: перезапуск
+   PHP-FPM, перегрузка, короткая просадка канала. */
+const RETRY_STATUS = [429, 502, 503, 504];
+
+const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 export async function api<T = any>(
   path: string,
-  opt: { method?: string; body?: any } = {},
+  opt: { method?: string; body?: any; retry?: boolean } = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   let body: string | FormData | undefined;
@@ -47,27 +67,57 @@ export async function api<T = any>(
   }
   if (token) headers.Authorization = 'Bearer ' + token;
 
-  let res: Response;
-  try {
-    res = await fetch(API_BASE + '/api/v1' + path, {
-      method: opt.method ?? 'GET',
-      headers,
-      body,
-    });
-  } catch {
-    /* Обрыв связи и ошибка сервера — разные вещи: на первом показываем
-       «нет сети», на втором сообщение с сервера. */
-    throw new ApiError('Нет связи с сервером. Проверьте интернет.', 0);
-  }
+  const method = (opt.method ?? 'GET').toUpperCase();
+  /* Повторяем сами только безопасное. Вызывающий может разрешить
+     повтор явно — там, где знает, что второй такой же запрос ничего
+     не испортит. */
+  const mayRetry = opt.retry ?? REPEATABLE.includes(method);
+  const tries = mayRetry ? BACKOFF.length + 1 : 1;
 
-  let json: any = {};
-  try {
-    json = await res.json();
-  } catch {
-    /* пустое тело — оставляем {} */
+  const started = Date.now();
+  /* Повторять есть смысл, только если на попытку ещё осталось время. */
+  const timeLeft = () => Date.now() - started < BUDGET_MS - TIMEOUT_MS;
+
+  for (let attempt = 0; ; attempt++) {
+    let res: Response;
+    /* Без таймаута зависшее соединение держит экран в загрузке до
+       бесконечности: телефон в лифте не рвёт сокет, а просто молчит. */
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+    try {
+      res = await fetch(API_BASE + '/api/v1' + path, {
+        method, headers, body, signal: abort.signal,
+      });
+    } catch {
+      if (attempt < tries - 1 && timeLeft()) { await wait(BACKOFF[attempt]); continue; }
+      /* Обрыв связи и ошибка сервера — разные вещи: на первом показываем
+         «нет сети», на втором сообщение с сервера. */
+      throw new ApiError('Нет связи с сервером. Проверьте интернет.', 0);
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (RETRY_STATUS.includes(res.status) && attempt < tries - 1 && timeLeft()) {
+      await wait(BACKOFF[attempt]);
+      continue;
+    }
+
+    let json: any = {};
+    try {
+      json = await res.json();
+    } catch {
+      /* пустое тело — оставляем {} */
+    }
+    if (!res.ok) {
+      /* «Сервер занят» отличаем от настоящей ошибки: первое стоит
+         просто повторить рукой, второе — повод разбираться. */
+      const busy = RETRY_STATUS.includes(res.status)
+        ? 'Сервер сейчас не отвечает. Попробуйте ещё раз через минуту.'
+        : null;
+      throw new ApiError(json?.error ?? busy ?? 'Ошибка сервера', res.status);
+    }
+    return json as T;
   }
-  if (!res.ok) throw new ApiError(json?.error ?? 'Ошибка сервера', res.status);
-  return json as T;
 }
 
 /* ---------- Типы ответов, которые уже отдаёт бэкенд ---------- */
