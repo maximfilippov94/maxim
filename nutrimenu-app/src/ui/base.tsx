@@ -5,6 +5,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { S, R, FONT } from '../theme';
+import { haptic } from '../haptics';
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
   const { p } = useApp();
@@ -62,6 +63,39 @@ export function Btn({ title, onPress, variant = 'primary', loading, icon, style 
 
 /** Полоса прогресса. Значение зажимается: перебор рисуется полной шкалой,
  *  а не вылезает за карточку. */
+/**
+ * Ряд «таблеток» — выбор одного из нескольких. Тот же вид, что у вкладок
+ * в карточке клиента: раз уж он там прижился, второй такой же в другом
+ * оформлении читался бы как другой элемент.
+ */
+export function Pills<T extends string>({ items, value, onChange, style }: {
+  items: [T, string][];
+  value: T;
+  onChange: (v: T) => void;
+  style?: ViewStyle;
+}) {
+  const { p } = useApp();
+  return (
+    <View style={[{ flexDirection: 'row', gap: S.sm, flexWrap: 'wrap' }, style]}>
+      {items.map(([k, l]) => {
+        const on = k === value;
+        return (
+          <Pressable key={k} onPress={() => { haptic.select(); onChange(k); }}
+            style={({ pressed }) => ({
+              paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+              backgroundColor: on ? p.primary : p.surface,
+              borderWidth: on ? 0 : 1, borderColor: p.border,
+              opacity: pressed && !on ? 0.7 : 1,
+            })}>
+            <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
+              color: on ? p.onPrimary : p.text2 }}>{l}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 export function Bar({ value, color, height = 5 }: { value: number; color?: string; height?: number }) {
   const { p } = useApp();
   const w = Math.max(0, Math.min(1, isFinite(value) ? value : 0));

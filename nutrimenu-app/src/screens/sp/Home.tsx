@@ -9,6 +9,7 @@ import { S, R, FONT } from '../../theme';
 import { Card, Label, Muted, Bar } from '../../ui/base';
 import { Icon } from '../../ui/Icon';
 import { Empty } from '../../ui/system';
+import { ScreenHead } from '../../ui/ScreenHead';
 import { Face } from '../../ui/Face';
 import { plural } from '../../format';
 import { haptic } from '../../haptics';
@@ -68,8 +69,7 @@ export default function SpHome() {
       }
       showsVerticalScrollIndicator={false}>
 
-      <Label>{me?.user?.name ?? 'Кабинет'}</Label>
-      <Text style={{ ...FONT.h1, color: p.text, marginTop: S.xs, marginBottom: S.lg }}>Главная</Text>
+      <ScreenHead eyebrow={me?.user?.name ?? 'Кабинет'} title="Главная" role="specialist" />
 
       {err ? (
         <Card style={{ marginBottom: S.md }}>

@@ -11,6 +11,7 @@ import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Counter } from '../ui/Counter';
 import { Empty } from '../ui/system';
+import { ScreenHead } from '../ui/ScreenHead';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
 
@@ -97,8 +98,7 @@ export default function Today() {
       }}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={onRefresh} tintColor={p.text3} />}>
 
-      <Label>{todayLabel()}</Label>
-      <Text style={{ ...FONT.h1, color: p.text, marginTop: S.xs, marginBottom: S.lg }}>Сегодня</Text>
+      <ScreenHead eyebrow={todayLabel()} title="Сегодня" role="client" />
 
       {err && (
         <Card style={{ marginBottom: S.md }}>

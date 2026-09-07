@@ -8,7 +8,7 @@ import { Image } from 'expo-image';
 import { api, mediaUrl, Dish, MEAL_TITLES } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
-import { Card, Muted } from '../../ui/base';
+import { Card, Muted, Pills } from '../../ui/base';
 import { Icon } from '../../ui/Icon';
 import { Empty } from '../../ui/system';
 import { round, plural } from '../../format';
@@ -24,12 +24,18 @@ const meals = (v?: string | null) => {
   } catch { return ''; }
 };
 
+type Scope = 'all' | 'mine' | 'public';
+const SCOPES: [Scope, string][] = [
+  ['all', 'Все'], ['mine', 'Свои'], ['public', 'Общие'],
+];
+
 export default function SpDishes() {
-  const { p } = useApp();
+  const { p, me } = useApp();
   const insets = useSafeAreaInsets();
   const [list, setList] = useState<Dish[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState('');
+  const [scope, setScope] = useState<Scope>('all');
 
   /* Перечитываем при каждом возвращении с редактора: иначе только что
      заведённое блюдо не появится, пока не переоткроешь экран. */
@@ -39,10 +45,19 @@ export default function SpDishes() {
       .catch(e => setErr(e.message));
   }, []));
 
+  const my = me?.user?.id;
+  const mine = useMemo(() => (list ?? []).filter(d => d.created_by === my), [list, my]);
+
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return (list ?? []).filter(d => !s || d.name.toLowerCase().includes(s));
-  }, [list, q]);
+    return (list ?? [])
+      .filter(d => scope === 'all'
+        || (scope === 'mine' ? d.created_by === my : d.created_by !== my))
+      .filter(d => !s || d.name.toLowerCase().includes(s))
+      /* Числа в названиях сравниваем как числа: иначе «№100» встаёт
+         между «№10» и «№11», и список выглядит перепутанным. */
+      .sort((a, b) => a.name.localeCompare(b.name, 'ru', { numeric: true }));
+  }, [list, q, scope, my]);
 
   if (err) return <Fail title="База блюд" text={err} />;
   if (!list) return <Loading title="База блюд" />;
@@ -59,6 +74,9 @@ export default function SpDishes() {
       <ScrollView contentContainerStyle={{
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
       }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+        <Pills items={SCOPES} value={scope} onChange={setScope}
+          style={{ marginTop: S.md }} />
 
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: S.sm,
@@ -80,13 +98,16 @@ export default function SpDishes() {
             на сервер: имя файла легко перепутать, а молчаливый прочерк
             в карточке об этом не скажет. */}
         <Muted style={{ marginBottom: S.md }}>
-          {list.length} {plural(list.length, ['блюдо', 'блюда', 'блюд'])} в каталоге ·
-          {' '}с фото {list.filter(d => d.photo_url).length}
+          {shown.length} {plural(shown.length, ['блюдо', 'блюда', 'блюд'])} ·
+          {' '}своих {mine.length} · с фото {shown.filter(d => d.photo_url).length}
         </Muted>
 
         {shown.length === 0 ? (
-          <Empty icon="fork.knife" title="Ничего не нашли"
-            note="Проверьте название или заведите своё блюдо кнопкой «плюс»." />
+          <Empty icon="fork.knife"
+            title={scope === 'mine' && !q ? 'Своих блюд пока нет' : 'Ничего не нашли'}
+            note={scope === 'mine' && !q
+              ? 'Кнопка «плюс» сверху заведёт первое — оно будет видно только вам.'
+              : 'Проверьте название или заведите своё блюдо кнопкой «плюс».'} />
         ) : shown.map((d, i) => {
           const portion = d.base_portion_g || 250;
           return (

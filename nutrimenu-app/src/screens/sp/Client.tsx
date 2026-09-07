@@ -5,7 +5,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useApp } from '../../store';
 import {
-  api, SpClient, SpMenu, SpMenuItem, ProgressResponse,
+  api, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
   MEAL_ORDER, MEAL_TITLES,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -28,6 +28,24 @@ const dmy = (s?: string | null) => {
   const a = String(s).slice(0, 10).split('-');
   return a.length === 3 ? `${a[2]}.${a[1]}` : s;
 };
+
+/**
+ * КБЖУ блюда при другой граммовке.
+ *
+ * Сервер присылает значения для сохранённой порции, а ползунок меняет
+ * её на лету. Пересчитываем пропорцией от той же порции — так цифра
+ * под блюдом и «калорийность дня» считаются одинаково и не расходятся.
+ */
+function scaleN(item: SpMenuItem, grams: number): Totals {
+  const n = item.nutrition;
+  const from = round(item.portion_g);
+  if (!n || !from) return { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+  const k = grams / from;
+  return {
+    kcal: n.kcal * k, protein: n.protein * k,
+    fat: n.fat * k, carbs: n.carbs * k,
+  };
+}
 
 export default function SpClientScreen() {
   const { p } = useApp();
@@ -179,9 +197,23 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
      а не прежний список. День при этом не сбрасываем. */
   useFocusEffect(useCallback(() => { load(true); }, [load]));
 
+  /* Ползунок двигают — итог дня обязан ехать за ним. Держим граммовку
+     здесь, а не внутри карточки: иначе «калорийность дня» считалась бы
+     по сохранённой порции и расходилась с тем, что видно под блюдом. */
+  const [draft, setDraft] = useState<Record<number, number>>({});
+  const dragPortion = useCallback((id: number, g: number) => {
+    setDraft(d => (d[id] === g ? d : { ...d, [id]: g }));
+  }, []);
+
   const setPortion = useCallback(async (id: number, g: number) => {
-    try { await api(`/specialist/menu-items/${id}`, { method: 'PATCH', body: { portion_g: g } }); }
-    catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не сохранилось'); }
+    try {
+      await api(`/specialist/menu-items/${id}`, { method: 'PATCH', body: { portion_g: g } });
+      /* Сохранилось — переносим граммовку в сам список, чтобы
+         черновик не расходился с данными после перерисовки. */
+      setItems(a => a.map(x => x.id === id
+        ? { ...x, portion_g: g, nutrition: scaleN(x, g) } : x));
+      setDraft(d => { const { [id]: _, ...rest } = d; return rest; });
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не сохранилось'); }
   }, []);
 
   const remove = useCallback(async (id: number) => {
@@ -245,7 +277,10 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
   }
 
   const dayItems = items.filter(i => i.day_number === day);
-  const kcal = dayItems.reduce((a, i) => a + (i.nutrition?.kcal ?? 0), 0);
+  /* Пока палец на ползунке, берём черновую граммовку — цифра сверху
+     меняется вместе с блюдом, а не после сохранения. */
+  const kcal = dayItems.reduce(
+    (a, i) => a + scaleN(i, draft[i.id] ?? i.portion_g).kcal, 0);
 
   return (
     <Animated.View entering={FadeInDown.duration(220)}>
@@ -331,7 +366,8 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
                 <Muted>Пусто — добавьте блюдо</Muted>
               </Card>
             ) : group.map(i => (
-              <ItemCard key={i.id} item={i}
+              <ItemCard key={i.id} item={i} grams={draft[i.id] ?? round(i.portion_g)}
+                onDrag={g => dragPortion(i.id, g)}
                 onPortion={g => setPortion(i.id, g)} onRemove={() => remove(i.id)} />
             ))}
           </View>
@@ -355,15 +391,19 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
   );
 }
 
-function ItemCard({ item, onPortion, onRemove }: {
-  item: SpMenuItem; onPortion: (g: number) => void; onRemove: () => void;
+function ItemCard({ item, grams, onDrag, onPortion, onRemove }: {
+  item: SpMenuItem;
+  /** Граммовка живёт в экране целиком — здесь её только показывают */
+  grams: number;
+  onDrag: (g: number) => void;
+  onPortion: (g: number) => void;
+  onRemove: () => void;
 }) {
   const { p } = useApp();
-  const [g, setG] = useState(round(item.portion_g));
+  const g = grams;
   const base = round(item.base_portion_g ?? 0) || round(item.portion_g) || 200;
   const lo = Math.max(10, Math.round(base * 0.25 / 5) * 5);
   const hi = Math.round(base * 2.5 / 5) * 5;
-  const k = item.portion_g ? g / round(item.portion_g) : 1;
 
   return (
     <Card style={{ marginBottom: S.sm }}>
@@ -371,7 +411,7 @@ function ItemCard({ item, onPortion, onRemove }: {
         <View style={{ flex: 1 }}>
           <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>{item.dish_name}</Text>
           <Muted style={{ marginTop: 2 }}>
-            {g} г · {round((item.nutrition?.kcal ?? 0) * k)} ккал
+            {g} г · {round(scaleN(item, g).kcal)} ккал
           </Muted>
         </View>
         <SysConfirm
@@ -383,7 +423,7 @@ function ItemCard({ item, onPortion, onRemove }: {
         />
       </View>
       <View style={{ marginTop: S.xs }}>
-        <SysSlider value={g} min={lo} max={hi} step={5} onChange={setG} onCommit={onPortion} />
+        <SysSlider value={g} min={lo} max={hi} step={5} onChange={onDrag} onCommit={onPortion} />
       </View>
     </Card>
   );
