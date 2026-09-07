@@ -327,8 +327,16 @@ export interface CatalogSpecialist {
 }
 
 /** Ссылка на файл с сервера: он отдаёт их относительным путём. */
+/**
+ * Полный адрес файла.
+ *
+ * Часть снимков сервер присылает не ссылкой, а прямо содержимым
+ * (`data:image/...`) — например фото прогресса. Такому адресу база
+ * не нужна: приписав её, мы получали «http://сервер data:image/…»,
+ * и снимок не открывался вовсе.
+ */
 export const mediaUrl = (u?: string | null) =>
-  !u ? null : /^https?:/i.test(u) ? u : API_BASE + u;
+  !u ? null : /^(https?|data|blob|file):/i.test(u) ? u : API_BASE + u;
 
 /** Что за вложение пришло — по расширению файла. */
 export type AttachKind = 'image' | 'video' | 'audio' | 'file';
