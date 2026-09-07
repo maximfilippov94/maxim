@@ -150,7 +150,7 @@ export default function AddDish() {
       </View>
 
       <Pills items={MEAL_TABS} value={mealTab} onChange={setMealTab} scroll
-        style={{ paddingHorizontal: S.xl, marginBottom: S.sm }} />
+        style={{ marginBottom: S.sm, paddingHorizontal: S.xl }} />
       <Pills items={SCOPES} value={scope} onChange={setScope}
         style={{ marginHorizontal: S.xl, marginBottom: S.md }} />
 

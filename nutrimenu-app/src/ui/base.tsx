@@ -71,6 +71,9 @@ export function Btn({ title, onPress, variant = 'primary', loading, icon, style 
  * в карточке клиента: раз уж он там прижился, второй такой же в другом
  * оформлении читался бы как другой элемент.
  */
+/** Высота одной «таблетки»: 7 + 7 отступов, строка 18, рамка. */
+const PILL_H = 34;
+
 export function Pills<T extends string>({ items, value, onChange, style, scroll }: {
   items: [T, string][];
   value: T;
@@ -98,14 +101,18 @@ export function Pills<T extends string>({ items, value, onChange, style, scroll 
   });
 
   if (scroll) {
-    /* Горизонтальный список внутри колонки сам высоту не берёт: без
-       flexGrow: 0 он схлопывается в полоску, и кнопки видно наполовину. */
+    /* Высоту задаём снаружи явно: горизонтальный список внутри колонки
+       меряет себя сам и в шторке успевает встать не на своё место —
+       кнопки наезжали на заголовок. С фиксированной высотой мерить
+       нечего, и ряд всегда стоит там, где стоит. */
     return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        style={[{ flexGrow: 0, flexShrink: 0 }, style]}
-        contentContainerStyle={{ flexDirection: 'row', gap: S.sm, paddingVertical: 1 }}>
-        {row}
-      </ScrollView>
+      <View style={[{ height: PILL_H }, style]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0 }}
+          contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+          {row}
+        </ScrollView>
+      </View>
     );
   }
   return (

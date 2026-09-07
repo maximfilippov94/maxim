@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { Image } from 'expo-image';
 import { useApp } from '../../store';
 import {
-  api, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
+  api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
   MEAL_ORDER, MEAL_TITLES,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -391,6 +392,13 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
   );
 }
 
+/**
+ * Блюдо в меню.
+ *
+ * По умолчанию — фотография, название и порция: так день читается
+ * взглядом, а не разбирается по ползункам. Граммовку меняют редко,
+ * поэтому ползунок появляется только по нажатию на карточку.
+ */
 function ItemCard({ item, grams, onDrag, onPortion, onRemove }: {
   item: SpMenuItem;
   /** Граммовка живёт в экране целиком — здесь её только показывают */
@@ -400,32 +408,59 @@ function ItemCard({ item, grams, onDrag, onPortion, onRemove }: {
   onRemove: () => void;
 }) {
   const { p } = useApp();
+  const [open, setOpen] = useState(false);
   const g = grams;
   const base = round(item.base_portion_g ?? 0) || round(item.portion_g) || 200;
   const lo = Math.max(10, Math.round(base * 0.25 / 5) * 5);
   const hi = Math.round(base * 2.5 / 5) * 5;
+  const photo = mediaUrl(item.photo_url);
 
   return (
-    <Card style={{ marginBottom: S.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>{item.dish_name}</Text>
-          <Muted style={{ marginTop: 2 }}>
-            {g} г · {round(scaleN(item, g).kcal)} ккал
-          </Muted>
+    <Pressable onPress={() => { haptic.tap(); setOpen(v => !v); }}
+      style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
+      <Card style={{ marginBottom: S.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <View style={{
+            width: 52, height: 52, borderRadius: R.md, backgroundColor: p.inset,
+            alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+          }}>
+            {/* Значок под снимком: пока фото едет или если его нет,
+                квадрат не остаётся пустым. */}
+            <Icon name="bowl" size={19} color={p.text3} />
+            {photo ? (
+              <Image source={{ uri: photo }}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+                contentFit="cover" transition={200} cachePolicy="memory-disk" />
+            ) : null}
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>{item.dish_name}</Text>
+            <Muted style={{ marginTop: 2 }}>
+              {g} г · {round(scaleN(item, g).kcal)} ккал
+            </Muted>
+          </View>
+
+          <SysConfirm
+            label="Убрать" tint={p.danger}
+            title={`Убрать «${item.dish_name}»?`}
+            message="Блюдо исчезнет из меню клиента."
+            confirmLabel="Убрать из меню"
+            onConfirm={onRemove}
+          />
         </View>
-        <SysConfirm
-          label="Убрать" tint={p.danger}
-          title={`Убрать «${item.dish_name}»?`}
-          message="Блюдо исчезнет из меню клиента."
-          confirmLabel="Убрать из меню"
-          onConfirm={onRemove}
-        />
-      </View>
-      <View style={{ marginTop: S.xs }}>
-        <SysSlider value={g} min={lo} max={hi} step={5} onChange={onDrag} onCommit={onPortion} />
-      </View>
-    </Card>
+
+        {open ? (
+          <Animated.View entering={FadeIn.duration(140)} style={{ marginTop: S.xs }}>
+            <SysSlider value={g} min={lo} max={hi} step={5}
+              onChange={onDrag} onCommit={onPortion} />
+            <Muted style={{ textAlign: 'center' }}>
+              {g === round(base) ? 'порция по рецепту' : `по рецепту ${round(base)} г`}
+            </Muted>
+          </Animated.View>
+        ) : null}
+      </Card>
+    </Pressable>
   );
 }
 
