@@ -106,6 +106,18 @@ IP компьютера: `ipconfig getifaddr en0` на macOS, `ip addr` на Lin
    EXPO_UNSTABLE_TUNNEL_V2=1 npx expo start --tunnel
    ```
 
+   А чтобы **подтянуть свежие правки и запустить одной строкой**:
+
+   ```bash
+   cd /workspaces/maxim && git checkout claude/new-session-9cqu0s && git pull \
+     && cd nutrimenu-app && npm install \
+     && EXPO_UNSTABLE_TUNNEL_V2=1 npx expo start --tunnel --clear
+   ```
+
+   `npm install` нужен потому, что правки иногда добавляют пакеты, а
+   `--clear` чистит кэш сборщика: без него Metro иногда отдаёт телефону
+   старый код и кажется, что правки не приехали.
+
    `--tunnel` обязателен: телефон и облако не в одной сети, и обычный
    QR-код с локальным адресом ему не подойдёт. `EXPO_UNSTABLE_TUNNEL_V2`
    включает туннель, который уже лежит в зависимостях (`@expo/ws-tunnel`),
