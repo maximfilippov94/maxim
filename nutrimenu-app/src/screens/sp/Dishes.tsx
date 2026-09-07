@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../../store';
@@ -11,6 +12,7 @@ import { Card, Muted } from '../../ui/base';
 import { Icon } from '../../ui/Icon';
 import { Empty } from '../../ui/system';
 import { round, plural } from '../../format';
+import { haptic } from '../../haptics';
 import { Loading, Fail } from '../Shopping';
 
 /** «Обед · Ужин» из поля meal_types, которое хранится строкой JSON. */
@@ -29,11 +31,13 @@ export default function SpDishes() {
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState('');
 
-  useEffect(() => {
+  /* Перечитываем при каждом возвращении с редактора: иначе только что
+     заведённое блюдо не появится, пока не переоткроешь экран. */
+  useFocusEffect(React.useCallback(() => {
     api<{ dishes: Dish[] }>('/specialist/dishes')
       .then(r => setList(r.dishes ?? []))
       .catch(e => setErr(e.message));
-  }, []);
+  }, []));
 
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -45,7 +49,13 @@ export default function SpDishes() {
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title="База блюд" back />
+      <NavBar title="База блюд" back
+        right={
+          <Pressable onPress={() => { haptic.tap(); router.push('/sp-dish-edit'); }} hitSlop={10}
+            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+            <Icon name="plus" size={21} color={p.primary} width={2.2} />
+          </Pressable>
+        } />
       <ScrollView contentContainerStyle={{
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
       }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -76,11 +86,13 @@ export default function SpDishes() {
 
         {shown.length === 0 ? (
           <Empty icon="fork.knife" title="Ничего не нашли"
-            note="Проверьте название или добавьте блюдо в браузере." />
+            note="Проверьте название или заведите своё блюдо кнопкой «плюс»." />
         ) : shown.map((d, i) => {
           const portion = d.base_portion_g || 250;
           return (
             <Animated.View key={d.id} entering={FadeInDown.delay(Math.min(i, 10) * 20).duration(200)}>
+              <Pressable onPress={() => { haptic.tap(); router.push(`/sp-dish-edit?id=${d.id}`); }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
               <Card style={{ marginBottom: S.sm, flexDirection: 'row', gap: S.md }}>
                 {mediaUrl(d.photo_url) ? (
                   <Image source={{ uri: mediaUrl(d.photo_url)! }}
@@ -111,6 +123,7 @@ export default function SpDishes() {
                   </Muted>
                 </View>
               </Card>
+              </Pressable>
             </Animated.View>
           );
         })}

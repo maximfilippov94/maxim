@@ -12,8 +12,10 @@ import { haptic } from '../haptics';
  *  с крупным заголовком под ней, по образцу «Сегодня».
  *  С `logo` вместо названия стоит знак: цвет берётся у темы — тёмный на
  *  светлой, белый на тёмной. */
-export function NavBar({ title, back, logo }: {
+export function NavBar({ title, back, logo, right }: {
   title?: string; back?: boolean; logo?: boolean;
+  /** Действие справа: «плюс» на списках, «Сохранить» на формах */
+  right?: React.ReactNode;
 }) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
@@ -38,6 +40,14 @@ export function NavBar({ title, back, logo }: {
             })}>
             <Icon name="back" size={22} color={p.primary} width={2.2} />
           </Pressable>
+        ) : null}
+        {right ? (
+          <View style={{
+            position: 'absolute', right: 12, height: 44,
+            alignItems: 'flex-end', justifyContent: 'center',
+          }}>
+            {right}
+          </View>
         ) : null}
       </View>
     </View>

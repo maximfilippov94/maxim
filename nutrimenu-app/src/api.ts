@@ -341,7 +341,30 @@ export interface Dish {
   base_portion_g?: number | null; cook_minutes?: number | null;
   kcal_100: number; protein_100: number; fat_100: number; carbs_100: number;
   meal_types?: string | null;
+  /** Кто завёл блюдо: чужие и общие править нельзя */
+  created_by?: number | null;
+  instructions?: string | null;
+  /** Шаги приготовления строкой JSON, как их отдаёт сервер */
+  steps?: string | null;
+  tags?: string | null;
 }
+/** Продукт из пищевой базы: КБЖУ всегда на 100 г сырого веса. */
+export interface Ingredient {
+  id: number; name: string; category?: string | null;
+  kcal: number; protein: number; fat: number; carbs: number;
+  fiber?: number | null; cooked_ratio?: number | null;
+}
+/** Состав блюда так, как его отдаёт GET /specialist/dishes/{id} */
+export interface DishRecipeRow {
+  ingredient_id: number; ingredient_name: string; grams: number;
+  kcal: number; protein: number; fat: number; carbs: number;
+  cooked_ratio?: number | null;
+}
+export interface DishFull extends Dish {
+  ingredients: DishRecipeRow[];
+}
+/** Шаг приготовления: текст и, если есть, снимок */
+export interface DishStep { text?: string; photo_url?: string | null }
 export interface SpProfile {
   id: number; name: string; email: string; avatar_url?: string | null;
   profession?: string | null; join_code?: string | null;

@@ -61,6 +61,7 @@ function Root() {
         <Stack.Screen name="sp-client/[id]" />
         <Stack.Screen name="sp-chat/[id]" />
         <Stack.Screen name="sp-dishes" />
+        <Stack.Screen name="sp-dish-edit" />
         <Stack.Screen name="sp-notifications" />
         <Stack.Screen name="sp-templates" />
         <Stack.Screen name="sp-analytics" />
