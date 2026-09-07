@@ -109,10 +109,21 @@ IP компьютера: `ipconfig getifaddr en0` на macOS, `ip addr` на Lin
    А чтобы **подтянуть свежие правки и запустить одной строкой**:
 
    ```bash
-   cd /workspaces/maxim && git checkout claude/new-session-9cqu0s && git pull \
+   cd /workspaces/maxim && git fetch origin \
+     && git reset --hard origin/claude/new-session-9cqu0s \
      && cd nutrimenu-app && npm install \
      && EXPO_UNSTABLE_TUNNEL_V2=1 npx expo start --tunnel --clear
    ```
+
+   Почему `reset --hard`, а не `pull`: `npm install` и `expo start`
+   правят `package-lock.json` и `.gitignore` прямо в среде, и обычный
+   `git pull` на этом останавливается — «local changes would be
+   overwritten». Сброс выкидывает эти правки инструментов и берёт то,
+   что в репозитории.
+
+   **Важно:** он выкинет и ваши собственные правки в Codespace, если вы
+   там что-то меняли руками. При работе «правки приходят из репозитория»
+   это то, что нужно; если правили сами — сначала `git stash`.
 
    `npm install` нужен потому, что правки иногда добавляют пакеты, а
    `--clear` чистит кэш сборщика: без него Metro иногда отдаёт телефону
