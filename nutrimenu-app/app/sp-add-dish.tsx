@@ -18,7 +18,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../src/store';
-import { api, mediaUrl, Dish, MEAL_TITLES } from '../src/api';
+import {
+  api, mediaUrl, Dish, MEAL_TITLES, MEAL_KEYS, MealKey, mealKeyOf, dishMeals,
+} from '../src/api';
 import { S, R, FONT } from '../src/theme';
 import { Muted, Pills } from '../src/ui/base';
 import { Icon } from '../src/ui/Icon';
@@ -41,10 +43,11 @@ const fitRank = (d: Dish, meal: string) => {
   } catch { return 0; }
 };
 
-type Scope = 'fit' | 'mine' | 'all';
-const SCOPES: [Scope, string][] = [
-  ['fit', 'Для приёма'], ['mine', 'Свои'], ['all', 'Все'],
-];
+type Scope = 'all' | 'mine';
+const SCOPES: [Scope, string][] = [['all', 'Все блюда'], ['mine', 'Только свои']];
+
+type MealTab = MealKey | 'all';
+const MEAL_TABS: [MealTab, string][] = [...MEAL_KEYS, ['all', 'Все приёмы']];
 
 export default function AddDish() {
   const { p, me } = useApp();
@@ -54,7 +57,10 @@ export default function AddDish() {
   }>();
   const [list, setList] = useState<Dish[] | null>(null);
   const [q, setQ] = useState('');
-  const [scope, setScope] = useState<Scope>('fit');
+  const [scope, setScope] = useState<Scope>('all');
+  /* Открываемся на том приёме, который сейчас заполняют: чаще всего
+     блюдо ищут именно для него, и лишнее нажатие тут ни к чему. */
+  const [mealTab, setMealTab] = useState<MealTab>(mealKeyOf(String(meal)));
   const [picked, setPicked] = useState<Dish | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -70,14 +76,15 @@ export default function AddDish() {
     const s = q.trim().toLowerCase();
     const a = (list ?? [])
       .filter(d => !s || d.name.toLowerCase().includes(s))
-      .filter(d => scope === 'all'
-        || (scope === 'mine' ? d.created_by === my : fitRank(d, String(meal)) > 0));
-    /* Сначала подходящие приёму, дальше по алфавиту — с числами как
-       числами, иначе «№100» встаёт между «№10» и «№11». */
+      .filter(d => scope === 'all' || d.created_by === my)
+      .filter(d => mealTab === 'all' || dishMeals(d).includes(mealTab));
+    /* Сначала те, что задуманы именно для этого приёма, дальше по
+       алфавиту — с числами как числами, иначе «№100» встаёт между
+       «№10» и «№11». */
     return a.sort((x, y) =>
       fitRank(y, String(meal)) - fitRank(x, String(meal))
       || x.name.localeCompare(y.name, 'ru', { numeric: true }));
-  }, [list, q, scope, meal, my]);
+  }, [list, q, scope, mealTab, meal, my]);
 
   async function add(d: Dish, grams: number) {
     if (busy) return;
@@ -142,6 +149,8 @@ export default function AddDish() {
         ) : null}
       </View>
 
+      <Pills items={MEAL_TABS} value={mealTab} onChange={setMealTab} scroll
+        style={{ paddingHorizontal: S.xl, marginBottom: S.sm }} />
       <Pills items={SCOPES} value={scope} onChange={setScope}
         style={{ marginHorizontal: S.xl, marginBottom: S.md }} />
 
@@ -153,10 +162,10 @@ export default function AddDish() {
         <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />
       ) : shown.length === 0 ? (
         <Empty icon="fork.knife"
-          title={scope === 'mine' ? 'Своих блюд пока нет' : 'Ничего не нашли'}
+          title={scope === 'mine' ? 'Своих блюд для этого приёма нет' : 'Ничего не нашли'}
           note={scope === 'mine'
             ? 'Завести своё блюдо можно в «Базе блюд» — кнопкой «плюс».'
-            : 'Проверьте название или посмотрите вкладку «Все».'} />
+            : 'Проверьте название или загляните во «Все приёмы».'} />
       ) : (
         <ScrollView contentContainerStyle={{
           paddingHorizontal: S.xl, paddingBottom: S.xxl,

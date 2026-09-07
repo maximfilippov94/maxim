@@ -163,6 +163,29 @@ export const MEAL_TIME: Record<string, string> = {
   breakfast: '08:30', snack1: '11:00', lunch: '14:00', snack2: '16:30', dinner: '19:00',
 };
 
+/* Фильтр по приёмам. Оба перекуса — одна кнопка: для выбора блюда
+   разница между «перекусом до обеда» и «после» не значит ничего, а две
+   одинаковые надписи рядом сбивают с толку. */
+export type MealKey = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export const MEAL_KEYS: [MealKey, string][] = [
+  ['breakfast', 'Завтрак'], ['lunch', 'Обед'],
+  ['dinner', 'Ужин'], ['snack', 'Перекус'],
+];
+/** Ключ фильтра для типа приёма из меню: snack1 и snack2 — один «Перекус». */
+export const mealKeyOf = (t: string): MealKey =>
+  (t === 'snack1' || t === 'snack2' ? 'snack' : t as MealKey);
+
+/** Приёмы, для которых заведено блюдо. Поле хранится строкой JSON. */
+export function dishMeals(d: Pick<Dish, 'meal_types'>): MealKey[] {
+  if (!d.meal_types) return [];
+  try {
+    const a = JSON.parse(d.meal_types);
+    if (!Array.isArray(a)) return [];
+    const keys = a.map((t: string) => mealKeyOf(String(t)));
+    return MEAL_KEYS.map(([k]) => k).filter(k => keys.includes(k));
+  } catch { return []; }
+}
+
 /* ---------- Разделы из «Ещё» ---------- */
 
 export interface ShoppingItem {

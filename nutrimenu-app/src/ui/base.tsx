@@ -1,5 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, Text, Pressable, ActivityIndicator, StyleSheet, ViewStyle, TextStyle } from 'react-native';
+import {
+  View, Text, Pressable, ActivityIndicator, ScrollView,
+  StyleSheet, ViewStyle, TextStyle,
+} from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, Easing,
 } from 'react-native-reanimated';
@@ -68,30 +71,46 @@ export function Btn({ title, onPress, variant = 'primary', loading, icon, style 
  * в карточке клиента: раз уж он там прижился, второй такой же в другом
  * оформлении читался бы как другой элемент.
  */
-export function Pills<T extends string>({ items, value, onChange, style }: {
+export function Pills<T extends string>({ items, value, onChange, style, scroll }: {
   items: [T, string][];
   value: T;
   onChange: (v: T) => void;
   style?: ViewStyle;
+  /** Длинный ряд не переносим, а листаем вбок: три строки кнопок
+      съедают экран раньше, чем начинается сам список. */
+  scroll?: boolean;
 }) {
   const { p } = useApp();
+  const row = items.map(([k, l]) => {
+    const on = k === value;
+    return (
+      <Pressable key={k} onPress={() => { haptic.select(); onChange(k); }}
+        style={({ pressed }) => ({
+          paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+          backgroundColor: on ? p.primary : p.surface,
+          borderWidth: on ? 0 : 1, borderColor: p.border,
+          opacity: pressed && !on ? 0.7 : 1,
+        })}>
+        <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
+          color: on ? p.onPrimary : p.text2 }}>{l}</Text>
+      </Pressable>
+    );
+  });
+
+  if (scroll) {
+    /* Горизонтальный список внутри колонки сам высоту не берёт: без
+       flexGrow: 0 он схлопывается в полоску, и кнопки видно наполовину. */
+    return (
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        style={[{ flexGrow: 0, flexShrink: 0 }, style]}
+        contentContainerStyle={{ flexDirection: 'row', gap: S.sm, paddingVertical: 1 }}>
+        {row}
+      </ScrollView>
+    );
+  }
   return (
     <View style={[{ flexDirection: 'row', gap: S.sm, flexWrap: 'wrap' }, style]}>
-      {items.map(([k, l]) => {
-        const on = k === value;
-        return (
-          <Pressable key={k} onPress={() => { haptic.select(); onChange(k); }}
-            style={({ pressed }) => ({
-              paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
-              backgroundColor: on ? p.primary : p.surface,
-              borderWidth: on ? 0 : 1, borderColor: p.border,
-              opacity: pressed && !on ? 0.7 : 1,
-            })}>
-            <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
-              color: on ? p.onPrimary : p.text2 }}>{l}</Text>
-          </Pressable>
-        );
-      })}
+      {row}
     </View>
   );
 }
