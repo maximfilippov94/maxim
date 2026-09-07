@@ -90,6 +90,8 @@ export default function SpMore() {
         <ListGroup>
           <ListRow first icon="gift" label="Заявки из каталога"
             onPress={() => router.push('/sp-leads')} />
+          <ListRow icon="heart" label="Лента"
+            onPress={() => router.push('/feed')} />
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/sp-notifications')} />
         </ListGroup>

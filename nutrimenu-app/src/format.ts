@@ -57,3 +57,23 @@ export function isToday(d: Date | null) {
   return d.getDate() === n.getDate() && d.getMonth() === n.getMonth()
     && d.getFullYear() === n.getFullYear();
 }
+
+/**
+ * «5 минут назад», «вчера», «3 сентября» — как в лентах.
+ * Точное время в ленте не нужно: важно, свежий пост или давний.
+ */
+export function ago(iso: string) {
+  /* Сервер отдаёт время по Гринвичу без пометки — иначе телефон
+     прочитает его как местное и всё окажется «в будущем». */
+  const d = new Date(String(iso).replace(' ', 'T') + (/[Zz+]/.test(iso) ? '' : 'Z'));
+  if (isNaN(+d)) return '';
+  const min = Math.floor((Date.now() - +d) / 60000);
+  if (min < 1) return 'только что';
+  if (min < 60) return `${min} ${plural(min, ['минуту', 'минуты', 'минут'])} назад`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} ${plural(h, ['час', 'часа', 'часов'])} назад`;
+  const days = Math.floor(h / 24);
+  if (days === 1) return 'вчера';
+  if (days < 7) return `${days} ${plural(days, ['день', 'дня', 'дней'])} назад`;
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+}

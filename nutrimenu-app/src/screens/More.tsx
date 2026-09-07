@@ -53,6 +53,8 @@ export default function More() {
         <ListGroup>
           <ListRow first icon="gift" label="Награды и баллы"
             onPress={() => router.push('/rewards')} />
+          <ListRow icon="heart" label="Лента"
+            onPress={() => router.push('/feed')} />
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/notifications')} />
           <ListRow icon="chat" label="Мой специалист"

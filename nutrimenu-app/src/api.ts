@@ -375,6 +375,23 @@ export const PROFESSION: Record<string, string> = {
   nutritionist: 'Нутрициолог', trainer: 'Тренер', coach: 'Коуч',
 };
 
+/* ---------- Лента ---------- */
+
+export interface Post {
+  id: number;
+  text?: string | null;
+  photo_url?: string | null;
+  created_at: string;
+  author_type: 'client' | 'specialist' | 'admin';
+  author_id: number;
+  author_name: string;
+  author_avatar?: string | null;
+  likes: number;
+  liked: boolean;
+  /** Свой пост можно удалить */
+  mine: boolean;
+}
+
 /* ---------- Остальное в кабинете специалиста ---------- */
 
 export interface SpTemplate {
