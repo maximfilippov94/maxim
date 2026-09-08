@@ -215,6 +215,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
   /* Ползунок двигают — итог дня обязан ехать за ним. Держим граммовку
      здесь, а не внутри карточки: иначе «калорийность дня» считалась бы
      по сохранённой порции и расходилась с тем, что видно под блюдом. */
+  const [report, setReport] = useState<GenReportData | null>(null);
   const [draft, setDraft] = useState<Record<number, number>>({});
   const dragPortion = useCallback((id: number, g: number) => {
     setDraft(d => (d[id] === g ? d : { ...d, [id]: g }));
@@ -261,6 +262,19 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     finally { setBusy(false); }
   }, [menu]);
 
+  /* Сборка меню под цели клиента. Отчёт держим рядом: расхождение по
+     жирам или белку виднее числом, чем при пролистывании семи дней. */
+  const generate = useCallback(async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await api<GenReportData>(`/specialist/clients/${cid}/menu/generate`, {
+        method: 'POST', body: { days_count: 7 },
+      });
+      setReport(r); haptic.success(); await load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось собрать'); }
+    finally { setBusy(false); }
+  }, [cid, load]);
+
   /* Скопировать вчерашний день — как в вебе: рацион редко меняют каждый
      день целиком, чаще правят одно-два блюда. */
   const copyPrev = useCallback(async () => {
@@ -281,12 +295,23 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     return (
       <Animated.View entering={FadeInDown.duration(220)}>
         <Empty icon="calendar.badge.plus" title="Меню ещё нет"
-          note="Создайте план на несколько дней и заполните его блюдами." />
-        <SysButton label="Создать меню" variant="prominent" icon="plus"
-          onPress={() => {
-            haptic.tap();
-            router.push({ pathname: '/sp-menu-new', params: { client: cid, name } });
-          }} />
+          note="Соберите черновик под цели клиента или заполните план вручную." />
+        <View style={{ gap: S.sm }}>
+          {/* Сборка — черновик, а не решение за специалиста: программа
+              набирает блюда под калории и обходит запреты клиента,
+              остальное он правит сам. */}
+          <SysButton label="Собрать под цели" variant="prominent" icon="sparkles"
+            disabled={busy} onPress={generate} />
+          <SysButton label="Пустое меню" icon="plus"
+            onPress={() => {
+              haptic.tap();
+              router.push({ pathname: '/sp-menu-new', params: { client: cid, name } });
+            }} />
+        </View>
+        {report ? <GenReport r={report} /> : null}
+        {err ? (
+          <Text style={{ ...FONT.small, color: p.danger, marginTop: S.md }}>{err}</Text>
+        ) : null}
       </Animated.View>
     );
   }
@@ -495,6 +520,54 @@ function ItemCard({ item, grams, onRemove }: {
         </View>
       </Card>
     </Pressable>
+  );
+}
+
+interface GenReportData {
+  menu_id: number; target_kcal: number; avg_kcal: number;
+  days: {
+    day: number; kcal: number; protein: number; fat: number; carbs: number;
+    kcal_diff: number; protein_diff: number | null;
+    fat_diff: number | null; carbs_diff: number | null;
+  }[];
+  warnings: string[];
+}
+
+/**
+ * Что получилось после сборки.
+ *
+ * Подбор из готовых блюд не сводит калории и все три числа БЖУ
+ * одновременно. Молчать об этом хуже, чем сказать: специалист поправит
+ * порции сам, если будет знать, где именно разошлось.
+ */
+function GenReport({ r }: { r: GenReportData }) {
+  const { p } = useApp();
+  const sign = (v: number | null) => v == null ? '' : `${v > 0 ? '+' : ''}${v}`;
+  return (
+    <Animated.View entering={FadeInDown.duration(220)}>
+      <Card style={{ marginTop: S.lg, gap: S.sm }}>
+        <Label>Черновик готов</Label>
+        <Muted style={{ lineHeight: 19 }}>
+          Цель {r.target_kcal} ккал · в среднем вышло {r.avg_kcal}.
+          Меню сохранено черновиком — проверьте и опубликуйте.
+        </Muted>
+        {r.warnings.map((w, i) => (
+          <Text key={i} style={{ ...FONT.small, color: p.premium, lineHeight: 18 }}>{w}</Text>
+        ))}
+        {r.days.map(d => (
+          <View key={d.day} style={{
+            flexDirection: 'row', alignItems: 'center', gap: S.md,
+            paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: p.borderSoft,
+          }}>
+            <Text style={{ fontSize: 14, color: p.text2, width: 62 }}>День {d.day}</Text>
+            <Text style={{ fontSize: 14, color: p.text }}>{d.kcal}</Text>
+            <Muted style={{ flex: 1 }} numberOfLines={1}>
+              Б {d.protein} ({sign(d.protein_diff)}) · Ж {d.fat} ({sign(d.fat_diff)}) · У {d.carbs} ({sign(d.carbs_diff)})
+            </Muted>
+          </View>
+        ))}
+      </Card>
+    </Animated.View>
   );
 }
 
