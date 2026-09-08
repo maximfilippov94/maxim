@@ -14,6 +14,11 @@ import { haptic } from '../../haptics';
 import { openLegal } from '../../ui/legal';
 import { confirmDeleteAccount } from '../../ui/deleteAccount';
 
+const VERIFY_LABEL: Record<string, string> = {
+  none: 'не пройдена', pending: 'на проверке',
+  verified: 'пройдена', rejected: 'отказано',
+};
+
 const THEMES: { key: ThemePref; label: string }[] = [
   { key: 'dark', label: 'Тёмная' },
   { key: 'light', label: 'Светлая' },
@@ -73,6 +78,16 @@ export default function SpMore() {
             </ListGroup>
           </>
         ) : null}
+
+        {/* Клиент не может сам проверить диплом — проверку берёт на себя
+            сервис. Отметку видно в каталоге, поэтому строка стоит рядом
+            с профилем, а не в глубине настроек. */}
+        <ListHead>Доверие</ListHead>
+        <ListGroup>
+          <ListRow first icon="shield" label="Верификация"
+            value={VERIFY_LABEL[pr?.verify_status ?? 'none']}
+            onPress={() => router.push('/sp-verification')} />
+        </ListGroup>
 
         <ListHead>Работа</ListHead>
         <ListGroup>

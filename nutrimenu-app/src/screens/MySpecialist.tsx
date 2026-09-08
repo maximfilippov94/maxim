@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, ViewStyle } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -84,6 +84,7 @@ export default function MySpecialist() {
               <Muted style={{ marginTop: 2 }}>
                 {PROF[spec.profession ?? 'nutritionist'] ?? 'Специалист'}
               </Muted>
+              {spec.verified ? <VerifiedMark style={{ marginTop: S.sm, alignSelf: 'center' }} /> : null}
             </Card>
             <View style={{ gap: S.md, marginTop: S.lg }}>
               <SysButton label="Написать" icon="bubble.left" variant="prominent"
@@ -133,7 +134,11 @@ export default function MySpecialist() {
                   <View style={{ flexDirection: 'row', gap: S.md }}>
                     <Face url={s.avatar_url} name={s.name} size={54} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ ...FONT.h3, color: p.text }}>{s.name}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center',
+                        gap: S.sm, flexWrap: 'wrap' }}>
+                        <Text style={{ ...FONT.h3, color: p.text }}>{s.name}</Text>
+                        {s.verified ? <VerifiedMark /> : null}
+                      </View>
                       <Muted style={{ marginTop: 2 }}>
                         {[PROF[s.profession ?? 'nutritionist'], s.city].filter(Boolean).join(' · ')}
                       </Muted>
@@ -167,6 +172,27 @@ export default function MySpecialist() {
           </>
         )}
       </ScrollView>
+    </View>
+  );
+}
+
+/**
+ * Отметка о проверке.
+ *
+ * Ставится только тогда, когда команда EQUA сверила диплом или
+ * сертификаты. Это обещание клиенту, поэтому выглядит одинаково здесь,
+ * в каталоге на сайте и на публичной странице специалиста.
+ */
+function VerifiedMark({ style }: { style?: ViewStyle }) {
+  const { p } = useApp();
+  return (
+    <View style={[{
+      flexDirection: 'row', alignItems: 'center', gap: 5,
+      backgroundColor: p.primarySoft, borderRadius: R.pill,
+      paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start',
+    }, style]}>
+      <Icon name="shield" size={13} color={p.accent} width={2} />
+      <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>Проверен</Text>
     </View>
   );
 }

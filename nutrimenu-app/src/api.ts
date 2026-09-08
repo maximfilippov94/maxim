@@ -302,6 +302,8 @@ export interface Notice {
 }
 export interface Specialist {
   id: number; name: string; avatar_url?: string | null; profession?: string;
+  /** 1 — EQUA проверила диплом и сертификаты специалиста */
+  verified?: number;
 }
 export interface Checkin {
   week_start: string; ease_score: number; wellbeing_score?: number | null;
@@ -324,6 +326,29 @@ export interface CatalogSpecialist {
   price?: number | null; price_unit?: string | null;
   experience_years?: number | null;
   specializations?: string | null;
+  verified?: number;
+}
+
+/* ---------- Верификация специалиста ----------
+   Диплом клиент проверить не может, поэтому проверку берёт на себя
+   сервис: специалист прикладывает документы, владелец их сверяет. */
+
+export type DocKind = 'diploma' | 'course' | 'certificate' | 'license';
+export const DOC_KINDS: Record<DocKind, string> = {
+  diploma: 'Диплом', course: 'Курс', certificate: 'Сертификат', license: 'Лицензия',
+};
+export interface SpecDoc {
+  id: number; kind: DocKind; title: string;
+  issuer?: string | null; issued_on?: string | null; file_url?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  review_note?: string | null; reviewed_at?: string | null; created_at: string;
+}
+export interface Verification {
+  status: 'none' | 'pending' | 'verified' | 'rejected';
+  note?: string | null;
+  submitted_at?: string | null;
+  verified_at?: string | null;
+  documents: SpecDoc[];
 }
 
 /** Ссылка на файл с сервера: он отдаёт их относительным путём. */
@@ -450,6 +475,7 @@ export interface SpProfile {
   id: number; name: string; email: string; avatar_url?: string | null;
   profession?: string | null; join_code?: string | null;
   plan?: string | null; bio?: string | null; city?: string | null;
+  verify_status?: Verification['status'] | null;
 }
 
 export const PROFESSION: Record<string, string> = {

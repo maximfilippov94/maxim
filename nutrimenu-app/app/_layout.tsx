@@ -68,6 +68,7 @@ function Root() {
         <Stack.Screen name="sp-analytics" />
         <Stack.Screen name="sp-services" />
         <Stack.Screen name="sp-leads" />
+        <Stack.Screen name="sp-verification" />
         <Stack.Screen name="register" />
         <Stack.Screen name="forgot" />
         <Stack.Screen name="progress" />

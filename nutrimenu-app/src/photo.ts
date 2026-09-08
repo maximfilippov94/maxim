@@ -65,3 +65,30 @@ function asFile(a: ImagePicker.ImagePickerAsset): PickedPhoto {
   };
 }
 
+
+/**
+ * Документ для верификации: диплом приходит и снимком, и PDF из почты.
+ *
+ * Отдельная функция, а не флаг в pickPhoto: там открывается галерея,
+ * а PDF в галерее не лежит. Здесь — системный выбор файлов.
+ */
+export async function pickDocument(): Promise<PickedPhoto | null> {
+  const DocumentPicker = require('expo-document-picker');
+  const r = await DocumentPicker.getDocumentAsync({
+    type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+    copyToCacheDirectory: true,
+    multiple: false,
+  });
+  if (r.canceled || !r.assets?.length) return null;
+  const a = r.assets[0];
+  const ext = (a.name?.split('.').pop() || a.uri.split('?')[0].split('.').pop() || 'pdf').toLowerCase();
+  const byExt: Record<string, string> = {
+    pdf: 'application/pdf', png: 'image/png',
+    webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+  };
+  return {
+    uri: a.uri,
+    name: a.name ?? `document.${ext}`,
+    type: a.mimeType ?? byExt[ext] ?? 'application/pdf',
+  };
+}
