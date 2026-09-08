@@ -12,10 +12,14 @@ import { haptic } from '../haptics';
  *  с крупным заголовком под ней, по образцу «Сегодня».
  *  С `logo` вместо названия стоит знак: цвет берётся у темы — тёмный на
  *  светлой, белый на тёмной. */
-export function NavBar({ title, back, logo, right }: {
+export function NavBar({ title, back, logo, right, onBack }: {
   title?: string; back?: boolean; logo?: boolean;
   /** Действие справа: «плюс» на списках, «Сохранить» на формах */
   right?: React.ReactNode;
+  /** Куда возвращаться, если не на предыдущий экран. Нужно там, где
+   *  внутри одного экрана есть свои шаги: «назад» из переписки ведёт к
+   *  списку обращений, а не прочь из поддержки. */
+  onBack?: () => void;
 }) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
@@ -31,7 +35,7 @@ export function NavBar({ title, back, logo, right }: {
         )}
         {back ? (
           <Pressable
-            onPress={() => { haptic.tap(); router.back(); }}
+            onPress={() => { haptic.tap(); onBack ? onBack() : router.back(); }}
             hitSlop={12}
             style={({ pressed }) => ({
               position: 'absolute', left: 12, height: 44, width: 44,

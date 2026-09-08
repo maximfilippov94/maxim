@@ -599,3 +599,25 @@ export interface NewClientResult {
 export const SERVICE_KIND: Record<string, string> = {
   subscription: 'Подписка', session: 'Разовая встреча', package: 'Пакет', other: 'Другое',
 };
+
+/* ---------- Поддержка ----------
+   Один набор типов на клиента и специалиста: обращение у них устроено
+   одинаково, различается только, кто пишет. */
+export interface Ticket {
+  id: number; topic: string; subject: string;
+  status: 'new' | 'in_progress' | 'closed';
+  created_at: string; last_reply_at: string;
+  unread?: number; last_body?: string | null;
+}
+export interface TicketMessage {
+  id: number; from_admin: number; body: string;
+  read_at?: string | null; created_at: string;
+}
+export interface TicketFull {
+  ticket: Ticket; messages: TicketMessage[]; topics: Record<string, string>;
+}
+
+/** Подписи статусов. У клиента «Ответили» понятнее, чем «В работе». */
+export const TICKET_STATUS: Record<Ticket['status'], string> = {
+  new: 'Ждёт ответа', in_progress: 'Ответили', closed: 'Закрыто',
+};

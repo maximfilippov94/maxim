@@ -122,6 +122,14 @@ export default function More() {
           </View>
         </ListGroup>
 
+        <ListHead>Помощь</ListHead>
+        <ListGroup>
+          {/* Про сервис — сюда, про питание — специалисту в чат.
+              Разные разговоры и разные читатели. */}
+          <ListRow first icon="chat" label="Поддержка"
+            onPress={() => router.push('/support')} />
+        </ListGroup>
+
         <ListHead>Документы</ListHead>
         <ListGroup>
           <ListRow icon="tag" label="Пользовательское соглашение"
