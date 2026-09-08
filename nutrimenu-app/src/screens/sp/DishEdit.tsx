@@ -61,6 +61,16 @@ function parseSteps(v?: string | null): DishStep[] {
   try { const a = JSON.parse(v); return Array.isArray(a) ? a : []; }
   catch { return []; }
 }
+/** Рецепт сплошным текстом — по шагам. Пустой текст даёт один пустой шаг. */
+function stepsFromText(v?: string | null): DishStep[] {
+  const t = (v ?? '').trim();
+  if (!t) return [{ text: '' }];
+  /* Режем по границам предложений: точка с пробелом или перевод строки.
+     Сокращения вроде «5–7 мин.» в конце фразы тоже дают точку, но лишний
+     разрыв там безобиднее слипшегося абзаца. */
+  const parts = t.split(/\n+|(?<=[.!?])\s+/).map(x => x.trim()).filter(Boolean);
+  return parts.length ? parts.map(text => ({ text })) : [{ text: t }];
+}
 
 export default function DishEdit() {
   const { p, me } = useApp();
@@ -95,8 +105,11 @@ export default function DishEdit() {
           setMeals(parseList(d.meal_types).length ? parseList(d.meal_types) : ['lunch']);
           setPhoto(d.photo_url ?? null);
           setTags(d.tags ?? '');
+          /* Пошагового рецепта может не быть — у блюд каталога он лежит
+             сплошным текстом в instructions. Показать пустой «Шаг 1»
+             рядом с готовым рецептом значит потерять его на экране. */
           const st = parseSteps(d.steps);
-          setSteps(st.length ? st : [{ text: '' }]);
+          setSteps(st.length ? st : stepsFromText(d.instructions));
           setRows((d.ingredients ?? []).length
             ? d.ingredients.map((r: DishRecipeRow) => ({
                 key: newKey(), ingredient_id: r.ingredient_id,
@@ -112,8 +125,14 @@ export default function DishEdit() {
     })();
   }, [dishId, me?.user?.id]);
 
-  /* Тот же расчёт, что у сервера: КБЖУ продуктов на сырой вес, а выход
-     блюда — с поправкой на уварку. */
+  /* Тот же расчёт, что у сервера в recalc_dish(): КБЖУ продуктов берётся
+     на сырой вес, а выход блюда — с поправкой на уварку.
+
+     Состав — единственный источник КБЖУ, и у блюда каталога тоже. Второго
+     набора чисел в сервисе нет: сервер сам считает блюдо по составу и
+     хранит результат на 100 г, чтобы каталог и меню не пересчитывали
+     сумму на каждый запрос. Поэтому сложенное здесь и присланное оттуда
+     сходятся, и карточка не спорит с итогом дня. */
   const total = useMemo(() => {
     let raw = 0, out = 0, k = 0, pr = 0, f = 0, c = 0;
     for (const r of rows) {
@@ -231,16 +250,23 @@ export default function DishEdit() {
             </Card>
           ) : null}
 
-          {/* Заглавное фото */}
+          {/* Заглавное фото. У чужого блюда без снимка рамку не рисуем:
+              нажать на неё всё равно нельзя, а пустой квадрат во всю
+              ширину — это экран пролистывания ни о чём. */}
+          {mine || mediaUrl(photo) ? (
           <Pressable onPress={mine ? attachCover : undefined} disabled={!mine || cover}
             style={({ pressed }) => ({
-              height: 170, borderRadius: R.lg, overflow: 'hidden', marginTop: S.md,
-              backgroundColor: p.inset, alignItems: 'center', justifyContent: 'center',
+              /* Квадрат и contain: снимки блюд квадратные, так они видны
+                 целиком. Прежние 170 в высоту с обрезкой съедали у боула
+                 половину тарелки — по такому фото блюдо не узнать. */
+              width: '100%', aspectRatio: 1, borderRadius: R.lg, overflow: 'hidden',
+              marginTop: S.md, backgroundColor: p.inset,
+              alignItems: 'center', justifyContent: 'center',
               opacity: pressed ? 0.8 : 1,
             })}>
             {mediaUrl(photo) ? (
               <Image source={{ uri: mediaUrl(photo)! }} style={{ width: '100%', height: '100%' }}
-                contentFit="cover" transition={200} cachePolicy="memory-disk" />
+                contentFit="contain" transition={200} cachePolicy="memory-disk" />
             ) : null}
             {mine ? (
               <View style={{
@@ -257,6 +283,7 @@ export default function DishEdit() {
               </View>
             ) : null}
           </Pressable>
+          ) : null}
 
           <Label>Название</Label>
           <TextInput value={name} onChangeText={setName} editable={mine}
@@ -365,20 +392,31 @@ export default function DishEdit() {
             <View key={i} style={{
               flexDirection: 'row', alignItems: 'flex-start', gap: S.sm, marginBottom: S.sm,
             }}>
-              <Pressable onPress={mine ? () => attachStep(i) : undefined} disabled={!mine}
-                style={({ pressed }) => ({
-                  width: 60, height: 60, borderRadius: R.md, overflow: 'hidden',
-                  backgroundColor: p.inset, alignItems: 'center', justifyContent: 'center',
-                  opacity: pressed ? 0.7 : 1,
-                })}>
-                {mediaUrl(s.photo_url) ? (
-                  <Image source={{ uri: mediaUrl(s.photo_url)! }}
-                    style={{ width: '100%', height: '100%' }}
-                    contentFit="cover" transition={200} cachePolicy="memory-disk" />
-                ) : (
-                  <Icon name="clip" size={17} color={p.text3} />
-                )}
-              </Pressable>
+              {/* Скрепка у чужого блюда ничего не открывает: снимок шага
+                  туда не приложить. Показываем её только там, где она
+                  работает, а вместо пустого квадрата — номер шага. */}
+              {mine || mediaUrl(s.photo_url) ? (
+                <Pressable onPress={mine ? () => attachStep(i) : undefined} disabled={!mine}
+                  style={({ pressed }) => ({
+                    width: 60, height: 60, borderRadius: R.md, overflow: 'hidden',
+                    backgroundColor: p.inset, alignItems: 'center', justifyContent: 'center',
+                    opacity: pressed ? 0.7 : 1,
+                  })}>
+                  {mediaUrl(s.photo_url) ? (
+                    <Image source={{ uri: mediaUrl(s.photo_url)! }}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="cover" transition={200} cachePolicy="memory-disk" />
+                  ) : (
+                    <Icon name="clip" size={17} color={p.text3} />
+                  )}
+                </Pressable>
+              ) : (
+                <View style={{
+                  width: 30, minHeight: 60, alignItems: 'center', paddingTop: 19,
+                }}>
+                  <Text style={{ ...FONT.h3, color: p.text3 }}>{i + 1}</Text>
+                </View>
+              )}
               <TextInput
                 value={s.text ?? ''} editable={mine} multiline
                 onChangeText={t => setSteps(v => v.map((x, j) => (j === i ? { ...x, text: t } : x)))}
