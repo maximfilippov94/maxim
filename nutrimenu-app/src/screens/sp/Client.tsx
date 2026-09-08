@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -88,15 +88,17 @@ export default function SpClientScreen() {
           </View>
         </View>
 
-        <View style={{ gap: S.md, marginBottom: S.lg }}>
-          <SysButton label="Написать" icon="bubble.left" height={46}
+        {/* Три действия в один ряд: во всю ширину они занимали треть
+            экрана и отодвигали меню вниз, а нажимают их по значку. */}
+        <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.lg }}>
+          <Action icon="chat" label="Написать"
             onPress={() => { haptic.tap(); router.push(`/sp-chat/${cid}`); }} />
-          <SysButton label="Цели и нормы" icon="target" height={46}
+          <Action icon="target" label="Цели"
             onPress={() => {
               haptic.tap();
               router.push({ pathname: '/sp-client-edit', params: { id: cid } });
             }} />
-          <SysButton label="Здоровье" icon="heart.text.square" height={46}
+          <Action icon="heart" label="Здоровье"
             onPress={() => {
               haptic.tap();
               router.push({ pathname: '/sp-health', params: { id: cid, name: c.name } });
@@ -402,6 +404,33 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
         ) : null}
       </View>
     </Animated.View>
+  );
+}
+
+/**
+ * Действие в карточке клиента: значок над подписью, треть ширины.
+ * Три таких помещаются в строку и не съедают экран, как это делали
+ * кнопки во всю ширину.
+ */
+function Action({ icon, label, onPress }: {
+  icon: string; label: string; onPress: () => void;
+}) {
+  const { p } = useApp();
+  return (
+    <Pressable onPress={onPress}
+      style={({ pressed }) => ({
+        flex: 1, height: 64, borderRadius: R.md,
+        alignItems: 'center', justifyContent: 'center', gap: 5,
+        backgroundColor: p.surface,
+        borderWidth: p.name === 'light' ? StyleSheet.hairlineWidth : 0,
+        borderColor: p.borderSoft,
+        opacity: pressed ? 0.6 : 1,
+      })}>
+      <Icon name={icon} size={19} color={p.primary} width={1.9} />
+      <Text style={{ fontSize: 12.5, fontWeight: '600', color: p.text2 }} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
