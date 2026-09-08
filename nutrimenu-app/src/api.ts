@@ -276,10 +276,22 @@ export interface Replacement {
 
 export interface GamTask { key: string; label: string; reward: number; done: boolean; progress: string }
 export interface GamAchievement { key: string; icon: string; label: string; hint: string; unlocked: boolean }
-export interface GamReward { key: string; label: string; cost: number; discount_pct: number }
+/** Привилегию задаёт специалист: выдавать её будет он, значит он и
+ *  решает, что предложить. Прежний зашитый список обещал скидку на
+ *  подписку, которой в сервисе нет. */
+export interface GamReward { id: number; label: string; note?: string | null; cost: number }
 export interface GamRedemption {
-  reward_key: string; discount_pct: number; points_cost: number;
+  reward_key: string; title?: string | null; points_cost: number;
   code: string; status: string; created_at: string;
+}
+
+/** Личное задание от специалиста — со сроком, баллами и фотоотчётом. */
+export interface ClientTask {
+  id: number; title: string; note?: string | null;
+  kind: 'simple' | 'photo'; points: number;
+  due_on?: string | null; status: 'open' | 'done' | 'cancelled';
+  photo_url?: string | null; comment?: string | null;
+  done_at?: string | null; created_at: string;
 }
 export interface GamWeekDay { label: string; date: string; pct: number | null; logged: number }
 export interface Gamification {
@@ -287,6 +299,7 @@ export interface Gamification {
   streak: number; eaten: number; perfect_days: number;
   level: number; level_title: string; level_base: number; level_next: number;
   tasks: GamTask[];
+  personal_tasks: ClientTask[];
   achievements: GamAchievement[];
   rewards: GamReward[];
   redemptions: GamRedemption[];

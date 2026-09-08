@@ -12,6 +12,13 @@ export const rub = (kop?: number | null) => {
   }) + ' ₽';
 };
 
+/** «14.09» — короткая дата для строк списка, где важен только день. */
+export const dmy = (s?: string | null) => {
+  if (!s) return '—';
+  const a = String(s).slice(0, 10).split('-');
+  return a.length === 3 ? `${a[2]}.${a[1]}` : s;
+};
+
 export function plural(n: number, forms: [string, string, string]) {
   const a = Math.abs(n) % 100, b = a % 10;
   if (a > 10 && a < 20) return forms[2];

@@ -1,15 +1,21 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import {
+  View, Text, ScrollView, Pressable, Modal, TextInput,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { Image } from 'expo-image';
 import { useApp } from '../store';
-import { api, Gamification, GamReward } from '../api';
+import { api, Gamification, GamReward, ClientTask } from '../api';
+import { uploadForm } from '../upload';
+import { pickPhoto, shootPhoto } from '../photo';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
-import { SysConfirm } from '../ui/system';
-import { plural } from '../format';
+import { SysButton, SysConfirm } from '../ui/system';
+import { plural, dmy } from '../format';
 import { Loading, Fail } from './Shopping';
 import { haptic } from '../haptics';
 
@@ -19,6 +25,9 @@ export default function Rewards() {
   const [g, setG] = useState<Gamification | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  /* Задание, которое сейчас закрывают: держим отдельно, чтобы окно
+     отчёта не перерисовывало весь экран на каждую букву. */
+  const [doing, setDoing] = useState<ClientTask | null>(null);
 
   const load = useCallback(async () => {
     try { setG(await api<Gamification>('/client/gamification')); }
@@ -30,10 +39,12 @@ export default function Rewards() {
     setNote(null);
     try {
       const j = await api<{ code?: string }>('/client/redeem', {
-        method: 'POST', body: { reward_key: r.key },
+        method: 'POST', body: { reward_id: r.id },
       });
       haptic.success();
-      setNote(j.code ? `Промокод ${j.code} — скидка ${r.discount_pct}%` : 'Готово');
+      /* Код нужен, чтобы специалист сверил обмен: привилегию выдаёт он,
+         а не сервис. */
+      setNote(j.code ? `Код обмена ${j.code} — назовите его специалисту` : 'Готово');
       await load();
     } catch (e: any) { haptic.error(); setNote(e?.message ?? 'Не удалось обменять'); }
   }, [load]);
@@ -152,6 +163,60 @@ export default function Rewards() {
           ))}
         </View>
 
+        {/* Личные задания специалиста. У них своя судьба — срок,
+            фотоотчёт, отмена — поэтому они не сворачиваются в ежедневные. */}
+        <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+          Задания специалиста
+        </Text>
+        {g.personal_tasks?.length ? (
+          <Card style={{ padding: 0, marginBottom: S.md }}>
+            {g.personal_tasks.map((t, i) => (
+              <View key={t.id} style={{
+                flexDirection: 'row', alignItems: 'center', gap: S.md,
+                paddingVertical: 12, paddingHorizontal: S.lg,
+                borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+              }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ fontSize: 15, color: t.status === 'done' ? p.text3 : p.text }}>
+                    {t.title}
+                  </Text>
+                  <Muted style={{ marginTop: 2 }} numberOfLines={2}>
+                    {[t.kind === 'photo' ? 'с фотоотчётом' : null,
+                      `${t.points} баллов`,
+                      t.due_on && t.status !== 'done' ? `до ${dmy(t.due_on)}` : null,
+                     ].filter(Boolean).join(' · ')}
+                  </Muted>
+                  {t.note ? <Muted numberOfLines={2}>{t.note}</Muted> : null}
+                </View>
+                {t.photo_url ? (
+                  <Image source={{ uri: t.photo_url }}
+                    style={{ width: 40, height: 40, borderRadius: R.sm, backgroundColor: p.inset }}
+                    contentFit="cover" />
+                ) : null}
+                {t.status === 'done' ? (
+                  <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
+                    +{t.points}
+                  </Text>
+                ) : (
+                  <Pressable onPress={() => setDoing(t)} hitSlop={6}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.pill,
+                      backgroundColor: p.primary, opacity: pressed ? 0.7 : 1,
+                    })}>
+                    <Text style={{ ...FONT.small, fontWeight: '600', color: p.onPrimary }}>
+                      {t.kind === 'photo' ? 'Отчёт' : 'Готово'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
+          </Card>
+        ) : (
+          <Card style={{ marginBottom: S.md }}>
+            <Muted style={{ lineHeight: 19 }}>Личных заданий пока нет.</Muted>
+          </Card>
+        )}
+
         <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
           Обменять баллы
         </Text>
@@ -160,18 +225,27 @@ export default function Rewards() {
             <Text style={{ ...FONT.body, color: p.text }}>{note}</Text>
           </Card>
         ) : null}
-        <Card style={{ padding: 0, marginBottom: S.md }}>
+        {g.rewards.length === 0 ? (
+          <Card style={{ marginBottom: S.md }}>
+            <Muted style={{ lineHeight: 19 }}>
+              Специалист пока не назначил, на что можно обменять баллы.
+            </Muted>
+          </Card>
+        ) : null}
+        <Card style={{ padding: 0, marginBottom: S.md, display: g.rewards.length ? 'flex' : 'none' }}>
           {g.rewards.map((r, i) => {
             const can = g.balance >= r.cost;
             return (
-              <View key={r.key} style={{
+              <View key={r.id} style={{
                 flexDirection: 'row', alignItems: 'center', gap: S.md,
                 paddingVertical: 12, paddingHorizontal: S.lg,
                 borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
               }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, color: can ? p.text : p.text3 }}>{r.label}</Text>
-                  <Muted style={{ marginTop: 2 }}>{r.cost} баллов</Muted>
+                  <Muted style={{ marginTop: 2 }}>
+                    {[r.note, `${r.cost} баллов`].filter(Boolean).join(' · ')}
+                  </Muted>
                 </View>
                 {can ? (
                   <SysConfirm
@@ -179,7 +253,7 @@ export default function Rewards() {
                     tint={p.primary}
                     destructive={false}
                     title={r.label}
-                    message={`Спишем ${r.cost} баллов и выдадим промокод.`}
+                    message={`Спишем ${r.cost} баллов и выдадим код обмена — назовите его специалисту.`}
                     confirmLabel="Обменять"
                     onConfirm={() => redeem(r)}
                   />
@@ -194,7 +268,7 @@ export default function Rewards() {
         {g.redemptions.length ? (
           <>
             <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
-              Мои промокоды
+              Мои коды обмена
             </Text>
             <Card style={{ padding: 0, marginBottom: S.md }}>
               {g.redemptions.map((r, i) => (
@@ -203,8 +277,11 @@ export default function Rewards() {
                   paddingVertical: 12, paddingHorizontal: S.lg,
                   borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
                 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '600', color: p.text }}>{r.code}</Text>
-                  <Muted>−{r.discount_pct}% · {r.status === 'used' ? 'использован' : 'активен'}</Muted>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: p.text }}>{r.code}</Text>
+                    <Muted numberOfLines={1}>{r.title ?? 'Привилегия'}</Muted>
+                  </View>
+                  <Muted>{r.status === 'used' ? 'использован' : 'активен'}</Muted>
                 </View>
               ))}
             </Card>
@@ -212,9 +289,88 @@ export default function Rewards() {
         ) : null}
 
         <Muted style={{ marginTop: S.sm, lineHeight: 18 }}>
-          Баллы начисляются за отмеченные приёмы пищи, дни без пропусков и записанный вес.
+          Баллы начисляются за отмеченные приёмы пищи, дни без пропусков,
+          записанный вес и выполненные задания специалиста.
         </Muted>
       </ScrollView>
+
+      <TaskSheet task={doing} onClose={() => setDoing(null)}
+        onDone={() => { setDoing(null); load(); }} />
     </View>
+  );
+}
+
+/**
+ * Закрытие задания.
+ *
+ * Задание с фотоотчётом без снимка не закрывается — в этом и был смысл:
+ * специалист хочет увидеть результат, а не галочку. Снимок можно и
+ * сделать на месте, и выбрать из галереи: приготовленное блюдо
+ * фотографируют сразу, а сданные анализы — уже готовым файлом.
+ */
+function TaskSheet({ task, onClose, onDone }: {
+  task: ClientTask | null; onClose: () => void; onDone: () => void;
+}) {
+  const { p } = useApp();
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => { setComment(''); setErr(null); }, [task?.id]);
+  if (!task) return null;
+  const needPhoto = task.kind === 'photo';
+
+  async function send(withCamera?: boolean) {
+    if (!task) return;
+    setBusy(true); setErr(null);
+    try {
+      if (needPhoto) {
+        const file = withCamera ? await shootPhoto() : await pickPhoto();
+        if (!file) { setBusy(false); return; }
+        await uploadForm(`/client/tasks/${task.id}/done`, file, 'photo', { comment });
+      } else {
+        await api(`/client/tasks/${task.id}/done`, { method: 'POST', body: { comment } });
+      }
+      haptic.success(); onDone();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не отправилось'); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{
+          backgroundColor: p.surface, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg,
+          padding: S.lg, paddingBottom: S.xl + 12, gap: S.md,
+        }}>
+          <Text style={{ ...FONT.h3, color: p.text }}>{task.title}</Text>
+          {task.note ? <Muted style={{ lineHeight: 19 }}>{task.note}</Muted> : null}
+
+          <TextInput value={comment} onChangeText={setComment} multiline
+            placeholder="Как прошло" placeholderTextColor={p.text3}
+            style={{
+              minHeight: 80, backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+              paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15, lineHeight: 21,
+              textAlignVertical: 'top',
+            }} />
+
+          {err ? <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text> : null}
+          {busy ? <ActivityIndicator color={p.primary} /> : null}
+
+          {needPhoto ? (
+            <View style={{ gap: S.sm }}>
+              <SysButton label="Снять сейчас" icon="camera" variant="prominent"
+                disabled={busy} onPress={() => send(true)} />
+              <SysButton label="Выбрать из галереи" icon="photo"
+                disabled={busy} onPress={() => send(false)} />
+            </View>
+          ) : (
+            <SysButton label="Задание выполнено" icon="checkmark" variant="prominent"
+              disabled={busy} onPress={() => send()} />
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 }

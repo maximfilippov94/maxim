@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
+import {
+  View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet, TextInput,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -7,7 +9,7 @@ import { Image } from 'expo-image';
 import { useApp } from '../../store';
 import {
   api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
-  MEAL_ORDER, MEAL_TITLES,
+  ClientTask, MEAL_ORDER, MEAL_TITLES,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
@@ -15,20 +17,15 @@ import { Card, Label, Muted, Bar } from '../../ui/base';
 import { Icon } from '../../ui/Icon';
 import { Face } from '../../ui/Face';
 import { SysButton, SysChart, SysSlider, SysConfirm, Empty } from '../../ui/system';
-import { round, kg, plural, menuDate, dayTitle, dowShort, isToday } from '../../format';
+import { round, kg, plural, dmy, menuDate, dayTitle, dowShort, isToday } from '../../format';
 import { haptic } from '../../haptics';
 import { Loading, Fail } from '../Shopping';
 
-type Tab = 'overview' | 'menu' | 'progress';
+type Tab = 'overview' | 'menu' | 'tasks' | 'progress';
 const TABS: [Tab, string][] = [
-  ['overview', 'Обзор'], ['menu', 'Меню'], ['progress', 'Прогресс'],
+  ['overview', 'Обзор'], ['menu', 'Меню'], ['tasks', 'Задания'], ['progress', 'Прогресс'],
 ];
 
-const dmy = (s?: string | null) => {
-  if (!s) return '—';
-  const a = String(s).slice(0, 10).split('-');
-  return a.length === 3 ? `${a[2]}.${a[1]}` : s;
-};
 
 /**
  * КБЖУ блюда при другой граммовке.
@@ -125,6 +122,7 @@ export default function SpClientScreen() {
 
         {tab === 'overview' ? <Overview c={c} /> : null}
         {tab === 'menu' ? <MenuTab cid={cid} name={c.name} /> : null}
+        {tab === 'tasks' ? <TasksTab cid={cid} /> : null}
         {tab === 'progress' ? <ProgressTab cid={cid} /> : null}
       </ScrollView>
     </View>
@@ -497,6 +495,142 @@ function ItemCard({ item, grams, onRemove }: {
         </View>
       </Card>
     </Pressable>
+  );
+}
+
+/**
+ * Задания клиенту.
+ *
+ * Зашитые «отметить приёмы» и «записать вес» — правила сервиса, а не
+ * задания специалиста. Здесь он ставит личные: сдать анализы, пройти
+ * шаги, приготовить по рецепту и прислать фото.
+ *
+ * Выполненное задание не удаляется, а только отменяется незакрытое:
+ * закрытые задания — история работы, и стирать её задним числом
+ * нечестно по отношению к клиенту.
+ */
+function TasksTab({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [list, setList] = useState<ClientTask[] | null>(null);
+  const [title, setTitle] = useState('');
+  const [note, setNote] = useState('');
+  const [photo, setPhoto] = useState(false);
+  const [points, setPoints] = useState('20');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try { setList((await api<{ tasks: ClientTask[] }>(`/specialist/clients/${cid}/tasks`)).tasks ?? []); }
+    catch (e: any) { setErr(e?.message ?? 'Не удалось открыть'); setList([]); }
+  }, [cid]);
+  useEffect(() => { load(); }, [load]);
+
+  const add = useCallback(async () => {
+    if (!title.trim()) { haptic.error(); setErr('Что нужно сделать?'); return; }
+    setBusy(true);
+    try {
+      await api(`/specialist/clients/${cid}/tasks`, {
+        method: 'POST',
+        body: {
+          title: title.trim(), note: note.trim(),
+          kind: photo ? 'photo' : 'simple',
+          points: Math.max(0, Math.min(500, parseInt(points, 10) || 0)),
+        },
+      });
+      setTitle(''); setNote(''); setPhoto(false); setPoints('20');
+      haptic.success(); setErr(null); load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не сохранилось'); }
+    finally { setBusy(false); }
+  }, [cid, title, note, photo, points, load]);
+
+  const cancel = useCallback(async (id: number) => {
+    setList(l => l && l.filter(x => x.id !== id));
+    try { await api(`/specialist/tasks/${id}`, { method: 'DELETE' }); haptic.success(); }
+    catch { haptic.error(); load(); }
+  }, [load]);
+
+  if (!list) return <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />;
+
+  return (
+    <Animated.View entering={FadeInDown.duration(220)}>
+      <Card style={{ marginBottom: S.md, gap: S.sm }}>
+        <Label>Новое задание</Label>
+        <TaskField value={title} onChange={setTitle} placeholder="Сдать общий анализ крови" />
+        <TaskField value={note} onChange={setNote} placeholder="Натощак, до конца недели" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <Pressable onPress={() => { haptic.select(); setPhoto(v => !v); }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+            <View style={{
+              width: 22, height: 22, borderRadius: 6,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: photo ? p.primary : 'transparent',
+              borderWidth: photo ? 0 : 1.5, borderColor: p.track,
+            }}>
+              {photo ? <Icon name="check" size={13} color={p.onPrimary} width={2.6} /> : null}
+            </View>
+            <Text style={{ fontSize: 15, color: p.text2 }}>С фотоотчётом</Text>
+          </Pressable>
+          <TaskField value={points} onChange={setPoints} placeholder="20"
+            keyboardType="number-pad" width={80} />
+        </View>
+        {err ? <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text> : null}
+        <SysButton label="Поставить задание" variant="prominent"
+          disabled={busy} onPress={add} />
+      </Card>
+
+      {list.length === 0 ? (
+        <Card><Muted style={{ lineHeight: 19 }}>Заданий пока нет.</Muted></Card>
+      ) : list.map(t => (
+        <Card key={t.id} style={{ marginBottom: S.sm, gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ ...FONT.h3, color: t.status === 'done' ? p.text2 : p.text }}>
+                {t.title}
+              </Text>
+              <Muted style={{ marginTop: 2 }}>
+                {[t.kind === 'photo' ? 'с фотоотчётом' : null,
+                  `${t.points} баллов`,
+                  t.due_on ? `до ${dmy(t.due_on)}` : null,
+                  t.status === 'done' ? 'выполнено' : t.status === 'cancelled' ? 'отменено' : null,
+                 ].filter(Boolean).join(' · ')}
+              </Muted>
+              {t.note ? <Muted>{t.note}</Muted> : null}
+              {t.comment ? (
+                <Text style={{ ...FONT.small, color: p.text2, marginTop: 4 }}>
+                  Ответ клиента: {t.comment}
+                </Text>
+              ) : null}
+            </View>
+            {t.photo_url ? (
+              <Image source={{ uri: t.photo_url }}
+                style={{ width: 52, height: 52, borderRadius: R.md, backgroundColor: p.inset }}
+                contentFit="cover" />
+            ) : null}
+          </View>
+          {t.status === 'open' ? (
+            <SysConfirm label="Отменить" tint={p.text3}
+              title={`Отменить «${t.title}»?`} confirmLabel="Отменить"
+              onConfirm={() => cancel(t.id)} />
+          ) : null}
+        </Card>
+      ))}
+    </Animated.View>
+  );
+}
+
+function TaskField({ value, onChange, placeholder, keyboardType, width }: {
+  value: string; onChange: (v: string) => void; placeholder: string;
+  keyboardType?: 'number-pad'; width?: number;
+}) {
+  const { p } = useApp();
+  return (
+    <TextInput value={value} onChangeText={onChange}
+      placeholder={placeholder} placeholderTextColor={p.text3}
+      keyboardType={keyboardType}
+      style={{
+        width, backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+        paddingHorizontal: S.md, paddingVertical: 11, fontSize: 15,
+      }} />
   );
 }
 
