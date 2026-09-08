@@ -69,6 +69,7 @@ function Root() {
         <Stack.Screen name="sp-services" />
         <Stack.Screen name="sp-leads" />
         <Stack.Screen name="sp-verification" />
+        <Stack.Screen name="sp-reviews" />
         <Stack.Screen name="register" />
         <Stack.Screen name="forgot" />
         <Stack.Screen name="progress" />
@@ -79,6 +80,7 @@ function Root() {
         <Stack.Screen name="rewards" />
         <Stack.Screen name="feed" />
         <Stack.Screen name="health" />
+        <Stack.Screen name="review" />
         <Stack.Screen name="sp-health" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="specialist" />

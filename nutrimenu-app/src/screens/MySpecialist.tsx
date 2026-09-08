@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useApp } from '../store';
 import { api, Specialist, CatalogSpecialist } from '../api';
+import { plural } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -142,14 +143,18 @@ export default function MySpecialist() {
                       <Muted style={{ marginTop: 2 }}>
                         {[PROF[s.profession ?? 'nutritionist'], s.city].filter(Boolean).join(' · ')}
                       </Muted>
+                      {/* Нет отзывов — нет и звёзд: пятёрка из воздуха
+                          обесценивает те оценки, что настоящие. */}
                       {s.rating ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
                           <Icon name="star" size={13} color={p.premium} />
                           <Muted>
-                            {s.rating}{s.reviews_count ? ` · ${s.reviews_count} отзывов` : ''}
+                            {s.rating} · {s.reviews_count ?? 0} {plural(s.reviews_count ?? 0, ['отзыв', 'отзыва', 'отзывов'])}
                           </Muted>
                         </View>
-                      ) : null}
+                      ) : (
+                        <Muted style={{ marginTop: 4 }}>Отзывов пока нет</Muted>
+                      )}
                     </View>
                   </View>
                   {s.bio ? (

@@ -299,6 +299,8 @@ export interface Notice {
   body?: string | null; read_at?: string | null; created_at: string;
   /** В кабинете специалиста уведомления приходят по разным клиентам */
   client_name?: string | null;
+  /** У специалиста два источника: события клиентов и то, что о нём самом */
+  source?: 'client' | 'own';
 }
 export interface Specialist {
   id: number; name: string; avatar_url?: string | null; profession?: string;
@@ -327,6 +329,19 @@ export interface CatalogSpecialist {
   experience_years?: number | null;
   specializations?: string | null;
   verified?: number;
+}
+
+/* ---------- Отзывы ----------
+   Рейтинг считается из отзывов и может быть пустым: сервис, где ещё
+   никто не оставил отзыв, честнее показать без звёзд, чем с пятёркой. */
+
+export interface Review {
+  id: number; rating: number; body?: string | null;
+  author: string; created_at: string;
+}
+export interface MyReview {
+  id: number; rating: number; body?: string | null;
+  status: string; created_at: string; updated_at?: string | null;
 }
 
 /* ---------- Верификация специалиста ----------

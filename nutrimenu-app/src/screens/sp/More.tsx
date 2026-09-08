@@ -87,6 +87,8 @@ export default function SpMore() {
           <ListRow first icon="shield" label="Верификация"
             value={VERIFY_LABEL[pr?.verify_status ?? 'none']}
             onPress={() => router.push('/sp-verification')} />
+          <ListRow icon="star" label="Отзывы"
+            onPress={() => router.push('/sp-reviews')} />
         </ListGroup>
 
         <ListHead>Работа</ListHead>

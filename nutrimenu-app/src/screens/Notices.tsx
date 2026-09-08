@@ -81,12 +81,11 @@ export default function Notices({ role = 'client' }: { role?: 'client' | 'specia
   const readAll = useCallback(async () => {
     haptic.tap();
     setList(l => l && l.map(n => ({ ...n, read_at: n.read_at ?? 'now' })));
-    /* Отметку «прочитано» серверу шлёт только клиентский кабинет: у
-       специалиста уведомления общие по всем клиентам и не гасятся оптом. */
-    if (role === 'client') {
-      try { await api('/client/notifications/read', { method: 'POST' }); }
-      catch { load(); }
-    }
+    /* У специалиста своя отметка: клиентские уведомления принадлежат
+       клиентам и гасить их он не вправе, поэтому сервер запоминает
+       время просмотра, а не трогает чужие записи. */
+    try { await api(base + '/notifications/read', { method: 'POST' }); }
+    catch { load(); }
   }, [role, load]);
 
   if (err) return <Fail title="Уведомления" text={err} />;
@@ -117,7 +116,7 @@ export default function Notices({ role = 'client' }: { role?: 'client' | 'specia
           ) : <View style={{ height: S.md }} />}
 
           {list.map((n, i) => (
-            <Animated.View key={n.id} entering={FadeInDown.delay(Math.min(i, 8) * 30).duration(220)}>
+            <Animated.View key={`${n.source ?? 'c'}-${n.id}`} entering={FadeInDown.delay(Math.min(i, 8) * 30).duration(220)}>
               <Card style={{ marginBottom: S.sm, flexDirection: 'row', gap: S.md }}>
                 <View style={{
                   width: 34, height: 34, borderRadius: 17, marginTop: 1,

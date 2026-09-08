@@ -61,6 +61,8 @@ export default function More() {
             onPress={() => router.push('/notifications')} />
           <ListRow icon="chat" label="Мой специалист"
             onPress={() => router.push('/specialist')} />
+          <ListRow icon="star" label="Отзыв о специалисте"
+            onPress={() => router.push('/review')} />
           <ListRow icon="edit" label="Отчёт за неделю"
             onPress={() => router.push('/checkin')} />
           <ListRow icon="tag" label="Услуги и цены"
