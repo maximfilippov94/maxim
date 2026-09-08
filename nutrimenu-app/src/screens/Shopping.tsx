@@ -42,6 +42,19 @@ export default function Shopping() {
     }
   }, []);
 
+  /* Кладовка. Соль и масло попадают в список каждую неделю и каждую
+     неделю в нём не нужны. Совсем убирать их нельзя — иногда они как
+     раз заканчиваются, поэтому они уходят в отдельный список. */
+  const pantry = useCallback(async (it: ShoppingItem, add: boolean) => {
+    haptic.select();
+    try {
+      await api('/client/shopping/pantry', {
+        method: 'POST', body: add ? { name: it.name } : { name: it.name, remove: true },
+      });
+      load();
+    } catch { haptic.error(); }
+  }, [load]);
+
   const clear = useCallback(async () => {
     const before = data?.items ?? [];
     setData(d => d && { ...d, items: d.items.map(x => ({ ...x, checked: 0 })) });
@@ -111,7 +124,10 @@ export default function Shopping() {
       {sysNative ? (
         <>
           {head}
-          <NativeList cats={cats} onSet={(it, v) => toggle(it, v)} />
+          <NativeList cats={cats} pantry={data.pantry ?? []}
+            onSet={(it, v) => toggle(it, v)}
+            onHome={it => pantry(it, true)}
+            onBack={it => pantry(it, false)} />
         </>
       ) : (
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
@@ -145,7 +161,18 @@ export default function Shopping() {
                             color: it.checked ? p.text3 : p.text,
                             textDecorationLine: it.checked ? 'line-through' : 'none',
                           }}>{it.name}</Text>
-                          <Text style={{ ...FONT.small, color: p.text3 }}>{it.grams} г</Text>
+                          <Text style={{ ...FONT.small, color: p.text3 }}>
+                            {it.amount?.text ?? `${it.grams} г`}
+                          </Text>
+                          {/* Домик убирает продукт в кладовку. Отдельной
+                              кнопкой, а не долгим нажатием: то, чего не
+                              видно, никто не найдёт. */}
+                          <Pressable onPress={() => pantry(it, true)} hitSlop={10}>
+                            {({ pressed: ph }) => (
+                              <Icon name="home" size={16}
+                                color={ph ? p.accent : p.text3} width={1.7} />
+                            )}
+                          </Pressable>
                         </View>
                       </View>
                     )}
@@ -154,6 +181,35 @@ export default function Shopping() {
               </ListGroup>
             </Animated.View>
           ))}
+          {data.pantry?.length ? (
+            <>
+              <ListHead>Уже есть дома</ListHead>
+              <ListGroup>
+                {data.pantry.map((it, i) => (
+                  <View key={it.key}>
+                    {i ? <View style={{ height: 0.5, backgroundColor: p.border, marginLeft: 18 }} /> : null}
+                    <View style={{
+                      height: 48, flexDirection: 'row', alignItems: 'center',
+                      paddingHorizontal: 18, gap: 14,
+                    }}>
+                      <Text numberOfLines={1} style={{ flex: 1, fontSize: 16, color: p.text3 }}>
+                        {it.name}
+                      </Text>
+                      <Pressable onPress={() => pantry(it, false)} hitSlop={8}>
+                        <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
+                          Вернуть
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ))}
+              </ListGroup>
+            </>
+          ) : null}
+          <Text style={{ ...FONT.small, color: p.text3, paddingHorizontal: 18, marginTop: 14, lineHeight: 18 }}>
+            Продукты, которые всегда есть дома, уберите значком домика —
+            они перестанут появляться в списке.
+          </Text>
         </ScrollView>
       )}
     </View>
@@ -168,9 +224,12 @@ export default function Shopping() {
  * системный. Взамен получаем всё разом: резину на краю, полный свайп
  * до конца, возврат строки, если палец передумал.
  */
-function NativeList({ cats, onSet }: {
+function NativeList({ cats, pantry, onSet, onHome, onBack }: {
   cats: [string, ShoppingItem[]][];
+  pantry: ShoppingItem[];
   onSet: (it: ShoppingItem, checked: boolean) => void;
+  onHome: (it: ShoppingItem) => void;
+  onBack: (it: ShoppingItem) => void;
 }) {
   const { p } = useApp();
   const {
@@ -197,6 +256,12 @@ function NativeList({ cats, onSet }: {
                       onPress={() => onSet(it, !on)}
                       modifiers={[m.tint(on ? p.text3 : p.primary)]}
                     />
+                    <Button
+                      label="Есть дома"
+                      systemImage="house"
+                      onPress={() => onHome(it)}
+                      modifiers={[m.tint(p.text3)]}
+                    />
                   </SwipeActions.Actions>
                   <HStack spacing={12}
                     modifiers={[m.onTapGesture(() => onSet(it, !on))]}>
@@ -211,7 +276,7 @@ function NativeList({ cats, onSet }: {
                     </VStack>
                     <Spacer />
                     <SText modifiers={[m.font({ size: 13 }), m.foregroundStyle(p.text3)]}>
-                      {`${it.grams} г`}
+                      {it.amount?.text ?? `${it.grams} г`}
                     </SText>
                   </HStack>
                 </SwipeActions>
@@ -219,6 +284,27 @@ function NativeList({ cats, onSet }: {
             })}
           </Section>
         ))}
+        {/* Кладовка — тем же списком, иначе убранное с глаз исчезало бы
+            совсем и вернуть его было бы нечем. */}
+        {pantry.length ? (
+          <Section title="Уже есть дома">
+            {pantry.map(it => (
+              <SwipeActions key={it.key}>
+                <SwipeActions.Actions edge="trailing">
+                  <Button label="Вернуть" systemImage="arrow.uturn.backward"
+                    onPress={() => onBack(it)} modifiers={[m.tint(p.primary)]} />
+                </SwipeActions.Actions>
+                <HStack spacing={12}>
+                  <SImage systemName="house" size={19} color={p.text3} />
+                  <SText modifiers={[m.font({ size: 16 }), m.foregroundStyle(p.text3)]}>
+                    {it.name}
+                  </SText>
+                  <Spacer />
+                </HStack>
+              </SwipeActions>
+            ))}
+          </Section>
+        ) : null}
       </List>
     </Host>
   );

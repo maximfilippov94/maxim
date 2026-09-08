@@ -558,6 +558,29 @@ function ProgressTab({ cid }: { cid: number }) {
           </Card>
         </>
       ) : null}
+
+      {/* Фото прогресса клиент вносит ровно для того, чтобы их посмотрел
+          специалист: по одной цифре на весах о теле не судят. Снимок
+          приходит содержимым, а не ссылкой — тег изображения не
+          отправляет заголовок авторизации. */}
+      {d?.photos?.length ? (
+        <>
+          <Text style={{ ...FONT.h3, color: p.text, marginTop: S.lg, marginBottom: S.sm }}>
+            Фото прогресса
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
+            {d.photos.filter(ph => ph.photo_url).map(ph => (
+              <View key={ph.id} style={{ width: '31%' }}>
+                <Image source={{ uri: ph.photo_url }}
+                  style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: R.md,
+                    backgroundColor: p.inset }}
+                  contentFit="cover" transition={200} />
+                <Muted style={{ marginTop: 4, fontSize: 11 }}>{dmy(ph.measured_on)}</Muted>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
     </Animated.View>
   );
 }

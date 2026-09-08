@@ -190,11 +190,16 @@ export function dishMeals(d: Pick<Dish, 'meal_types'>): MealKey[] {
 
 export interface ShoppingItem {
   key: string; name: string; category: string; grams: number; checked: number;
+  /** Сколько купить в единицах магазина: «12 штук», «1,3 кг», «25 мл» */
+  amount?: { value: number; unit: string; text: string };
+  at_home?: number;
 }
 export interface ShoppingResponse {
   menu: { id: number; title: string; days_count: number } | null;
   days: number;
   items: ShoppingItem[];
+  /** Продукты, которые клиент отметил как «всегда есть дома» */
+  pantry: ShoppingItem[];
 }
 
 export interface WeightLog { id: number; weight_kg: number; measured_on: string }
