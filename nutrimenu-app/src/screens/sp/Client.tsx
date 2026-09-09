@@ -10,6 +10,7 @@ import { useApp } from '../../store';
 import {
   api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
   ClientTask, MEAL_ORDER, MEAL_TITLES,
+  thumbUrl,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
@@ -472,7 +473,7 @@ function ItemCard({ item, grams, onRemove }: {
   onRemove: () => void;
 }) {
   const { p } = useApp();
-  const photo = mediaUrl(item.photo_url);
+  const photo = thumbUrl(item);
 
   return (
     <Pressable

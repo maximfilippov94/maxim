@@ -7,6 +7,7 @@ import { useApp } from '../../store';
 import { Image } from 'expo-image';
 import {
   api, mediaUrl, Dish, MEAL_TITLES, MEAL_KEYS, MealKey, dishMeals,
+  thumbUrl,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
@@ -158,7 +159,7 @@ export default function SpDishes() {
 function DishRow({ dish: d, index }: { dish: Dish; index: number }) {
   const { p } = useApp();
   const portion = d.base_portion_g || 250;
-  const photo = mediaUrl(d.photo_url);
+  const photo = thumbUrl(d);
   return (
     <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 20).duration(200)}>
       <Pressable onPress={() => { haptic.tap(); router.push(`/sp-dish-edit?id=${d.id}`); }}

@@ -130,6 +130,7 @@ export interface MealItem {
   meal_type: string;
   portion_g: number;
   photo_url?: string | null;
+  photo_thumb_url?: string | null;
   log_status?: string | null;
   nutrition: Totals;
 }
@@ -267,7 +268,7 @@ export interface DishItem extends MealItem {
   ingredients: DishIngredient[];
 }
 export interface Replacement {
-  id: number; name: string; photo_url?: string | null;
+  id: number; name: string; photo_url?: string | null; photo_thumb_url?: string | null;
   kcal_100: number; protein_100: number; fat_100: number; carbs_100: number;
   base_portion_g?: number | null;
 }
@@ -396,6 +397,17 @@ export interface Verification {
 export const mediaUrl = (u?: string | null) =>
   !u ? null : /^(https?|data|blob|file):/i.test(u) ? u : API_BASE + u;
 
+/**
+ * Фото блюда для списка.
+ *
+ * В строке и сетке плитка 46–56 точек, и грузить туда снимок на 1100
+ * — это мегабайты трафика ради картинки размером с ноготь. Сервер
+ * держит рядом миниатюру; крупная версия остаётся карточке (mediaUrl
+ * по photo_url).
+ */
+export const thumbUrl = (o?: { photo_thumb_url?: string | null; photo_url?: string | null } | null) =>
+  mediaUrl(o?.photo_thumb_url ?? o?.photo_url);
+
 /** Что за вложение пришло — по расширению файла. */
 export type AttachKind = 'image' | 'video' | 'audio' | 'file';
 export function attachKind(url?: string | null): AttachKind | null {
@@ -477,6 +489,8 @@ export interface SpMenuItem extends MealItem {
 }
 export interface Dish {
   id: number; name: string; photo_url?: string | null;
+  /** Уменьшенная копия для списков — её и грузят сетки. */
+  photo_thumb_url?: string | null;
   base_portion_g?: number | null; cook_minutes?: number | null;
   kcal_100: number; protein_100: number; fat_100: number; carbs_100: number;
   meal_types?: string | null;

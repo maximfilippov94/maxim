@@ -5,7 +5,7 @@ import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
-import { api, mediaUrl, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from '../api';
+import { api, mediaUrl, thumbUrl, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from '../api';
 import { S, R, FONT } from '../theme';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
@@ -259,9 +259,9 @@ export default function Today() {
                     borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
                     backgroundColor: pressed ? p.ov1 : 'transparent',
                   })}>
-                    {mediaUrl(x.photo_url)
+                    {thumbUrl(x)
                       ? <Image
-                          source={{ uri: mediaUrl(x.photo_url)! }}
+                          source={{ uri: thumbUrl(x)! }}
                           style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: p.inset }}
                           contentFit="cover"
                           transition={220}
