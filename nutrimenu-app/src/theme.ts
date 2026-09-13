@@ -31,6 +31,8 @@ export interface Palette {
   track: string;        // подложка прогресс-баров
   ov1: string; ov2: string; ov3: string;
   danger: string;
+  warn: string;        // расхождение заметное, но не ошибка
+
   videoBg: string;
   shadow: string;
 }
@@ -60,6 +62,7 @@ export const NAVY: Palette = {
   ov2: 'rgba(255,255,255,0.06)',
   ov3: 'rgba(255,255,255,0.09)',
   danger: '#E2564D',
+  warn: '#E0A44A',
   videoBg: '#0C1118',
   shadow: '#000000',
 };
@@ -90,6 +93,7 @@ export const PORCELAIN: Palette = {
   ov2: 'rgba(18,24,32,0.07)',
   ov3: 'rgba(18,24,32,0.1)',
   danger: '#D3453C',
+  warn: '#C98620',
   videoBg: '#ECEEF1',
   shadow: '#121820',
 };

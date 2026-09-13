@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, mediaUrl, DishItem, Replacement, MEAL_TITLES } from '../api';
+import { api, mediaUrl, DishItem, Replacement, ReplacementSource, MEAL_TITLES } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -26,6 +26,7 @@ export default function Dish() {
   const [err, setErr] = useState<string | null>(null);
   const [gram, setGram] = useState(0);
   const [repl, setRepl] = useState<Replacement[] | null>(null);
+  const [replSrc, setReplSrc] = useState<ReplacementSource>('auto');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -53,7 +54,9 @@ export default function Dish() {
   const openRepl = useCallback(async () => {
     haptic.tap();
     try {
-      const r = await api<{ dishes: Replacement[] }>(`/client/menu-items/${iid}/replacements`);
+      const r = await api<{ dishes: Replacement[]; source: ReplacementSource }>(
+        `/client/menu-items/${iid}/replacements`);
+      setReplSrc(r.source ?? 'auto');
       setRepl(r.dishes ?? []);
     } catch (e: any) { setErr(e?.message ?? 'Замены недоступны'); }
   }, [iid]);
@@ -176,9 +179,16 @@ export default function Dish() {
             отдельном окне: выбор блюда рядом с составом понятнее. */}
         {repl ? (
           <Animated.View entering={FadeInDown.duration(220)}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
               marginTop: S.sm, marginBottom: S.sm }}>
-              <Text style={{ ...FONT.h3, color: p.text }}>Чем заменить</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...FONT.h3, color: p.text }}>Чем заменить</Text>
+                <Muted style={{ marginTop: 2 }}>
+                  {replSrc === 'specialist'
+                    ? 'Замены, которые разрешил специалист'
+                    : 'Подобрали блюда с близкими КБЖУ'}
+                </Muted>
+              </View>
               <Pressable onPress={() => setRepl(null)} hitSlop={10}>
                 <Icon name="close" size={17} color={p.text3} />
               </Pressable>
@@ -186,11 +196,10 @@ export default function Dish() {
             {repl.length === 0 ? (
               <Empty icon="rectangle.on.rectangle.slash" height={160}
                 title="Замен нет"
-                note="Специалист не задал для этого блюда разрешённых замен." />
+                note="Подходящих блюд для этого приёма не нашлось." />
             ) : (
               <Card style={{ padding: 0, marginBottom: S.md }}>
                 {repl.map((d, i) => {
-                  const portion = d.base_portion_g || 250;
                   return (
                     <Pressable key={d.id} onPress={() => doRepl(d.id)} disabled={busy}>
                       {({ pressed }) => (
@@ -203,8 +212,19 @@ export default function Dish() {
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 15, fontWeight: '600', color: p.text }}>{d.name}</Text>
                             <Muted style={{ marginTop: 2 }}>
-                              {round(d.kcal_100 * portion / 100)} ккал · {portion} г
+                              {d.portion_g} г · {d.kcal} ккал · Б {d.protein} · Ж {d.fat} · У {d.carbs}
                             </Muted>
+                            {/* Чем замена отличается от исходного блюда. Порог у
+                                каждого показателя свой: 15 ккал незаметны, а 15 г
+                                белка — уже другой приём пищи. */}
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 3 }}>
+                              <Diff n={d.kcal_diff} lim={15}
+                                text={Math.abs(d.kcal_diff) <= 15
+                                  ? 'калории те же' : `${signed(d.kcal_diff)} ккал`} />
+                              <Sep /><Diff n={d.protein_diff} lim={9} text={`Б ${signed(d.protein_diff)}`} />
+                              <Sep /><Diff n={d.fat_diff} lim={9} text={`Ж ${signed(d.fat_diff)}`} />
+                              <Sep /><Diff n={d.carbs_diff} lim={14} text={`У ${signed(d.carbs_diff)}`} />
+                            </View>
                           </View>
                           <Icon name="chevr" size={14} color={p.text3} width={2} />
                         </View>
@@ -272,3 +292,21 @@ function SkipRow({ onPick, disabled }: { onPick: (reason: string) => void; disab
     </Card>
   );
 }
+
+/* Знак расхождения ставим сами: минус — типографский, иначе в строке
+   цифр он выглядит как дефис переноса. */
+const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0');
+
+/** Одно расхождение: в пределах порога — спокойным цветом, за ним — тревожным. */
+function Diff({ n, lim, text }: { n: number; lim: number; text: string }) {
+  const { p } = useApp();
+  /* Красить строку целиком одним цветом нельзя: «калории те же» при
+     белке −14 г читалось бы как «всё совпало», а это неправда. */
+  return (
+    <Text style={{ ...FONT.small, color: Math.abs(n) <= lim ? p.primary : p.warn }}>{text}</Text>
+  );
+}
+const Sep = () => {
+  const { p } = useApp();
+  return <Text style={{ ...FONT.small, color: p.text3 }}> · </Text>;
+};

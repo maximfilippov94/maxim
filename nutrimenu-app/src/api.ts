@@ -267,11 +267,19 @@ export interface DishItem extends MealItem {
   base_portion_g?: number | null;
   ingredients: DishIngredient[];
 }
+/* Подбор замен считает порцию сам — так, чтобы калории сошлись с тем
+   блюдом, которое заменяют, — и возвращает уже готовые числа вместе с
+   расхождением по каждому показателю. Считать из kcal_100, как раньше,
+   больше нельзя: сервер их в этом ответе не отдаёт. */
 export interface Replacement {
   id: number; name: string; photo_url?: string | null; photo_thumb_url?: string | null;
-  kcal_100: number; protein_100: number; fat_100: number; carbs_100: number;
-  base_portion_g?: number | null;
+  portion_g: number;
+  kcal: number; protein: number; fat: number; carbs: number;
+  kcal_diff: number; protein_diff: number; fat_diff: number; carbs_diff: number;
 }
+
+/** Откуда список: ручной от специалиста или автоподбор. */
+export type ReplacementSource = 'specialist' | 'auto';
 
 /* ---------- Награды и баллы ---------- */
 
@@ -473,6 +481,11 @@ export interface SpClient {
   menu_status?: string | null;
   last_activity?: string | null;
   eaten7?: number; logged7?: number;
+  /* Приёмов в плане за 7 дней и что с ними стало. Доля съеденного среди
+     отмеченных обманывает: отметивший один приём из двадцати пяти
+     показывал 100 %. Считать надо от плана — это planned7 и marked_pct. */
+  planned7?: number; skipped7?: number; unlogged7?: number;
+  marked_pct?: number | null;
   last_msg?: string | null; last_msg_at?: string | null;
   compliance?: number | null;
   points?: number | null; streak?: number | null;

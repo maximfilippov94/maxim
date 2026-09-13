@@ -7,7 +7,7 @@ import { useApp } from '../../src/store';
  * панель рисует UIKit, поэтому стекло, размытие и линза настоящие.
  */
 export default function SpTabs() {
-  const { p } = useApp();
+  const { p, unread } = useApp();
   return (
     <NativeTabs
       tintColor={p.primary}
@@ -25,6 +25,9 @@ export default function SpTabs() {
       <NativeTabs.Trigger name="chats">
         <NativeTabs.Trigger.Icon sf="bubble.left" />
         <NativeTabs.Trigger.Label>Чат</NativeTabs.Trigger.Label>
+        {/* Сколько сообщений ждут ответа. Число приходит вместе со списком
+            клиентов — его считают «Клиенты» и «Чаты» при загрузке. */}
+        {unread ? <NativeTabs.Trigger.Badge>{String(unread)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="more">
         <NativeTabs.Trigger.Icon sf="ellipsis" />

@@ -33,7 +33,7 @@ const ago = (s?: string | null) => {
 };
 
 export default function SpClients() {
-  const { p } = useApp();
+  const { p, setUnread } = useApp();
   const insets = useSafeAreaInsets();
   const [list, setList] = useState<SpClient[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -41,7 +41,13 @@ export default function SpClients() {
   const [f, setF] = useState<Filter>('all');
 
   const load = useCallback(async () => {
-    try { setList((await api<{ clients: SpClient[] }>('/specialist/clients')).clients ?? []); setErr(null); }
+    try {
+      const cs = (await api<{ clients: SpClient[] }>('/specialist/clients')).clients ?? [];
+      setList(cs); setErr(null);
+      /* Значок на вкладке «Чат» считаем отсюда: список уже загружен,
+         отдельный запрос ради одного числа не нужен. */
+      setUnread(cs.reduce((n, c) => n + (c.unread ?? 0), 0));
+    }
     catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -145,7 +151,13 @@ export default function SpClients() {
 
 function Row({ c }: { c: SpClient }) {
   const { p } = useApp();
-  const done = c.logged7 ? Math.round((c.eaten7 ?? 0) / c.logged7 * 100) : null;
+  /* Сколько приёмов из плана клиент вообще отметил. Раньше здесь стояла
+     доля съеденного среди отмеченных, и человек, отметивший один приём
+     из двадцати пяти, показывал 100 %. */
+  const mk = c.marked_pct ?? null;
+  const marked = c.planned7 ? `${c.logged7 ?? 0} из ${c.planned7}` : '—';
+  const mTone = mk == null ? undefined
+    : mk >= 70 ? p.primary : mk >= 35 ? p.warn : p.danger;
   return (
     <Pressable onPress={() => { haptic.tap(); router.push(`/sp-client/${c.id}`); }}>
       {({ pressed }) => (
@@ -168,7 +180,7 @@ function Row({ c }: { c: SpClient }) {
           </View>
           <View style={{ flexDirection: 'row', gap: S.lg, marginTop: S.md }}>
             <Tag label="Меню" value={c.menu_status === 'published' ? 'опубликовано' : 'нет'} />
-            <Tag label="Отметки" value={done == null ? '—' : `${done}%`} />
+            <Tag label="Отметки" value={marked} tone={mTone} />
             <Tag label="Заходил" value={ago(c.last_activity)} />
           </View>
         </Card>
@@ -177,12 +189,13 @@ function Row({ c }: { c: SpClient }) {
   );
 }
 
-function Tag({ label, value }: { label: string; value: string }) {
+function Tag({ label, value, tone }: { label: string; value: string; tone?: string }) {
   const { p } = useApp();
   return (
     <View style={{ flex: 1 }}>
       <Text style={{ ...FONT.label, color: p.text3, textTransform: 'uppercase' }}>{label}</Text>
-      <Text style={{ ...FONT.small, color: p.text2, marginTop: 2 }} numberOfLines={1}>{value}</Text>
+      <Text style={{ ...FONT.small, color: tone ?? p.text2, marginTop: 2 }}
+        numberOfLines={1}>{value}</Text>
     </View>
   );
 }

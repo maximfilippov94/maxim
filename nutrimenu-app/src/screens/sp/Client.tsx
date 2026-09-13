@@ -79,9 +79,14 @@ export default function SpClientScreen() {
           <Face url={c.avatar_url} name={c.name} size={58} />
           <View style={{ flex: 1 }}>
             <Text style={{ ...FONT.h2, color: p.text }}>{c.name}</Text>
+            {/* Возраст, рост и вес специалист держит в голове при каждом
+                разговоре — значит они принадлежат шапке, а не вкладке
+                «Цели» в двух переходах отсюда. Цель ведёт строку: с неё
+                начинается любой разбор. */}
             <Muted style={{ marginTop: 2 }}>
               {[c.goal, age ? `${age} ${plural(age, ['год', 'года', 'лет'])}` : null,
-                c.height_cm ? `${c.height_cm} см` : null].filter(Boolean).join(' · ') || '—'}
+                c.height_cm ? `${c.height_cm} см` : null,
+                c.weight_kg ? `${kg(c.weight_kg)} кг` : null].filter(Boolean).join(' · ') || '—'}
             </Muted>
           </View>
         </View>
@@ -137,7 +142,8 @@ function Overview({ c }: { c: SpClient }) {
     ['Белки', c.target_protein ? `${round(c.target_protein)} г` : '—'],
     ['Жиры', c.target_fat ? `${round(c.target_fat)} г` : '—'],
     ['Углеводы', c.target_carbs ? `${round(c.target_carbs)} г` : '—'],
-    ['Вес', c.weight_kg ? `${kg(c.weight_kg)} кг` : '—'],
+    /* Вес переехал в шапку карточки, к возрасту и росту — здесь остаётся
+       то, по чему со специалистом связываются. */
     ['Почта', c.email ?? '—'],
     ['Телефон', c.phone ?? '—'],
   ];
@@ -155,6 +161,7 @@ function Overview({ c }: { c: SpClient }) {
           </View>
         ))}
       </Card>
+      <Adherence cid={c.id} />
       {c.notes ? (
         <Card>
           <Label>Заметка</Label>
@@ -296,14 +303,12 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     return (
       <Animated.View entering={FadeInDown.duration(220)}>
         <Empty icon="calendar.badge.plus" title="Меню ещё нет"
-          note="Соберите черновик под цели клиента или заполните план вручную." />
+          note="Создайте первое меню для клиента." />
         <View style={{ gap: S.sm }}>
-          {/* Сборка — черновик, а не решение за специалиста: программа
-              набирает блюда под калории и обходит запреты клиента,
-              остальное он правит сам. */}
-          <SysButton label="Собрать под цели" variant="prominent" icon="sparkles"
-            disabled={busy} onPress={generate} />
-          <SysButton label="Пустое меню" icon="plus"
+          {/* Подбор под цели временно убран из интерфейса: калькулятор
+              ещё дорабатывается. Вызов generate и отчёт GenReport целы —
+              вернуть сюда кнопку, и всё оживёт. */}
+          <SysButton label="Создать меню" variant="prominent" icon="plus"
             onPress={() => {
               haptic.tap();
               router.push({ pathname: '/sp-menu-new', params: { client: cid, name } });
@@ -790,5 +795,82 @@ function ProgressTab({ cid }: { cid: number }) {
         </>
       ) : null}
     </Animated.View>
+  );
+}
+
+/* ==========================================================================
+   ПРИВЕРЖЕННОСТЬ МЕНЮ ЗА 7 ДНЕЙ.
+
+   Три числа вместо одного: «не ел» и «не отметил» — разные вещи. Первое
+   говорит, что меню не подошло, второе — что клиент просто молчит, и
+   разговор с ним нужен совсем другой. Раньше и то и другое сливалось в
+   один процент, по которому нельзя было понять, о чём спрашивать.
+   ========================================================================== */
+interface Adh {
+  planned: number; logged: number; eaten: number;
+  skipped: number; unlogged: number;
+  marked_pct: number | null; eaten_pct: number | null;
+}
+
+function Adherence({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [a, setA] = useState<Adh | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api<{ adh?: Adh }>(`/specialist/clients/${cid}/engagement`)
+      .then(r => { if (alive && r.adh) setA(r.adh); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [cid]);
+  if (!a) return null;
+
+  /* Считаем от плана, а не от отметок: доля съеденного среди отмеченных
+     льстит клиенту, который почти ничего не отмечал. */
+  const pct = a.eaten_pct;
+  const word = !a.planned ? 'Меню не опубликовано'
+    : pct == null ? '—'
+    : pct >= 80 ? 'Отличная' : pct >= 55 ? 'Хорошая' : 'Требует внимания';
+  const tone = !a.planned || pct == null ? p.text2
+    : pct >= 80 ? p.primary : pct >= 55 ? p.warn : p.danger;
+
+  return (
+    <Card style={{ marginBottom: S.md }}>
+      <Label>Приверженность меню</Label>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm, marginTop: S.sm }}>
+        <Text style={{ ...FONT.h2, color: tone }}>{pct == null ? '—' : `${pct}%`}</Text>
+        <Text style={{ ...FONT.body, color: p.text2 }}>{word}</Text>
+      </View>
+      <Muted style={{ marginTop: 2 }}>
+        {a.planned
+          ? `съедено из ${a.planned} ${plural(a.planned, ['приёма', 'приёмов', 'приёмов'])} плана за 7 дней`
+          : 'за 7 дней плана не было'}
+      </Muted>
+      <View style={{ marginTop: S.md }}>
+        <Bar value={(pct ?? 0) / 100} color={tone} />
+      </View>
+      {a.planned ? (
+        <View style={{ flexDirection: 'row', marginTop: S.md }}>
+          <Split n={a.eaten} label="съел" color={p.primary} />
+          <Split n={a.skipped} label="не ел" color={p.warn} />
+          <Split n={a.unlogged} label="не отметил" color={p.danger} />
+        </View>
+      ) : null}
+      {a.planned && a.unlogged > a.logged ? (
+        <Muted style={{ marginTop: S.md, lineHeight: 18 }}>
+          Большую часть приёмов клиент не отмечал. Это молчание, а не отказ
+          от меню: сначала стоит спросить, отмечает ли он вообще.
+        </Muted>
+      ) : null}
+    </Card>
+  );
+}
+
+function Split({ n, label, color }: { n: number; label: string; color: string }) {
+  const { p } = useApp();
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={{ ...FONT.num, color }}>{n}</Text>
+      <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>{label}</Text>
+    </View>
   );
 }

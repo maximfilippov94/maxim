@@ -24,12 +24,16 @@ const when = (s?: string | null) => {
 };
 
 export default function SpChats() {
-  const { p } = useApp();
+  const { p, setUnread } = useApp();
   const insets = useSafeAreaInsets();
   const [list, setList] = useState<SpClient[] | null>(null);
 
   const load = useCallback(async () => {
-    try { setList((await api<{ clients: SpClient[] }>('/specialist/clients')).clients ?? []); }
+    try {
+      const cs = (await api<{ clients: SpClient[] }>('/specialist/clients')).clients ?? [];
+      setList(cs);
+      setUnread(cs.reduce((n, c) => n + (c.unread ?? 0), 0));
+    }
     catch { setList([]); }
   }, []);
   useEffect(() => { load(); }, [load]);

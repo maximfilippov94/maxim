@@ -21,6 +21,11 @@ interface Ctx {
   signUp: (data: SignUp) => Promise<void>;
   signOut: () => Promise<void>;
   refreshMe: () => Promise<void>;
+  /* Непрочитанные сообщения — значок на вкладке «Чат». Держим здесь, а не
+     в самой вкладке: число приходит вместе со списком клиентов, который
+     и так загружают «Клиенты» и «Чаты», и лишнего запроса не нужно. */
+  unread: number;
+  setUnread: (n: number) => void;
 }
 const C = createContext<Ctx>(null as any);
 export const useApp = () => useContext(C);
@@ -30,6 +35,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [themePref, setPref] = useState<ThemePref>('dark');
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
+  const [unread, setUnreadState] = useState(0);
+  const setUnread = useCallback((n: number) => setUnreadState(Math.max(0, n | 0)), []);
 
   useEffect(() => {
     (async () => {
@@ -119,6 +126,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <C.Provider value={{
       p: PALETTES[resolved], themePref, setThemePref,
       me, ready, signIn, signInWithToken, signUp, signOut, refreshMe,
+      unread, setUnread,
     }}>
       {children}
     </C.Provider>
