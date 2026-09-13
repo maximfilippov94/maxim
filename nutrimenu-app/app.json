@@ -23,7 +23,7 @@
       "package": "ru.equa.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#2E7D63"
+        "backgroundImage": "./assets/adaptive-icon-bg.png", "backgroundColor": "#159A6E"
       },
       "permissions": [
         "CAMERA",
