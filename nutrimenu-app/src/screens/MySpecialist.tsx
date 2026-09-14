@@ -40,6 +40,17 @@ export default function MySpecialist() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
+  /* Выбрали специалиста — показываем его услуги: это следующий шаг в
+     разговоре, а не отдельная тема, за которой надо идти в «Ещё».
+     Услуг нет — оставляем человека здесь, пустой прайс никому не нужен. */
+  const toServices = useCallback(async () => {
+    try {
+      const r = await api<{ services?: unknown[] }>('/client/services');
+      if ((r.services ?? []).length) { router.push('/services'); return true; }
+    } catch { /* не дошло — не беда, экран уже показывает специалиста */ }
+    return false;
+  }, []);
+
   const connect = useCallback(async (body: object) => {
     setBusy(true); setErr(null);
     try {
@@ -47,9 +58,10 @@ export default function MySpecialist() {
       haptic.success();
       await refreshMe();
       await load();
+      await toServices();
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось подключиться'); }
     finally { setBusy(false); }
-  }, [refreshMe, load]);
+  }, [refreshMe, load, toServices]);
 
   const byCode = useCallback(async () => {
     const c = code.trim().toUpperCase();
@@ -60,9 +72,10 @@ export default function MySpecialist() {
       haptic.success();
       await refreshMe();
       await load();
+      await toServices();
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Код не подошёл'); }
     finally { setBusy(false); }
-  }, [code, refreshMe, load]);
+  }, [code, refreshMe, load, toServices]);
 
   if (spec === undefined) return <Loading title="Мой специалист" />;
 

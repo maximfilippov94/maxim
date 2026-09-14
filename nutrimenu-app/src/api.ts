@@ -225,7 +225,29 @@ export interface ServicesResponse {
   services: Service[];
   payments_enabled: boolean;
   note?: string | null;
+  subscription: Subscription | null;
 }
+
+/**
+ * Услуга, которую клиент подключил у своего специалиста.
+ *
+ * Оплаты пока нет — услуга включается сразу, а paid остаётся нулём.
+ * days_left считает сервер: у последнего дня подписки это 1, а не 0,
+ * потому что в этот день она ещё работает.
+ */
+export interface Subscription {
+  id: number; service_id: number | null;
+  specialist_id: number; specialist_name?: string;
+  title: string;
+  kind: 'one_time' | 'subscription';
+  price_kop: number; price: number;
+  period_days: number | null;
+  status: 'active' | 'expired' | 'cancelled';
+  paid: 0 | 1;
+  started_at: string; expires_at: string | null;
+  days_left: number | null; expired: boolean;
+}
+
 
 /* ---------- Питьевой режим ---------- */
 
@@ -356,6 +378,10 @@ export interface CatalogSpecialist {
   experience_years?: number | null;
   specializations?: string | null;
   verified?: number;
+  /* Цена «от» в каталоге считается из прайса: минимальная активная
+     услуга и её период. Отдельного поля цены у профиля больше нет. */
+  slug?: string | null; education?: string | null;
+  advantages?: string | null; active_clients?: number;
 }
 
 /* ---------- Отзывы ----------

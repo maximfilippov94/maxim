@@ -9,7 +9,7 @@ import { Image } from 'expo-image';
 import { useApp } from '../../store';
 import {
   api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
-  ClientTask, MEAL_ORDER, MEAL_TITLES,
+  ClientTask, Subscription, MEAL_ORDER, MEAL_TITLES,
   thumbUrl,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -18,7 +18,7 @@ import { Card, Label, Muted, Bar } from '../../ui/base';
 import { Icon } from '../../ui/Icon';
 import { Face } from '../../ui/Face';
 import { SysButton, SysChart, SysSlider, SysConfirm, Empty } from '../../ui/system';
-import { round, kg, plural, dmy, menuDate, dayTitle, dowShort, isToday } from '../../format';
+import { round, kg, rub, plural, dmy, menuDate, dayTitle, dowShort, isToday } from '../../format';
 import { haptic } from '../../haptics';
 import { Loading, Fail } from '../Shopping';
 
@@ -53,11 +53,16 @@ export default function SpClientScreen() {
   const cid = Number(id);
 
   const [c, setC] = useState<SpClient | null>(null);
+  const [sub, setSub] = useState<Subscription | null>(null);
   const [tab, setTab] = useState<Tab>('overview');
   const [err, setErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    try { setC((await api<{ client: SpClient }>(`/specialist/clients/${cid}`)).client); setErr(null); }
+    try {
+      const r = await api<{ client: SpClient; subscription: Subscription | null }>(
+        `/specialist/clients/${cid}`);
+      setC(r.client); setSub(r.subscription ?? null); setErr(null);
+    }
     catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); }
   }, [cid]);
   useEffect(() => { load(); }, [load]);
@@ -126,7 +131,7 @@ export default function SpClientScreen() {
           })}
         </View>
 
-        {tab === 'overview' ? <Overview c={c} /> : null}
+        {tab === 'overview' ? <Overview c={c} sub={sub} /> : null}
         {tab === 'menu' ? <MenuTab cid={cid} name={c.name} /> : null}
         {tab === 'tasks' ? <TasksTab cid={cid} /> : null}
         {tab === 'progress' ? <ProgressTab cid={cid} /> : null}
@@ -135,7 +140,7 @@ export default function SpClientScreen() {
   );
 }
 
-function Overview({ c }: { c: SpClient }) {
+function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
   const { p } = useApp();
   const rows: [string, string][] = [
     ['Норма калорий', c.target_kcal ? `${c.target_kcal} ккал` : '—'],
@@ -147,8 +152,34 @@ function Overview({ c }: { c: SpClient }) {
     ['Почта', c.email ?? '—'],
     ['Телефон', c.phone ?? '—'],
   ];
+  const tone = !sub || sub.kind !== 'subscription' || sub.days_left == null ? p.primary
+    : sub.days_left <= 3 ? p.danger : sub.days_left <= 7 ? p.warn : p.primary;
   return (
     <Animated.View entering={FadeInDown.duration(220)}>
+      {/* Какую услугу клиент подключил и до какого числа: специалист
+          должен видеть это, не спрашивая человека. */}
+      {sub ? (
+        <Card style={{ marginBottom: S.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start',
+            justifyContent: 'space-between', gap: S.md }}>
+            <View style={{ flex: 1 }}>
+              <Label>Услуга</Label>
+              <Text style={{ ...FONT.h3, color: p.text, marginTop: 2 }}>{sub.title}</Text>
+            </View>
+            <Text style={{ ...FONT.h3, color: p.text }}>{rub(sub.price_kop)}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md,
+            paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: p.ov2 }}>
+            <Icon name="clock" size={16} color={tone} width={1.8} />
+            <Text style={{ ...FONT.body, fontWeight: '600', color: tone }}>{subLeft(sub)}</Text>
+            {sub.expires_at ? (
+              <Text style={{ ...FONT.small, color: p.text3, marginLeft: 'auto' }}>
+                до {dmy(sub.expires_at.slice(0, 10))}
+              </Text>
+            ) : null}
+          </View>
+        </Card>
+      ) : null}
       <Card style={{ padding: 0, marginBottom: S.md }}>
         {rows.map(([l, v], i) => (
           <View key={l} style={{
@@ -873,4 +904,14 @@ function Split({ n, label, color }: { n: number; label: string; color: string })
       <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>{label}</Text>
     </View>
   );
+}
+
+/* Остаток подписки словами. Последний день называем последним:
+   «осталось 0 дней» у работающей услуги читается как поломка. */
+function subLeft(s: Subscription) {
+  if (s.kind !== 'subscription' || s.days_left == null) return 'разовая услуга';
+  const d = s.days_left;
+  if (d <= 0) return 'заканчивается сегодня';
+  if (d === 1) return 'остался 1 день';
+  return `осталось ${d} ${plural(d, ['день', 'дня', 'дней'])}`;
 }

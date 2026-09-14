@@ -21,6 +21,7 @@ const THEMES: { key: ThemePref; label: string }[] = [
 
 export default function More() {
   const { p, themePref, setThemePref, me, signOut } = useApp();
+  const hasSpec = !!me?.user?.specialist_id;
   const insets = useSafeAreaInsets();
   const idx = Math.max(0, THEMES.findIndex(t => t.key === themePref));
 
@@ -51,6 +52,26 @@ export default function More() {
             onPress={() => router.push('/water')} />
         </ListGroup>
 
+        {/* Пока специалист не выбран, половина пунктов ведёт в пустоту:
+            отзыв не о ком, услуги не у кого. Вместо них — вход в каталог:
+            это и есть следующий шаг, а не ещё один пункт среди прочих. */}
+        <ListHead>Специалист</ListHead>
+        <ListGroup>
+          {hasSpec ? (
+            <>
+              <ListRow first icon="chat" label="Мой специалист"
+                onPress={() => router.push('/specialist')} />
+              <ListRow icon="tag" label="Услуги и цены"
+                onPress={() => router.push('/services')} />
+              <ListRow icon="star" label="Отзыв о специалисте"
+                onPress={() => router.push('/review')} />
+            </>
+          ) : (
+            <ListRow first icon="users" label="Найти специалиста"
+              onPress={() => router.push('/specialist')} />
+          )}
+        </ListGroup>
+
         <ListHead>Мотивация и связь</ListHead>
         <ListGroup>
           <ListRow first icon="gift" label="Награды и баллы"
@@ -59,14 +80,8 @@ export default function More() {
             onPress={() => router.push('/feed')} />
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/notifications')} />
-          <ListRow icon="chat" label="Мой специалист"
-            onPress={() => router.push('/specialist')} />
-          <ListRow icon="star" label="Отзыв о специалисте"
-            onPress={() => router.push('/review')} />
           <ListRow icon="edit" label="Отчёт за неделю"
             onPress={() => router.push('/checkin')} />
-          <ListRow icon="tag" label="Услуги и цены"
-            onPress={() => router.push('/services')} />
         </ListGroup>
 
         <ListHead>Оформление</ListHead>

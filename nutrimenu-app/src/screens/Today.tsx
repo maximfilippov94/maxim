@@ -10,13 +10,14 @@ import { S, R, FONT } from '../theme';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Counter } from '../ui/Counter';
-import { Empty } from '../ui/system';
+import { Empty, SysButton } from '../ui/system';
 import { ScreenHead } from '../ui/ScreenHead';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
 
 export default function Today() {
   const { p, me } = useApp();
+  const hasSpec = !!me?.user?.specialist_id;
   const insets = useSafeAreaInsets();
   const [data, setData] = useState<TodayResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -226,10 +227,20 @@ export default function Today() {
         </Pressable>
       </Animated.View>
 
-      {/* Приёмы пищи */}
+      {/* Приёмы пищи. Пока специалиста нет, ждать нечего: меню составляет
+          он, и первый шаг — каталог, а не ожидание. */}
       {items.length === 0 ? (
-        <Empty icon="fork.knife" title="На сегодня меню не назначено"
-          note="Как только специалист назначит меню на этот день, блюда появятся здесь." />
+        hasSpec ? (
+          <Empty icon="fork.knife" title="На сегодня меню не назначено"
+            note="Как только специалист назначит меню на этот день, блюда появятся здесь." />
+        ) : (
+          <View>
+            <Empty icon="person.2" title="Выберите специалиста"
+              note="Он составит меню под ваши цели и будет вести вас в чате. Выбрать можно из каталога или по коду." />
+            <SysButton label="Открыть каталог" variant="prominent" icon="person.2"
+              onPress={() => { haptic.tap(); router.push('/specialist'); }} />
+          </View>
+        )
       ) : MEAL_ORDER.map((mt, gi) => {
         const group = items.filter(x => x.meal_type === mt);
         if (!group.length) return null;
