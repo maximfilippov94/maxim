@@ -99,6 +99,8 @@ export default function SpMore() {
             onPress={() => router.push('/sp-templates')} />
           <ListRow icon="trend" label="Аналитика"
             onPress={() => router.push('/sp-analytics')} />
+          <ListRow icon="coin" label="Баланс"
+            onPress={() => router.push('/sp-balance')} />
           <ListRow icon="tag" label="Услуги и цены"
             onPress={() => router.push('/sp-services')} />
           <ListRow icon="gift" label="Привилегии за баллы"

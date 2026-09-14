@@ -6,7 +6,7 @@
  * поэтому он стоит отдельной строкой со значком, а не прячется в подпись.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -45,6 +45,8 @@ export default function Services() {
   const [d, setD] = useState<ServicesResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [disputing, setDisputing] = useState(false);
+  const [note, setNote] = useState('');
 
   const load = useCallback(async () => {
     try { setD(await api<ServicesResponse>('/client/services')); setErr(null); }
@@ -67,6 +69,36 @@ export default function Services() {
       } },
     ]);
   }, [load]);
+
+  /* Кнопка «подтвердить» без второй кнопки ничего не значит: рядом
+     всегда есть возражение, и пока идёт спор, деньги заморожены. */
+  const accept = useCallback((sub: Subscription) => {
+    Alert.alert('Подтвердить выполнение?',
+      `«${sub.title}»\n\nПосле подтверждения деньги перейдут специалисту.`, [
+      { text: 'Отмена', style: 'cancel' },
+      { text: 'Подтвердить', onPress: async () => {
+        setBusy(true);
+        try {
+          await api(`/client/subscriptions/${sub.id}/accept`, { method: 'POST', body: {} });
+          haptic.success(); await load();
+        } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось подтвердить'); }
+        finally { setBusy(false); }
+      } },
+    ]);
+  }, [load]);
+
+  /* Возражение пишем в поле на экране, а не в системном окне ввода:
+     Alert.prompt есть только на iOS, а на Android молча ничего бы не
+     показал. */
+  const sendDispute = useCallback(async (sub: Subscription) => {
+    if (note.trim().length < 10) { haptic.error(); setErr('Опишите хотя бы парой фраз'); return; }
+    setBusy(true);
+    try {
+      await api(`/client/subscriptions/${sub.id}/dispute`, { method: 'POST', body: { note: note.trim() } });
+      haptic.success(); setNote(''); setDisputing(false); await load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось отправить'); }
+    finally { setBusy(false); }
+  }, [note, load]);
 
   if (err && !d) return <Fail title="Услуги и цены" text={err} />;
   if (!d) return <Loading title="Услуги и цены" />;
@@ -106,7 +138,50 @@ export default function Services() {
           </View>
         </Card>
 
-        {sub ? (
+        {sub?.awaiting_accept ? (
+          <Animated.View entering={FadeInDown.duration(220)}>
+            <Card style={{ marginBottom: S.md, borderWidth: 1.5, borderColor: p.primary }}>
+              <Label>Требуется подтверждение</Label>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline',
+                justifyContent: 'space-between', gap: S.md, marginTop: 2 }}>
+                <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{sub.title}</Text>
+                <Text style={{ ...FONT.h3, color: p.text }}>{rub(sub.price_kop)}</Text>
+              </View>
+              <Muted style={{ marginTop: 6, lineHeight: 18 }}>
+                Специалист отметил услугу выполненной. Подтвердите — и деньги перейдут ему.
+                {sub.accept_days_left != null
+                  ? ` Если промолчать, подтвердится само через ${sub.accept_days_left} ${plural(sub.accept_days_left, ['день', 'дня', 'дней'])}.`
+                  : ''}
+              </Muted>
+              {disputing ? (
+                <View style={{ marginTop: S.md }}>
+                  <Label>Что произошло</Label>
+                  <TextInput value={note} onChangeText={setNote} multiline
+                    placeholder="Например: консультация не состоялась, перенести не удалось"
+                    placeholderTextColor={p.text3}
+                    style={{ ...FONT.body, color: p.text, backgroundColor: p.inset, borderRadius: 12,
+                      paddingHorizontal: 14, paddingVertical: 12, marginTop: 6, minHeight: 88,
+                      textAlignVertical: 'top' }} />
+                  <View style={{ marginTop: S.md, gap: S.sm }}>
+                    <SysButton label="Отправить" variant="prominent" icon="send"
+                      disabled={busy} onPress={() => sendDispute(sub)} />
+                    <SysButton label="Отмена" variant="quiet"
+                      onPress={() => { setDisputing(false); setNote(''); }} />
+                  </View>
+                </View>
+              ) : (
+                <View style={{ marginTop: S.md, gap: S.sm }}>
+                  <SysButton label="Подтвердить" variant="prominent" icon="check"
+                    disabled={busy} onPress={() => accept(sub)} />
+                  <SysButton label="Что-то не так" variant="quiet"
+                    disabled={busy} onPress={() => { haptic.tap(); setDisputing(true); }} />
+                </View>
+              )}
+            </Card>
+          </Animated.View>
+        ) : null}
+
+        {sub && !sub.awaiting_accept ? (
           <Animated.View entering={FadeInDown.duration(220)}>
             <Card style={{ marginBottom: S.md }}>
               {/* Название и цена — в одной строке. Пока цена стояла рядом с
@@ -128,9 +203,9 @@ export default function Services() {
                   </Text>
                 ) : null}
               </View>
-              <Muted style={{ marginTop: S.sm, lineHeight: 18 }}>
-                Оплата пока не подключена: услуга включена по договорённости со специалистом.
-              </Muted>
+              {d.note ? (
+                <Muted style={{ marginTop: S.sm, lineHeight: 18 }}>{d.note}</Muted>
+              ) : null}
             </Card>
           </Animated.View>
         ) : null}

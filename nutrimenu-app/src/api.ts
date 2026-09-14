@@ -223,7 +223,8 @@ export interface Service {
 export interface ServicesResponse {
   specialist: { id: number; name: string; avatar_url?: string | null } | null;
   services: Service[];
-  payments_enabled: boolean;
+  /** off — денег нет вовсе, demo — заморозка работает на учебных суммах, live — настоящие. */
+  payments_mode: 'off' | 'demo' | 'live';
   note?: string | null;
   subscription: Subscription | null;
 }
@@ -242,10 +243,65 @@ export interface Subscription {
   kind: 'one_time' | 'subscription';
   price_kop: number; price: number;
   period_days: number | null;
-  status: 'active' | 'expired' | 'cancelled';
+  status: 'active' | 'expired' | 'cancelled' | 'refunded';
   paid: 0 | 1;
   started_at: string; expires_at: string | null;
   days_left: number | null; expired: boolean;
+  /* Приёмка разовой услуги: специалист отметил выполнение, и пока клиент
+     не подтвердил (или не промолчал до срока), деньги заморожены. */
+  done_at?: string | null;
+  accepted_at?: string | null;
+  accepted_by?: 'client' | 'auto' | 'admin' | 'refund' | null;
+  disputed_at?: string | null;
+  dispute_note?: string | null;
+  awaiting_accept?: boolean;
+  accept_days_left?: number | null;
+  payout_kop?: number | null;
+  client_name?: string;
+}
+
+/* ---------- Баланс специалиста ----------
+   Баланс не хранится, а считается движениями: каждая строка выписки
+   объясняет, откуда взялось одно из двух чисел. */
+
+export interface Balance {
+  held_kop: number;
+  available_kop: number;
+  pending_kop: number;
+  payout_min_kop: number;
+  payments_mode: 'off' | 'demo' | 'live';
+  can_payout: boolean;
+  accept_days: number;
+}
+export interface BalanceEntry {
+  id: number;
+  kind: 'hold' | 'release' | 'refund' | 'payout' | 'payout_back';
+  held_kop: number; avail_kop: number;
+  note?: string | null;
+  sub_title?: string | null;
+  client_name?: string | null;
+  occurred_at: string;
+}
+export interface PayoutDetails {
+  legal_type: 'self_employed' | 'ip' | 'individual';
+  full_name: string;
+  inn?: string | null;
+  /** Полного номера счёта сервер не отдаёт: сверить перевод хватает четырёх цифр. */
+  account_tail: string;
+  bank?: string | null;
+  agreement_accepted_at?: string | null;
+}
+export interface PayoutRequest {
+  id: number; amount_kop: number;
+  status: 'pending' | 'paid' | 'rejected';
+  note?: string | null;
+  created_at: string; decided_at?: string | null;
+}
+export interface BalanceResponse {
+  balance: Balance;
+  entries: BalanceEntry[];
+  details: PayoutDetails | null;
+  payouts: PayoutRequest[];
 }
 
 
@@ -649,8 +705,11 @@ export interface NewClientResult {
   client_id: number; invite_token: string; invite_url: string;
 }
 
+/* Видов ровно два, и это те же два, что понимает сервер. Раньше здесь
+   значились «встреча» и «пакет», которых он не знает: выбранный вид
+   молча превращался в разовую услугу. */
 export const SERVICE_KIND: Record<string, string> = {
-  subscription: 'Подписка', session: 'Разовая встреча', package: 'Пакет', other: 'Другое',
+  one_time: 'Разовая услуга', subscription: 'Подписка',
 };
 
 /* ---------- Поддержка ----------

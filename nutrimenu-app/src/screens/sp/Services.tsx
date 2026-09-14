@@ -13,8 +13,10 @@ import { rub } from '../../format';
 import { haptic } from '../../haptics';
 import { Loading } from '../Shopping';
 
+/* Видов ровно два — те же, что понимает сервер. «Встреча» и «пакет»
+   здесь были, но на сервере их нет: выбор молча превращался в разовую. */
 const KINDS: [string, string][] = [
-  ['subscription', 'Подписка'], ['session', 'Встреча'], ['package', 'Пакет'],
+  ['one_time', 'Разовая'], ['subscription', 'Подписка'],
 ];
 
 /** Услуги и цены: то, что клиент видит в разделе «Услуги». */
@@ -27,7 +29,8 @@ export default function SpServices() {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
   const [price, setPrice] = useState('');
-  const [kind, setKind] = useState('subscription');
+  const [kind, setKind] = useState('one_time');
+  const [period, setPeriod] = useState('30');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -47,6 +50,7 @@ export default function SpServices() {
           description: desc.trim() || null,
           kind,
           price: price.replace(',', '.'),
+          ...(kind === 'subscription' ? { period_days: Number(period) || 30 } : null),
         },
       });
       haptic.success();
@@ -54,7 +58,7 @@ export default function SpServices() {
       await load();
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось добавить'); }
     finally { setBusy(false); }
-  }, [title, desc, price, kind, load]);
+  }, [title, desc, price, kind, period, load]);
 
   const toggle = useCallback(async (s: SpService) => {
     const next = s.is_active ? 0 : 1;
@@ -132,6 +136,21 @@ export default function SpServices() {
                   );
                 })}
               </View>
+
+              {/* Период спрашиваем только у подписки: у разовой услуги
+                  его нет, и пустое поле сбивало бы с толку. */}
+              {kind === 'subscription' ? (
+                <View style={{ marginTop: S.md }}>
+                  <Label>Период, дней</Label>
+                  <TextInput value={period} onChangeText={setPeriod} keyboardType="number-pad"
+                    placeholder="30" placeholderTextColor={p.text3}
+                    style={{ ...FONT.body, color: p.text, backgroundColor: p.inset,
+                      borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 12, marginTop: 6 }} />
+                  <Muted style={{ marginTop: 6, lineHeight: 18 }}>
+                    От 7 до 31 дня. Дольше месяца нельзя: столько деньги у платёжного сервиса не держатся.
+                  </Muted>
+                </View>
+              ) : null}
 
               <View style={{ marginTop: S.lg }}>
                 <SysButton label="Добавить" variant="prominent" disabled={busy} onPress={add} />
