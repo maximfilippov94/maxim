@@ -109,11 +109,13 @@ export default function Services() {
         {sub ? (
           <Animated.View entering={FadeInDown.duration(220)}>
             <Card style={{ marginBottom: S.md }}>
-              <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: S.md }}>
-                <View style={{ flex: 1 }}>
-                  <Label>Подключено</Label>
-                  <Text style={{ ...FONT.h3, color: p.text, marginTop: 2 }}>{sub.title}</Text>
-                </View>
+              {/* Название и цена — в одной строке. Пока цена стояла рядом с
+                  колонкой «надзаголовок + название», она выравнивалась по
+                  верху блока и висела выше названия, к которому относится. */}
+              <Label>Подключено</Label>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline',
+                justifyContent: 'space-between', gap: S.md, marginTop: 2 }}>
+                <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{sub.title}</Text>
                 <Text style={{ ...FONT.h3, color: p.text }}>{rub(sub.price_kop)}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md,
@@ -144,8 +146,10 @@ export default function Services() {
                   <Text style={{ ...FONT.h3, color: p.text }}>{rub(s.price_kop)}</Text>
                 </View>
                 {s.description ? <Muted style={{ marginTop: 3 }}>{s.description}</Muted> : null}
+                {/* Ряд действий одной высоты: с кнопкой и без неё карточки
+                    не должны отличаться на два десятка точек. */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                  gap: S.md, marginTop: S.md }}>
+                  gap: S.md, marginTop: S.md, minHeight: 44 }}>
                   <Text style={{ ...FONT.small, color: p.text2 }}>{period(s.kind, s.period_days)}</Text>
                   {on ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>

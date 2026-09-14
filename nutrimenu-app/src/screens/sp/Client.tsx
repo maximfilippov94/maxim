@@ -160,12 +160,10 @@ function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
           должен видеть это, не спрашивая человека. */}
       {sub ? (
         <Card style={{ marginBottom: S.md }}>
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start',
-            justifyContent: 'space-between', gap: S.md }}>
-            <View style={{ flex: 1 }}>
-              <Label>Услуга</Label>
-              <Text style={{ ...FONT.h3, color: p.text, marginTop: 2 }}>{sub.title}</Text>
-            </View>
+          <Label>Услуга</Label>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline',
+            justifyContent: 'space-between', gap: S.md, marginTop: 2 }}>
+            <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{sub.title}</Text>
             <Text style={{ ...FONT.h3, color: p.text }}>{rub(sub.price_kop)}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md,
