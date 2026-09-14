@@ -8,7 +8,7 @@ import { S, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
-import { Empty, SysButton } from '../ui/system';
+import { Empty, SysButton, SysConfirm } from '../ui/system';
 import { registerPush, PushState } from '../push';
 import { Loading, Fail } from './Shopping';
 import { haptic } from '../haptics';
@@ -88,6 +88,16 @@ export default function Notices({ role = 'client' }: { role?: 'client' | 'specia
     catch { load(); }
   }, [role, load]);
 
+  /* Очистка ленты. У клиента уведомления его собственные — сервер их
+     удаляет. У специалиста в ленте есть и чужие, клиентские: их он
+     удалять не вправе, поэтому сервер запоминает время очистки и
+     перестаёт показывать ему всё, что было раньше. */
+  const clearAll = useCallback(async () => {
+    setList([]);
+    try { await api(base + '/notifications', { method: 'DELETE' }); }
+    catch { load(); }
+  }, [base, load]);
+
   if (err) return <Fail title="Уведомления" text={err} />;
   if (!list) return <Loading title="Уведомления" />;
 
@@ -142,6 +152,18 @@ export default function Notices({ role = 'client' }: { role?: 'client' | 'specia
               </Card>
             </Animated.View>
           ))}
+
+          {/* Под списком, а не в шапке: сначала события читают и только
+              потом решают их убрать. */}
+          <View style={{ alignItems: 'center', marginTop: S.md, marginBottom: S.sm }}>
+            <SysConfirm
+              label="Очистить список" tint={p.text3}
+              title="Очистить уведомления?"
+              message="Список событий станет пустым. Сами сообщения и звонки останутся на своих местах."
+              confirmLabel="Очистить"
+              onConfirm={clearAll}
+            />
+          </View>
         </ScrollView>
       )}
     </View>
