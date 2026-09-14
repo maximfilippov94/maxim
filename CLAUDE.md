@@ -71,7 +71,8 @@ SP=<каталог> sh $SP/check-all.sh
 ## Поставка веба
 
 Архив собирается из каталога сайта. **Не включать**: `_router.php` (только для
-локальной разработки), `config/mail.php`, `config/legal.php`, живую базу
+локальной разработки), `config/mail.php`, `config/legal.php`,
+`config/payments.php` (ключи эквайера), живую базу
 `storage/nutrimenu.sqlite`, ключи `storage/vapid.*`, копии `storage/backups/`
 и загрузки `storage/uploads/`. Пустые `storage/` и `storage/uploads/` нужны.
 
