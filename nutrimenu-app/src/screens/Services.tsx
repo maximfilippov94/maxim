@@ -6,7 +6,7 @@
  * поэтому он стоит отдельной строкой со значком, а не прячется в подпись.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, Alert, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -62,7 +62,12 @@ export default function Services() {
       { text: 'Подключить', onPress: async () => {
         setBusy(true);
         try {
-          await api(`/client/services/${id}/activate`, { method: 'POST', body: {} });
+          const r = await api<{ confirmation_url?: string | null }>(
+            `/client/services/${id}/activate`, { method: 'POST', body: {} });
+          /* Когда приём платежей подключён, сервер отдаёт ссылку на
+             оплату: услуга включится не сейчас, а когда придёт
+             подтверждение от платёжного сервиса. */
+          if (r?.confirmation_url) { await Linking.openURL(r.confirmation_url); return; }
           haptic.success(); await load();
         } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось подключить'); }
         finally { setBusy(false); }
