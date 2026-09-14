@@ -141,7 +141,9 @@ export default function More() {
         <ListGroup>
           {/* Про сервис — сюда, про питание — специалисту в чат.
               Разные разговоры и разные читатели. */}
-          <ListRow first icon="chat" label="Поддержка"
+          <ListRow first icon="spark" label="EQUA info"
+            onPress={() => router.push('/info')} />
+          <ListRow icon="chat" label="Поддержка"
             onPress={() => router.push('/support')} />
         </ListGroup>
 

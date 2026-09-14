@@ -115,6 +115,8 @@ export default function SpMore() {
             onPress={() => router.push('/feed')} />
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/sp-notifications')} />
+          <ListRow icon="spark" label="EQUA info"
+            onPress={() => router.push('/info')} />
           <ListRow icon="chat" label="Поддержка"
             onPress={() => router.push('/support')} />
         </ListGroup>

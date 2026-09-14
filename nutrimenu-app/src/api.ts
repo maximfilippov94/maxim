@@ -260,6 +260,22 @@ export interface Subscription {
   client_name?: string;
 }
 
+/* ---------- EQUA info ----------
+   Рассказ о сервисе и его обновления. Одна лента на все роли: сервер
+   сам отдаёт то, что относится к этой стороне. */
+
+export interface InfoPost {
+  id: number;
+  kind: 'about' | 'update';
+  title: string;
+  body: string;
+  created_at: string;
+}
+export interface InfoResponse {
+  about: InfoPost[];
+  updates: InfoPost[];
+}
+
 /* ---------- Баланс специалиста ----------
    Баланс не хранится, а считается движениями: каждая строка выписки
    объясняет, откуда взялось одно из двух чисел. */
@@ -438,6 +454,11 @@ export interface CatalogSpecialist {
      услуга и её период. Отдельного поля цены у профиля больше нет. */
   slug?: string | null; education?: string | null;
   advantages?: string | null; active_clients?: number;
+  /* До трёх услуг с ценами прямо в карточке: по ним и выбирают
+     человека, а не по городу. */
+  services?: { title: string; kind: string; price_kop: number; period_days?: number | null }[];
+  /* Паспорт сверен владельцем. Сам скан наружу не отдаётся никогда. */
+  identity_verified?: boolean;
 }
 
 /* ---------- Отзывы ----------

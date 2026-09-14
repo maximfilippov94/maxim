@@ -147,10 +147,12 @@ export default function Services() {
           <Animated.View entering={FadeInDown.duration(220)}>
             <Card style={{ marginBottom: S.md, borderWidth: 1.5, borderColor: p.primary }}>
               <Label>Требуется подтверждение</Label>
+              {/* Цена не сжимается и не переносится, название занимает остальное:
+                  без flexShrink длинное название отжимало цену за край карточки. */}
               <View style={{ flexDirection: 'row', alignItems: 'baseline',
                 justifyContent: 'space-between', gap: S.md, marginTop: 2 }}>
                 <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{sub.title}</Text>
-                <Text style={{ ...FONT.h3, color: p.text }}>{rub(sub.price_kop)}</Text>
+                <Text style={{ ...FONT.h3, color: p.text, flexShrink: 0 }} numberOfLines={1}>{rub(sub.price_kop)}</Text>
               </View>
               <Muted style={{ marginTop: 6, lineHeight: 18 }}>
                 Специалист отметил услугу выполненной. Подтвердите — и деньги перейдут ему.
@@ -196,7 +198,7 @@ export default function Services() {
               <View style={{ flexDirection: 'row', alignItems: 'baseline',
                 justifyContent: 'space-between', gap: S.md, marginTop: 2 }}>
                 <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{sub.title}</Text>
-                <Text style={{ ...FONT.h3, color: p.text }}>{rub(sub.price_kop)}</Text>
+                <Text style={{ ...FONT.h3, color: p.text, flexShrink: 0 }} numberOfLines={1}>{rub(sub.price_kop)}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md,
                 paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: p.ov2 }}>
@@ -223,7 +225,7 @@ export default function Services() {
                 ...(on ? { borderWidth: 1.5, borderColor: p.primary } : null) }}>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.md }}>
                   <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{s.title}</Text>
-                  <Text style={{ ...FONT.h3, color: p.text }}>{rub(s.price_kop)}</Text>
+                  <Text style={{ ...FONT.h3, color: p.text, flexShrink: 0 }} numberOfLines={1}>{rub(s.price_kop)}</Text>
                 </View>
                 {s.description ? <Muted style={{ marginTop: 3 }}>{s.description}</Muted> : null}
                 {/* Ряд действий одной высоты: с кнопкой и без неё карточки

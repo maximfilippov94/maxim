@@ -92,6 +92,29 @@ export function ChatView({
 
   useEffect(() => { load(); }, [load]);
 
+  /* Догрузка новых сообщений.
+   *
+   * Собеседник пишет — строка должна появиться сама, а не по возвращению
+   * на экран. Просим у сервера только то, что новее последнего
+   * показанного: гонять всю переписку каждые несколько секунд незачем.
+   * Свои, ещё не отправленные строки имеют отрицательный номер и в
+   * расчёт не идут. */
+  const pull = useCallback(async () => {
+    const after = (msgs ?? []).reduce((m, x) => (x.id > m ? x.id : m), 0);
+    try {
+      const sep = endpoint.includes('?') ? '&' : '?';
+      const r = await api<{ messages: ChatMessage[] }>(`${endpoint}${sep}after_id=${after}`);
+      const fresh = (r.messages ?? []).filter(x => x.id > after);
+      if (fresh.length) setMsgs(m => [...(m ?? []), ...fresh]);
+    } catch { /* сеть моргнула — попробуем на следующем круге */ }
+  }, [endpoint, msgs]);
+
+  /* Опрашиваем, только пока экран открыт: ушли — таймер снят. */
+  useFocusEffect(useCallback(() => {
+    const t = setInterval(() => { pull(); }, 3000);
+    return () => clearInterval(t);
+  }, [pull]));
+
   /* Голосовые должны звучать и при включённом бесшумном режиме — как в
      мессенджерах: человек нажал «играть», он ждёт звук, а не тишину. */
   useEffect(() => {
@@ -113,8 +136,12 @@ export function ChatView({
     haptic.tap();
     setBusy(true);
     try {
-      await api(endpoint, { method: 'POST', body: { ...extra, body } });
-      await load();
+      /* Сервер возвращает созданную строку: подменяем ею свою временную,
+         чтобы у сообщения появился настоящий номер и оно не пришло
+         второй раз опросом. */
+      const r = await api<{ message?: ChatMessage }>(endpoint, { method: 'POST', body: { ...extra, body } });
+      if (r?.message) setMsgs(m => (m ?? []).map(x => (x.id === local.id ? r.message! : x)));
+      else await load();
     } catch (e: any) {
       haptic.error();
       setMsgs(m => (m ?? []).filter(x => x.id !== local.id));

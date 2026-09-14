@@ -6,7 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useApp } from '../store';
 import { api, Specialist, CatalogSpecialist } from '../api';
-import { plural } from '../format';
+import { rub, plural } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -174,11 +174,35 @@ export default function MySpecialist() {
                     <Text style={{ ...FONT.body, color: p.text2, marginTop: S.md, lineHeight: 19 }}
                       numberOfLines={3}>{s.bio}</Text>
                   ) : null}
+
+                  {/* Услуги с ценами прямо в карточке: человек выбирает
+                      по тому, что ему сделают и почём. Раньше стояла
+                      одна цена «от», и по ней было не понять, за что. */}
+                  {s.services?.length ? (
+                    <View style={{ marginTop: S.md, paddingTop: S.md,
+                      borderTopWidth: 1, borderTopColor: p.border }}>
+                      {s.services.map((v, k) => (
+                        <View key={k} style={{ flexDirection: 'row', alignItems: 'baseline',
+                          justifyContent: 'space-between', gap: S.md, paddingVertical: 3 }}>
+                          <Text style={{ ...FONT.small, color: p.text2, flex: 1 }}
+                            numberOfLines={1}>{v.title}</Text>
+                          <Text style={{ ...FONT.small, fontWeight: '700', color: p.text, flexShrink: 0 }}>
+                            {rub(v.price_kop)}{v.kind === 'subscription'
+                              ? ` / ${v.period_days === 7 ? 'неделя' : v.period_days && v.period_days !== 30
+                                  ? `${v.period_days} дн.` : 'месяц'}`
+                              : ''}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: S.md, gap: S.md }}>
-                    {s.price ? (
-                      <Text style={{ ...FONT.h3, color: p.text }}>
-                        {s.price.toLocaleString('ru-RU')} ₽{s.price_unit ? ` / ${s.price_unit}` : ''}
-                      </Text>
+                    {s.identity_verified ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <Icon name="shield" size={14} color={p.accent} width={1.9} />
+                        <Muted>паспорт сверен</Muted>
+                      </View>
                     ) : null}
                     <View style={{ flex: 1 }} />
                     <SysButton label="Выбрать" width={128} height={44}
