@@ -83,10 +83,18 @@ export default function Today() {
   const doneCount = items.filter(x => x.log_status === 'eaten').length;
   const plan = round(data?.plan_totals?.kcal);
 
+  /* Полосы Б/Ж/У показывают одно и то же — долю от цели, поэтому и цвет
+     у них один. Три разных были украшением: жёлтый и синий спорили с
+     теми же цветами, которыми в интерфейсе помечены «внимание» и
+     «тревога». Теперь цвет значит ровно одно: норма или перебор. */
+  const macroCol = (cur: number, tg: number) => (tg && cur / tg > 1.05 ? p.warn : p.mp);
   const macros: [string, number, number, string][] = [
-    ['Белки', data?.totals?.protein ?? 0, targets.protein, p.mp],
-    ['Жиры', data?.totals?.fat ?? 0, targets.fat, p.mf],
-    ['Углеводы', data?.totals?.carbs ?? 0, targets.carbs, p.mc],
+    ['Белки', data?.totals?.protein ?? 0, targets.protein,
+      macroCol(data?.totals?.protein ?? 0, targets.protein)],
+    ['Жиры', data?.totals?.fat ?? 0, targets.fat,
+      macroCol(data?.totals?.fat ?? 0, targets.fat)],
+    ['Углеводы', data?.totals?.carbs ?? 0, targets.carbs,
+      macroCol(data?.totals?.carbs ?? 0, targets.carbs)],
   ];
 
   return (
@@ -284,8 +292,11 @@ export default function Today() {
                           <Icon name="bowl" size={18} color={p.text3} />
                         </View>}
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text numberOfLines={1} style={{
-                        fontSize: 15, fontWeight: '600',
+                      {/* Две строки вместо многоточия: длинные названия вроде
+                          «Боул с лососем, рисом и авокадо» обрывались на
+                          середине, и блюдо было не узнать. */}
+                      <Text numberOfLines={2} style={{
+                        fontSize: 15, fontWeight: '600', lineHeight: 19,
                         color: done ? p.text3 : p.text,
                         textDecorationLine: done ? 'line-through' : 'none',
                       }}>{x.dish_name}</Text>

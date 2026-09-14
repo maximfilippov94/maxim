@@ -365,8 +365,10 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
         <Muted>{menu.status === 'published' ? 'опубликовано' : 'черновик'}</Muted>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: S.sm, paddingBottom: S.md }}>
+      {/* Неделя помещается на экран целиком: при семи днях раскладываем
+          их в ряд с равными долями, и обрывать у края нечего. Для меню
+          длиннее недели остаётся прокрутка — там она честная. */}
+      <DayStrip week={menu.days_count <= 7}>
         {Array.from({ length: menu.days_count }, (_, i) => i + 1).map(n => {
           const on = n === day;
           const d = menuDate(menu.start_date, n)!;
@@ -375,7 +377,8 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
           return (
             <Pressable key={n} onPress={() => { haptic.select(); setDay(n); }}
               style={({ pressed }) => ({
-                width: 46, paddingVertical: 9, borderRadius: R.md, alignItems: 'center',
+                ...(menu.days_count <= 7 ? { flex: 1, minWidth: 0 } : { width: 46 }),
+                paddingVertical: 9, borderRadius: R.md, alignItems: 'center',
                 backgroundColor: on ? p.primary : p.surface,
                 /* Сегодня обведено — видно, какой день клиент ест прямо сейчас */
                 borderWidth: now && !on ? 1.5 : 0,
@@ -396,7 +399,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
             </Pressable>
           );
         })}
-      </ScrollView>
+      </DayStrip>
 
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm,
         marginBottom: S.md }}>
@@ -493,6 +496,30 @@ function Action({ icon, label, onPress }: {
 }
 
 /**
+ * Полоса дней меню.
+ *
+ * Неделя — это всегда семь дней, между неделями переключаться не нужно,
+ * значит и прокручивать нечего: раскладываем в ряд равными долями, и
+ * последний день не срезается краем экрана. Меню длиннее недели в ряд
+ * не влезет — там остаётся прокрутка.
+ */
+function DayStrip({ week, children }: { week: boolean; children: React.ReactNode }) {
+  if (week) {
+    return (
+      <View style={{ flexDirection: 'row', gap: 5, paddingBottom: S.md }}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: S.sm, paddingBottom: S.md }}>
+      {children}
+    </ScrollView>
+  );
+}
+
+/**
  * Блюдо в меню.
  *
  * Фотография, название и порция — день читается взглядом. По нажатию
@@ -539,7 +566,10 @@ function ItemCard({ item, grams, onRemove }: {
           </View>
 
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>{item.dish_name}</Text>
+            {/* Две строки: специалист должен видеть, что за блюдо, целиком.
+                На одной длинные названия обрывались многоточием. */}
+            <Text style={{ ...FONT.h3, color: p.text, lineHeight: 20 }}
+              numberOfLines={2}>{item.dish_name}</Text>
             <Muted style={{ marginTop: 2 }}>
               {grams} г · {round(scaleN(item, grams).kcal)} ккал
             </Muted>
@@ -856,11 +886,27 @@ function Adherence({ cid }: { cid: number }) {
   /* Считаем от плана, а не от отметок: доля съеденного среди отмеченных
      льстит клиенту, который почти ничего не отмечал. */
   const pct = a.eaten_pct;
-  const word = !a.planned ? 'Меню не опубликовано'
-    : pct == null ? '—'
+  const word = pct == null ? '—'
     : pct >= 80 ? 'Отличная' : pct >= 55 ? 'Хорошая' : 'Требует внимания';
-  const tone = !a.planned || pct == null ? p.text2
+  const tone = pct == null ? p.text2
     : pct >= 80 ? p.primary : pct >= 55 ? p.warn : p.danger;
+
+  /* Когда меню не опубликовано, показывать прочерк и пустую полосу
+     незачем: это не измерение, а рамка от измерения. Вместо них —
+     объяснение и путь дальше. */
+  if (!a.planned) {
+    return (
+      <Card style={{ marginBottom: S.md }}>
+        <Label>Приверженность меню</Label>
+        <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm }}>
+          Меню ещё не опубликовано
+        </Text>
+        <Muted style={{ marginTop: 3, lineHeight: 18 }}>
+          Приверженность появится, когда клиент начнёт отмечать приёмы из плана.
+        </Muted>
+      </Card>
+    );
+  }
 
   return (
     <Card style={{ marginBottom: S.md }}>
@@ -870,9 +916,7 @@ function Adherence({ cid }: { cid: number }) {
         <Text style={{ ...FONT.body, color: p.text2 }}>{word}</Text>
       </View>
       <Muted style={{ marginTop: 2 }}>
-        {a.planned
-          ? `съедено из ${a.planned} ${plural(a.planned, ['приёма', 'приёмов', 'приёмов'])} плана за 7 дней`
-          : 'за 7 дней плана не было'}
+        {`съедено из ${a.planned} ${plural(a.planned, ['приёма', 'приёмов', 'приёмов'])} плана за 7 дней`}
       </Muted>
       <View style={{ marginTop: S.md }}>
         <Bar value={(pct ?? 0) / 100} color={tone} />
