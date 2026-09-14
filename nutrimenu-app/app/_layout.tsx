@@ -6,7 +6,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { AppProvider, useApp } from '../src/store';
 import { setupNotificationHandler } from '../src/push';
-import { ScreenEdge } from '../src/ui/ScreenEdge';
 
 /* Пока приложение открыто, уведомление всё равно показываем баннером:
    иначе новое сообщение теряется, если человек смотрит другой экран. */
@@ -170,9 +169,6 @@ function Root() {
           }}
         />
       </Stack>
-      {/* Полоса стекла под статус-строкой — одна на всё приложение, поверх
-          любого экрана. Ставим после Stack, чтобы она лежала выше него. */}
-      <ScreenEdge />
     </>
   );
 }
