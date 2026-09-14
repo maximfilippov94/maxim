@@ -59,6 +59,8 @@ export const PATHS: Record<string, string> = {
   shield: 'M12 3.2 19 5.7v5.2c0 4.3-2.9 7.6-7 9.3-4.1-1.7-7-5-7-9.3V5.7L12 3.2ZM8.8 11.8l2.2 2.2 4.2-4.2',
   /* Академическая шапочка — документ об образовании. */
   grad: 'M12 3.9 3.4 8.1 12 12.3l8.6-4.2ZM6.8 10.1v4.4c0 1.7 2.3 3 5.2 3s5.2-1.3 5.2-3v-4.4M20.6 8.1v5.2',
+  /* Лупа — поиск по каталогу. */
+  search: 'M10.8 4.2a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2ZM15.6 15.6 20 20',
 };
 
 /** На iOS берём системные SF Symbols: их рисовал Apple, они совпадают по
@@ -109,6 +111,7 @@ export const SF: Record<string, SymbolViewProps['name']> = {
   eyeoff: 'eye.slash',
   shield: 'checkmark.shield',
   grad: 'graduationcap',
+  search: 'magnifyingglass',
 };
 
 export function Icon({ name, size = 22, color = '#fff', width = 1.75, animate }: {

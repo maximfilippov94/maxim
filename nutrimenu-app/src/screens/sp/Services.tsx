@@ -31,6 +31,7 @@ export default function SpServices() {
   const [price, setPrice] = useState('');
   const [kind, setKind] = useState('one_time');
   const [period, setPeriod] = useState('30');
+  const [dur, setDur] = useState('');
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -50,15 +51,17 @@ export default function SpServices() {
           description: desc.trim() || null,
           kind,
           price: price.replace(',', '.'),
-          ...(kind === 'subscription' ? { period_days: Number(period) || 30 } : null),
+          ...(kind === 'subscription'
+            ? { period_days: Number(period) || 30 }
+            : { duration_min: dur.trim() }),
         },
       });
       haptic.success();
-      setTitle(''); setDesc(''); setPrice(''); setOpen(false);
+      setTitle(''); setDesc(''); setPrice(''); setDur(''); setOpen(false);
       await load();
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось добавить'); }
     finally { setBusy(false); }
-  }, [title, desc, price, kind, period, load]);
+  }, [title, desc, price, kind, period, dur, load]);
 
   const toggle = useCallback(async (s: SpService) => {
     const next = s.is_active ? 0 : 1;
@@ -139,6 +142,20 @@ export default function SpServices() {
 
               {/* Период спрашиваем только у подписки: у разовой услуги
                   его нет, и пустое поле сбивало бы с толку. */}
+              {/* У разовой услуги мера — длительность: по одной цене
+                  без неё двух специалистов не сравнить. */}
+              {kind !== 'subscription' ? (
+                <View style={{ marginTop: S.md }}>
+                  <Label>Длительность, минут</Label>
+                  <TextInput value={dur} onChangeText={setDur} keyboardType="number-pad"
+                    placeholder="60" placeholderTextColor={p.text3}
+                    style={{ ...FONT.body, color: p.text, backgroundColor: p.inset,
+                      borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 12, marginTop: 6 }} />
+                  <Muted style={{ marginTop: 6, lineHeight: 18 }}>
+                    Клиент увидит её рядом с ценой: «3000 ₽ · 60 мин.». Можно не заполнять.
+                  </Muted>
+                </View>
+              ) : null}
               {kind === 'subscription' ? (
                 <View style={{ marginTop: S.md }}>
                   <Label>Период, дней</Label>
@@ -178,6 +195,7 @@ export default function SpServices() {
                     <Text style={{ ...FONT.small, color: p.text3 }}>
                       {'  '}{SERVICE_KIND[s.kind] ?? s.kind}
                       {s.period_days ? ` · ${s.period_days} дней` : ''}
+                      {s.duration_min ? ` · ${s.duration_min} мин.` : ''}
                     </Text>
                   </Text>
                 </View>

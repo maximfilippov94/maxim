@@ -84,3 +84,38 @@ export function ago(iso: string) {
   if (days < 7) return `${days} ${plural(days, ['день', 'дня', 'дней'])} назад`;
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
 }
+
+/* ——— Каталог специалистов ———
+   Те же правила, что в вебе: строка «в сети» и мера услуги должны
+   читаться одинаково на сайте и в приложении. */
+
+/** «В сети сегодня в 11:05». Пол специалиста мы не знаем — форма безличная. */
+export function seenPhrase(ts?: string | null): string {
+  if (!ts) return '';
+  const t = Date.parse(String(ts).replace(' ', 'T') + 'Z');
+  if (isNaN(t)) return '';
+  const d = new Date(t), n = new Date(), s = Math.max(0, (+n - t) / 1000);
+  if (s < 300) return 'В сети только что';
+  const hhmm = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === n.toDateString()) return `В сети сегодня в ${hhmm}`;
+  const y = new Date(n); y.setDate(y.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return `В сети вчера в ${hhmm}`;
+  if (s < 7 * 86400) {
+    const k = Math.floor(s / 86400);
+    return `В сети ${k} ${plural(k, ['день', 'дня', 'дней'])} назад`;
+  }
+  return 'В сети ' + d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+}
+
+/** Мера услуги: у разовой — сколько длится, у подписки — за какой срок. */
+export function svcUnit(s: { kind: string; period_days?: number | null; duration_min?: number | null }) {
+  if (s.kind === 'subscription') {
+    const d = s.period_days ?? 30;
+    return d <= 7 ? 'неделя' : d >= 28 ? 'месяц' : `${d} ${plural(d, ['день', 'дня', 'дней'])}`;
+  }
+  return s.duration_min ? `${s.duration_min} мин.` : 'разово';
+}
+
+/** Оценка одной цифрой после запятой; без отзывов — прочерк. */
+export const specRate = (r?: number | null) =>
+  r ? String(Math.round(r * 10) / 10).replace('.', ',') : '—';

@@ -1,22 +1,32 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, ViewStyle } from 'react-native';
-import { Image } from 'expo-image';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useApp } from '../store';
 import { api, Specialist, CatalogSpecialist } from '../api';
-import { rub, plural } from '../format';
+import { plural } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
-import { Card, Label, Muted } from '../ui/base';
+import { Card, Label, Muted, Pills } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { SysButton, Empty } from '../ui/system';
 import { haptic } from '../haptics';
 import { Loading } from './Shopping';
+import { SpecCard, Face, VerifiedMark, PROF } from '../ui/SpecCard';
 
-const PROF: Record<string, string> = {
-  nutritionist: 'Нутрициолог', trainer: 'Тренер', coach: 'Коуч',
+type Prof = '' | 'nutritionist' | 'trainer' | 'coach';
+const FAV_KEY = 'nm_fav_sp';
+
+const TITLES: Record<Prof, string> = {
+  '': 'Специалисты', nutritionist: 'Нутрициологи', trainer: 'Тренеры', coach: 'Коучи',
+};
+const NOUNS: Record<Prof, [string, string, string]> = {
+  '': ['специалист', 'специалиста', 'специалистов'],
+  nutritionist: ['нутрициолог', 'нутрициолога', 'нутрициологов'],
+  trainer: ['тренер', 'тренера', 'тренеров'],
+  coach: ['коуч', 'коуча', 'коучей'],
 };
 
 export default function MySpecialist() {
@@ -25,8 +35,19 @@ export default function MySpecialist() {
   const [spec, setSpec] = useState<Specialist | null | undefined>(undefined);
   const [list, setList] = useState<CatalogSpecialist[]>([]);
   const [code, setCode] = useState('');
+  const [codeOpen, setCodeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  /* Фильтры каталога. Каталог приходит одним запросом, поэтому
+     отбираем на месте: ходить на сервер на каждое нажатие незачем. */
+  const [prof, setProf] = useState<Prof>('');
+  const [q, setQ] = useState('');
+  const [onlyFav, setOnlyFav] = useState(false);
+  /* Избранное живёт в телефоне, а не на сервере: это закладка
+     «вернуться и подумать», и специалисту незачем знать, кто его
+     рассматривал. */
+  const [fav, setFav] = useState<number[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -39,6 +60,19 @@ export default function MySpecialist() {
     } catch (e: any) { setErr(e.message); setSpec(null); }
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(FAV_KEY)
+      .then(v => { try { const a = JSON.parse(v ?? '[]'); if (Array.isArray(a)) setFav(a.map(Number)); } catch { /* пусто */ } })
+      .catch(() => { /* нет доступа к хранилищу — живём без закладок */ });
+  }, []);
+  const toggleFav = useCallback((id: number) => {
+    setFav(cur => {
+      const next = cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id];
+      AsyncStorage.setItem(FAV_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
 
   /* Выбрали специалиста — показываем его услуги: это следующий шаг в
      разговоре, а не отдельная тема, за которой надо идти в «Ещё».
@@ -77,11 +111,22 @@ export default function MySpecialist() {
     finally { setBusy(false); }
   }, [code, refreshMe, load, toServices]);
 
+  const rows = useMemo(() => list.filter(s => {
+    if (prof && (s.profession ?? 'nutritionist') !== prof) return false;
+    if (onlyFav && !fav.includes(s.id)) return false;
+    if (q.trim()) {
+      const hay = [s.name, s.city, s.bio, s.specializations]
+        .concat((s.services ?? []).map(v => v.title)).join(' ').toLowerCase();
+      if (!hay.includes(q.trim().toLowerCase())) return false;
+    }
+    return true;
+  }), [list, prof, onlyFav, fav, q]);
+
   if (spec === undefined) return <Loading title="Мой специалист" />;
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title="Мой специалист" back />
+      <NavBar title={spec ? 'Мой специалист' : 'Каталог'} back />
       <ScrollView contentContainerStyle={{
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
       }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -109,9 +154,80 @@ export default function MySpecialist() {
           </Animated.View>
         ) : (
           <>
-            <Animated.View entering={FadeInDown.duration(240)}>
-              <Card style={{ marginTop: S.md, marginBottom: S.md }}>
-                <Label>У меня есть код</Label>
+            {/* Счётчик над заголовком, как в каталоге на сайте: сначала
+                сколько нашлось, потом кого именно показываем. */}
+            <Text style={{ ...FONT.small, fontWeight: '600', color: p.text3, marginTop: S.md }}>
+              {rows.length} {plural(rows.length, NOUNS[prof])}
+            </Text>
+            <Text style={{ ...FONT.h1, fontSize: 28, color: p.text, marginTop: 2, marginBottom: S.md }}>
+              {TITLES[prof]}
+            </Text>
+
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: S.sm,
+              backgroundColor: p.surface, borderRadius: R.pill,
+              paddingHorizontal: S.lg, marginBottom: S.md,
+            }}>
+              <Icon name="search" size={16} color={p.text3} />
+              <TextInput value={q} onChangeText={setQ}
+                placeholder="Имя, город или специализация"
+                placeholderTextColor={p.text3}
+                style={{ flex: 1, color: p.text, paddingVertical: 11, fontSize: 14 }} />
+              {q ? (
+                <Pressable onPress={() => setQ('')} hitSlop={10}>
+                  <Icon name="close" size={16} color={p.text3} />
+                </Pressable>
+              ) : null}
+            </View>
+
+            <Pills scroll value={prof} onChange={setProf} style={{ marginBottom: S.sm }}
+              items={[['', 'Все'], ['nutritionist', 'Нутрициологи'],
+                ['trainer', 'Тренеры'], ['coach', 'Коучи']] as [Prof, string][]} />
+
+            <Pressable onPress={() => { haptic.select(); setOnlyFav(v => !v); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+                paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+                backgroundColor: onlyFav ? p.primary : p.surface,
+                borderWidth: onlyFav ? 0 : 1, borderColor: p.border, marginBottom: S.md,
+              }}>
+              <Icon name="heart" size={14} color={onlyFav ? p.onPrimary : p.text2} />
+              <Text style={{ fontSize: 14, fontWeight: onlyFav ? '600' : '400',
+                color: onlyFav ? p.onPrimary : p.text2 }}>Избранные</Text>
+            </Pressable>
+
+            {rows.length === 0 ? (
+              <Empty icon="person.crop.circle.badge.questionmark"
+                title={list.length ? 'Никого не нашлось' : 'Каталог пуст'}
+                note={list.length
+                  ? 'Смягчите отбор — например, снимите «Избранные».'
+                  : 'Попросите у специалиста код приглашения.'} />
+            ) : rows.map((s, i) => (
+              <Animated.View key={s.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
+                <SpecCard s={s} busy={busy} fav={fav.includes(s.id)}
+                  onFav={() => toggleFav(s.id)}
+                  onOpen={() => router.push(s.slug
+                    ? `/spec/${s.id}?slug=${encodeURIComponent(s.slug)}`
+                    : `/spec/${s.id}`)}
+                  onPick={() => connect({ specialist_id: s.id })} />
+              </Animated.View>
+            ))}
+
+            {/* Код приглашения нужен меньшинству, поэтому он не занимает
+                верх экрана, а раскрывается по нажатию. */}
+            <Pressable onPress={() => { haptic.tap(); setCodeOpen(v => !v); }}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: S.sm,
+                paddingVertical: S.md, marginTop: S.sm,
+              }}>
+              <Icon name="tag" size={17} color={p.accent} />
+              <Text style={{ ...FONT.body, fontWeight: '700', color: p.accent }}>
+                У меня есть код
+              </Text>
+            </Pressable>
+            {codeOpen ? (
+              <Card>
+                <Label>Код приглашения</Label>
                 <Muted style={{ marginTop: S.sm }}>
                   Специалист может дать код или ссылку-приглашение.
                 </Muted>
@@ -133,130 +249,10 @@ export default function MySpecialist() {
                     disabled={busy} onPress={byCode} />
                 </View>
               </Card>
-            </Animated.View>
-
-            <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
-              Или выберите из каталога
-            </Text>
-            {list.length === 0 ? (
-              <Empty icon="person.crop.circle.badge.questionmark"
-                title="Каталог пуст"
-                note="Попросите у специалиста код приглашения." />
-            ) : list.map((s, i) => (
-              <Animated.View key={s.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
-                <Card style={{ marginBottom: S.md }}>
-                  <View style={{ flexDirection: 'row', gap: S.md }}>
-                    <Face url={s.avatar_url} name={s.name} size={54} />
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center',
-                        gap: S.sm, flexWrap: 'wrap' }}>
-                        <Text style={{ ...FONT.h3, color: p.text }}>{s.name}</Text>
-                        {s.verified ? <VerifiedMark /> : null}
-                      </View>
-                      <Muted style={{ marginTop: 2 }}>
-                        {[PROF[s.profession ?? 'nutritionist'], s.city].filter(Boolean).join(' · ')}
-                      </Muted>
-                      {/* Нет отзывов — нет и звёзд: пятёрка из воздуха
-                          обесценивает те оценки, что настоящие. */}
-                      {s.rating ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                          <Icon name="star" size={13} color={p.premium} />
-                          <Muted>
-                            {s.rating} · {s.reviews_count ?? 0} {plural(s.reviews_count ?? 0, ['отзыв', 'отзыва', 'отзывов'])}
-                          </Muted>
-                        </View>
-                      ) : (
-                        <Muted style={{ marginTop: 4 }}>Отзывов пока нет</Muted>
-                      )}
-                    </View>
-                  </View>
-                  {s.bio ? (
-                    <Text style={{ ...FONT.body, color: p.text2, marginTop: S.md, lineHeight: 19 }}
-                      numberOfLines={3}>{s.bio}</Text>
-                  ) : null}
-
-                  {/* Услуги с ценами прямо в карточке: человек выбирает
-                      по тому, что ему сделают и почём. Раньше стояла
-                      одна цена «от», и по ней было не понять, за что. */}
-                  {s.services?.length ? (
-                    <View style={{ marginTop: S.md, paddingTop: S.md,
-                      borderTopWidth: 1, borderTopColor: p.border }}>
-                      {s.services.map((v, k) => (
-                        <View key={k} style={{ flexDirection: 'row', alignItems: 'baseline',
-                          justifyContent: 'space-between', gap: S.md, paddingVertical: 3 }}>
-                          <Text style={{ ...FONT.small, color: p.text2, flex: 1 }}
-                            numberOfLines={1}>{v.title}</Text>
-                          <Text style={{ ...FONT.small, fontWeight: '700', color: p.text, flexShrink: 0 }}>
-                            {rub(v.price_kop)}{v.kind === 'subscription'
-                              ? ` / ${v.period_days === 7 ? 'неделя' : v.period_days && v.period_days !== 30
-                                  ? `${v.period_days} дн.` : 'месяц'}`
-                              : ''}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : null}
-
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: S.md, gap: S.md }}>
-                    {s.identity_verified ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                        <Icon name="shield" size={14} color={p.accent} width={1.9} />
-                        <Muted>паспорт сверен</Muted>
-                      </View>
-                    ) : null}
-                    <View style={{ flex: 1 }} />
-                    <SysButton label="Выбрать" width={128} height={44}
-                      disabled={busy} onPress={() => connect({ specialist_id: s.id })} />
-                  </View>
-                </Card>
-              </Animated.View>
-            ))}
+            ) : null}
           </>
         )}
       </ScrollView>
-    </View>
-  );
-}
-
-/**
- * Отметка о проверке.
- *
- * Ставится только тогда, когда команда EQUA сверила диплом или
- * сертификаты. Это обещание клиенту, поэтому выглядит одинаково здесь,
- * в каталоге на сайте и на публичной странице специалиста.
- */
-function VerifiedMark({ style }: { style?: ViewStyle }) {
-  const { p } = useApp();
-  return (
-    <View style={[{
-      flexDirection: 'row', alignItems: 'center', gap: 5,
-      backgroundColor: p.primarySoft, borderRadius: R.pill,
-      paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start',
-    }, style]}>
-      <Icon name="shield" size={13} color={p.accent} width={2} />
-      <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>Проверен</Text>
-    </View>
-  );
-}
-
-/** Фото специалиста, а если его нет — первая буква имени на подложке. */
-function Face({ url, name, size }: { url?: string | null; name: string; size: number }) {
-  const { p } = useApp();
-  if (url) {
-    return (
-      <Image source={{ uri: url }}
-        style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: p.inset }}
-        contentFit="cover" transition={200} cachePolicy="memory-disk" />
-    );
-  }
-  return (
-    <View style={{
-      width: size, height: size, borderRadius: size / 2, backgroundColor: p.primarySoft,
-      alignItems: 'center', justifyContent: 'center',
-    }}>
-      <Text style={{ fontSize: size * 0.4, fontWeight: '700', color: p.accent }}>
-        {(name || '·').trim()[0]?.toUpperCase() ?? '·'}
-      </Text>
     </View>
   );
 }

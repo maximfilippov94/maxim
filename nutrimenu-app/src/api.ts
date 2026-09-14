@@ -456,9 +456,30 @@ export interface CatalogSpecialist {
   advantages?: string | null; active_clients?: number;
   /* До трёх услуг с ценами прямо в карточке: по ним и выбирают
      человека, а не по городу. */
-  services?: { title: string; kind: string; price_kop: number; period_days?: number | null }[];
+  services?: CatalogService[];
+  /** Сколько активных услуг всего — в карточке показываем не больше трёх. */
+  services_count?: number;
   /* Паспорт сверен владельцем. Сам скан наружу не отдаётся никогда. */
   identity_verified?: boolean;
+  /** Последний запрос специалиста к API: «в сети сегодня в 11:05». */
+  last_seen_at?: string | null;
+  /** Когда специалист завёл аккаунт — отсюда «из них N лет на EQUA». */
+  joined_at?: string | null;
+}
+
+export interface CatalogService {
+  id?: number; title: string; description?: string | null;
+  kind: string; price_kop: number; period_days?: number | null;
+  /** Длительность разовой услуги в минутах: «3000 ₽ · 60 мин.» */
+  duration_min?: number | null;
+}
+
+/** Открытый профиль специалиста: то, что видит клиент до выбора. */
+export interface PublicSpecialist extends CatalogSpecialist {
+  documents?: { id: number; kind: string; title: string; issuer?: string | null;
+    issued_on?: string | null; scan_url?: string | null }[];
+  reviews?: { id: number; rating: number; body?: string | null;
+    created_at: string; author: string }[];
 }
 
 /* ---------- Отзывы ----------
@@ -478,14 +499,20 @@ export interface MyReview {
    Диплом клиент проверить не может, поэтому проверку берёт на себя
    сервис: специалист прикладывает документы, владелец их сверяет. */
 
-export type DocKind = 'diploma' | 'course' | 'certificate' | 'license';
+/* Паспорт — тоже документ верификации: клиенту важно знать, что за
+   человеком стоит проверенная личность. Сам скан паспорта наружу не
+   отдаётся никогда — в профиле от него остаётся только отметка. */
+export type DocKind = 'passport' | 'diploma' | 'course' | 'certificate' | 'license';
 export const DOC_KINDS: Record<DocKind, string> = {
-  diploma: 'Диплом', course: 'Курс', certificate: 'Сертификат', license: 'Лицензия',
+  passport: 'Паспорт', diploma: 'Диплом', course: 'Курс',
+  certificate: 'Сертификат', license: 'Лицензия',
 };
 export interface SpecDoc {
   id: number; kind: DocKind; title: string;
   issuer?: string | null; issued_on?: string | null; file_url?: string | null;
   status: 'pending' | 'approved' | 'rejected';
+  /** 1 — специалист сам открыл скан в своём публичном профиле. */
+  is_public?: number;
   review_note?: string | null; reviewed_at?: string | null; created_at: string;
 }
 export interface Verification {
@@ -708,6 +735,8 @@ export interface SpLead {
 export interface SpService {
   id: number; title: string; description?: string | null;
   kind: string; price_kop: number; period_days?: number | null;
+  /** Длительность разовой услуги в минутах — мера рядом с ценой. */
+  duration_min?: number | null;
   is_active: number; sort_order?: number;
 }
 export interface SpSignal {

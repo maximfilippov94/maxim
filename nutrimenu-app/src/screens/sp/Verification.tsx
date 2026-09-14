@@ -17,7 +17,7 @@
  */
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, ScrollView, Pressable, ActivityIndicator,
+  View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Switch,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -125,6 +125,14 @@ export default function VerificationScreen() {
     finally { setBusy(false); }
   }, [load]);
 
+  const setPublic = useCallback(async (id: number, on: boolean) => {
+    setD(cur => cur && { ...cur,
+      documents: cur.documents.map(x => x.id === id ? { ...x, is_public: on ? 1 : 0 } : x) });
+    haptic.select();
+    try { await api(`/specialist/verification/documents/${id}`, { method: 'PATCH', body: { is_public: on ? 1 : 0 } }); }
+    catch (e: any) { setErr(e?.message ?? 'Не сохранилось'); load(); }
+  }, [load]);
+
   const open = useCallback(async (doc: SpecDoc) => {
     if (!doc.file_url) return;
     haptic.tap();
@@ -192,7 +200,8 @@ export default function VerificationScreen() {
           ) : d.documents.map((doc, i) => (
             <Animated.View key={doc.id}
               entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
-              <DocRow doc={doc} onOpen={() => open(doc)} onRemove={() => remove(doc.id)} />
+              <DocRow doc={doc} onOpen={() => open(doc)} onRemove={() => remove(doc.id)}
+                onPublic={on => setPublic(doc.id, on)} />
             </Animated.View>
           ))}
 
@@ -240,8 +249,9 @@ export default function VerificationScreen() {
 
 /* ------------------------------------------------------------------ */
 
-function DocRow({ doc, onOpen, onRemove }: {
+function DocRow({ doc, onOpen, onRemove, onPublic }: {
   doc: SpecDoc; onOpen: () => void; onRemove: () => void;
+  onPublic: (on: boolean) => void;
 }) {
   const { p } = useApp();
   const mark = doc.status === 'approved'
@@ -277,6 +287,18 @@ function DocRow({ doc, onOpen, onRemove }: {
           </Text>
           {doc.file_url ? <Muted>· нажмите, чтобы открыть</Muted> : null}
         </View>
+        {/* Показывать скан в открытом профиле — решение специалиста, а
+            не наше: документ он грузил для проверки. Паспорт нельзя
+            открыть вовсе, там клиенту достаточно отметки о проверке. */}
+        {doc.status === 'approved' && doc.kind !== 'passport' ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: 2 }}>
+            <Text style={{ ...FONT.small, color: p.text2, flex: 1 }}>
+              Показывать скан в профиле
+            </Text>
+            <Switch value={!!doc.is_public} onValueChange={onPublic}
+              trackColor={{ true: p.primary, false: p.track }} />
+          </View>
+        ) : null}
         {doc.status === 'rejected' && doc.review_note ? (
           <Text style={{ ...FONT.small, color: p.danger, lineHeight: 19 }}>
             {doc.review_note}
