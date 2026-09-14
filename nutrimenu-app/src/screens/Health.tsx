@@ -22,7 +22,8 @@ import {
   api, Health, Allergy, Med, Lab, Recommendation,
   ALLERGY_KINDS, MED_KINDS,
 } from '../api';
-import { openPrivateFile } from '../openPrivateFile';
+import { openPrivateFile, fetchPrivateFile, looksLikeImage } from '../openPrivateFile';
+import { ImageViewer } from '../ui/ImageViewer';
 import { uploadForm } from '../upload';
 import { pickPhoto } from '../photo';
 import { S, R, FONT } from '../theme';
@@ -316,15 +317,27 @@ function Labs({ list, edit, clientId, onAdd, onRemove, onError }: {
   /* Файл лежит за проверкой прав: качаем его заголовком авторизации
      и отдаём системному просмотрщику. Токен в адресе не передаём — он
      остался бы в истории браузера. */
+  const [viewer, setViewer] = useState<{ uri: string; title: string } | null>(null);
+
   async function open(l: Lab) {
     if (!l.file_url) return;
     haptic.tap();
-    try { await openPrivateFile(l.file_url, l.title); }
-    catch (e: any) { onError(e?.message ?? 'Не удалось открыть файл'); }
+    try {
+      /* Снимок анализа показываем тут же: уходить в системный
+         просмотрщик и возвращаться кнопкой «назад» ради одной картинки
+         незачем. PDF и прочее по-прежнему отдаём системе. */
+      if (looksLikeImage(l.file_url)) {
+        setViewer({ uri: await fetchPrivateFile(l.file_url, l.title), title: l.title });
+        return;
+      }
+      await openPrivateFile(l.file_url, l.title);
+    } catch (e: any) { onError(e?.message ?? 'Не удалось открыть файл'); }
   }
 
   return (
     <View>
+      <ImageViewer uri={viewer?.uri ?? null} title={viewer?.title}
+        onClose={() => setViewer(null)} />
       {edit ? (
         <Card style={{ marginBottom: S.md, gap: S.sm }}>
           <TextInput value={title} onChangeText={setTitle}

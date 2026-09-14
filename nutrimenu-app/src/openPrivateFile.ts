@@ -43,3 +43,36 @@ export async function openPrivateFile(url: string, suggestedName = 'file') {
   }
   await Sharing.shareAsync(r.uri);
 }
+
+/** Похоже ли на картинку — по расширению в адресе. */
+export const looksLikeImage = (url: string) =>
+  /\.(jpe?g|png|webp|heic|gif)(\?|$)/i.test(url);
+
+/**
+ * Скачать защищённый файл и вернуть путь к нему.
+ *
+ * Нужно там, где файл не отдают системе, а показывают на месте: снимок
+ * анализа удобнее посмотреть тут же, чем уходить в другое приложение и
+ * возвращаться кнопкой «назад».
+ */
+export async function fetchPrivateFile(url: string, suggestedName = 'file'): Promise<string> {
+  const full = /^https?:/i.test(url) ? url : API_BASE + url;
+  const token = getToken();
+
+  if (Platform.OS === 'web') {
+    const res = await fetch(full, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+    if (!res.ok) throw new ApiError('Файл не открылся', res.status);
+    return URL.createObjectURL(await res.blob());
+  }
+
+  const FS = require('expo-file-system/legacy');
+  const ext = full.split('?')[0].split('.').pop() || 'jpg';
+  const to = FS.cacheDirectory + suggestedName.replace(/[^\w.-]+/g, '_') + '.' + ext;
+  const r = await FS.downloadAsync(full, to, {
+    headers: token ? { Authorization: 'Bearer ' + token } : {},
+  });
+  if (r.status >= 400) {
+    throw new ApiError(r.status === 403 ? 'Нет доступа к файлу' : 'Файл не открылся', r.status);
+  }
+  return r.uri;
+}
