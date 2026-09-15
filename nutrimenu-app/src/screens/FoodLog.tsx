@@ -37,7 +37,8 @@ const stepOf = (f: Food) =>
 export default function FoodLog() {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
-  const { meal: mealParam } = useLocalSearchParams<{ meal?: string }>();
+  const { meal: mealParam, code: codeParam } =
+    useLocalSearchParams<{ meal?: string; code?: string }>();
 
   /* Экран открывают из нужной секции дня, поэтому приём пищи уже
      выбран: человек нажал «Добавить еду» под «Обедом», а не вообще. */
@@ -71,6 +72,18 @@ export default function FoodLog() {
     setGrams(String(round(st ? st.g : 100)));
     setPicked(f);
   }, []);
+
+  /* Пришли со сканера: товар уже известен по штрихкоду, спрашиваем
+     только вес. Ходим тем же маршрутом, что и сканер, — он уже положил
+     товар в справочник, так что ответ придёт сразу из своей базы. */
+  useEffect(() => {
+    if (!codeParam) return;
+    let alive = true;
+    api<{ food: Food }>(`/client/foods/barcode/${codeParam}`)
+      .then(j => { if (alive && j.food) open(j.food); })
+      .catch(() => { if (alive) setErr('Товар не нашёлся, найдите его поиском'); });
+    return () => { alive = false; };
+  }, [codeParam, open]);
 
   const add = useCallback(() => {
     if (!picked) return;
@@ -177,6 +190,21 @@ export default function FoodLog() {
             </Pressable>
           ) : null}
         </View>
+
+        {/* Штрихкод вместо набора КБЖУ с этикетки: четыре числа руками —
+            верный способ бросить дневник на третий день. */}
+        <Pressable onPress={() => { haptic.tap(); router.push(`/barcode?meal=${meal}`); }}
+          style={({ pressed }) => ({
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+            minHeight: 46, marginTop: S.sm, borderRadius: R.lg,
+            borderWidth: 1, borderColor: p.border, borderStyle: 'dashed',
+            opacity: pressed ? 0.7 : 1,
+          })}>
+          <Icon name="camera" size={17} color={p.accent} />
+          <Text style={{ ...FONT.body, fontWeight: '600', color: p.accent }}>
+            Сканировать штрихкод
+          </Text>
+        </Pressable>
 
         {found === null ? (
           <ActivityIndicator color={p.accent} style={{ marginTop: S.xl }} />
