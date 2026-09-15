@@ -10,8 +10,8 @@ import { S, R, FONT } from '../theme';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Counter } from '../ui/Counter';
-import { Empty, SysButton } from '../ui/system';
-import { FoodBlock } from '../ui/FoodBlock';
+import { SysButton } from '../ui/system';
+import { FoodRows, MealAdd } from '../ui/FoodBlock';
 import { ScreenHead } from '../ui/ScreenHead';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
@@ -238,22 +238,31 @@ export default function Today() {
 
       {/* Приёмы пищи. Пока специалиста нет, ждать нечего: меню составляет
           он, и первый шаг — каталог, а не ожидание. */}
-      {items.length === 0 ? (
-        hasSpec ? (
-          <Empty icon="fork.knife" title="На сегодня меню не назначено"
-            note="Как только специалист назначит меню на этот день, блюда появятся здесь." />
-        ) : (
-          <View>
-            <Empty icon="person.2" title="Выберите специалиста"
-              note="Он составит меню под ваши цели и будет вести вас в чате. Выбрать можно из каталога или по коду." />
+      {/* День — это дневник, а не два списка. В одной секции стоит и то,
+          что назначил специалист, и то, что человек съел на самом деле:
+          он не обязан помнить, откуда какая строка взялась. */}
+      {items.length === 0 && !hasSpec ? (
+        <View style={{ marginBottom: S.md }}>
+          <Muted>
+            Ведите дневник питания уже сейчас. Специалист составит меню под ваши цели,
+            когда вы его выберете.
+          </Muted>
+          <View style={{ marginTop: S.md }}>
             <SysButton label="Открыть каталог" variant="prominent" icon="person.2"
               onPress={() => { haptic.tap(); router.push('/specialist'); }} />
           </View>
-        )
-      ) : MEAL_ORDER.map((mt, gi) => {
+        </View>
+      ) : null}
+      {MEAL_ORDER.map((mt, gi) => {
         const group = items.filter(x => x.meal_type === mt);
-        if (!group.length) return null;
-        const kcal = round(group.reduce((s, x) => s + (x.nutrition?.kcal ?? 0), 0));
+        const own = (data?.food ?? []).filter(e => e.meal === mt);
+        const planK = round(group.reduce((s, x) => s + (x.nutrition?.kcal ?? 0), 0));
+        const doneK = round(
+          group.filter(x => x.log_status === 'eaten').reduce((s, x) => s + (x.nutrition?.kcal ?? 0), 0)
+          + own.reduce((s, e) => s + e.totals.kcal, 0));
+        /* «Съедено из назначенного», когда есть план, и просто съеденное,
+           когда плана нет: «0 из 0 ккал» — не число, а шум. */
+        const kcal = planK ? `${doneK} из ${planK} ккал` : (doneK ? `${doneK} ккал` : '');
         return (
           <Animated.View key={mt}
             entering={FadeInDown.delay(150 + gi * 60).duration(300)}
@@ -262,7 +271,7 @@ export default function Today() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between',
               alignItems: 'baseline', paddingHorizontal: 2, paddingBottom: 8 }}>
               <Text style={{ ...FONT.h3, color: p.text }}>{MEAL_TITLES[mt]}</Text>
-              <Muted>{MEAL_TIME[mt]} · {kcal} ккал</Muted>
+              <Muted>{MEAL_TIME[mt]}{kcal ? ` · ${kcal}` : ''}</Muted>
             </View>
             <Card style={{ padding: 0, overflow: 'hidden' }}>
               {group.map((x, i) => {
@@ -320,15 +329,12 @@ export default function Today() {
                   </Pressable>
                 );
               })}
+              <FoodRows entries={own} onChanged={load} first={group.length === 0} />
+              <MealAdd meal={mt} />
             </Card>
           </Animated.View>
         );
       })}
-      {/* Съеденное не по меню. Бывает, что человек ел не блюдо, а набор
-          продуктов — свёклу и греческий йогурт. Раньше отметить это было
-          негде, и в итоге дня этого просто не было. */}
-      <FoodBlock day={data} onChanged={load} />
-
       <Muted style={{ textAlign: 'center', marginTop: S.md }}>
         {items.length > 0 && `${doneCount} ${plural(doneCount, ['приём', 'приёма', 'приёмов'])} из ${items.length} отмечено`}
       </Muted>

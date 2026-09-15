@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, Food, FoodMeal, FOOD_MEALS } from '../api';
+import { api, Food, FoodMeal, FOOD_MEALS, MEAL_TIME } from '../api';
 import { round, plural } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
@@ -39,8 +39,10 @@ export default function FoodLog() {
   const insets = useSafeAreaInsets();
   const { meal: mealParam } = useLocalSearchParams<{ meal?: string }>();
 
+  /* Экран открывают из нужной секции дня, поэтому приём пищи уже
+     выбран: человек нажал «Добавить еду» под «Обедом», а не вообще. */
   const [meal, setMeal] = useState<FoodMeal>(
-    (FOOD_MEALS.find(m => m[0] === mealParam)?.[0]) ?? 'snack');
+    (FOOD_MEALS.find(m => m[0] === mealParam)?.[0]) ?? 'snack2');
   const [q, setQ] = useState('');
   const [found, setFound] = useState<Food[] | null>(null);
   const [picked, setPicked] = useState<Food | null>(null);
@@ -150,11 +152,14 @@ export default function FoodLog() {
             const on = v === meal;
             return (
               <Pressable key={v} onPress={() => { haptic.select(); setMeal(v); }}
-                style={{ paddingHorizontal: 14, paddingVertical: 9, borderRadius: R.pill,
+                style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+                  alignItems: 'flex-start',
                   backgroundColor: on ? p.primary : p.surface,
                   borderWidth: on ? 0 : 1, borderColor: p.border }}>
                 <Text style={{ ...FONT.body, fontWeight: on ? '600' : '400',
                   color: on ? p.onPrimary : p.text2 }}>{t}</Text>
+                <Text style={{ fontSize: 10.5, opacity: 0.7,
+                  color: on ? p.onPrimary : p.text3 }}>{MEAL_TIME[v]}</Text>
               </Pressable>
             );
           })}

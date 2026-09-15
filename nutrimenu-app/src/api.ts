@@ -459,9 +459,12 @@ export interface Food {
   /** Порция с упаковки. */
   per_serving_g?: number | null;
 }
-export type FoodMeal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+/* Те же пять слотов, что у меню: день один, и назначенное со съеденным
+   должны попадать в одну и ту же секцию, а не в два списка. */
+export type FoodMeal = 'breakfast' | 'snack1' | 'lunch' | 'snack2' | 'dinner';
 export const FOOD_MEALS: [FoodMeal, string][] = [
-  ['breakfast', 'Завтрак'], ['lunch', 'Обед'], ['dinner', 'Ужин'], ['snack', 'Перекус'],
+  ['breakfast', 'Завтрак'], ['snack1', 'Перекус'], ['lunch', 'Обед'],
+  ['snack2', 'Перекус'], ['dinner', 'Ужин'],
 ];
 export interface FoodEntryItem {
   id: number; ingredient_id: number | null; name: string; grams: number;
