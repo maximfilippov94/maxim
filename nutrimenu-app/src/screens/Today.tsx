@@ -11,6 +11,7 @@ import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Counter } from '../ui/Counter';
 import { Empty, SysButton } from '../ui/system';
+import { FoodBlock } from '../ui/FoodBlock';
 import { ScreenHead } from '../ui/ScreenHead';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
@@ -323,6 +324,11 @@ export default function Today() {
           </Animated.View>
         );
       })}
+      {/* Съеденное не по меню. Бывает, что человек ел не блюдо, а набор
+          продуктов — свёклу и греческий йогурт. Раньше отметить это было
+          негде, и в итоге дня этого просто не было. */}
+      <FoodBlock day={data} onChanged={load} />
+
       <Muted style={{ textAlign: 'center', marginTop: S.md }}>
         {items.length > 0 && `${doneCount} ${plural(doneCount, ['приём', 'приёма', 'приёмов'])} из ${items.length} отмечено`}
       </Muted>

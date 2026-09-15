@@ -137,8 +137,13 @@ export interface MealItem {
 export interface TodayResponse {
   menu: { id: number; title: string; target_kcal?: number } | null;
   items: MealItem[];
-  /** Съедено: только отмеченные приёмы */
+  /** Съедено за день: отмеченные приёмы меню плюс дневник продуктов */
   totals: Totals;
+  /** Только отмеченное по меню, без дневника */
+  menu_totals?: Totals;
+  /** Съеденное не по меню — записи дня и их сумма */
+  food?: FoodEntry[];
+  food_totals?: Totals & { fiber?: number };
   /** Весь день по плану — столько будет, если съесть всё назначенное */
   plan_totals?: Totals;
   weight?: { last: number; delta: number } | null;
@@ -439,6 +444,40 @@ export const parseList = (v?: string | null): string[] => {
   try { const a = JSON.parse(v); return Array.isArray(a) ? a.map(String) : []; }
   catch { return []; }
 };
+
+/* ---------- Дневник продуктов ----------
+   Человек не всегда ест блюдо: бывает свёкла и греческий йогурт.
+   Запись независима от меню — день, приём пищи, набор продуктов. */
+
+export interface Food {
+  id: number; name: string; category?: string | null; brand?: string | null;
+  barcode?: string | null;
+  kcal: number; protein: number; fat: number; carbs: number; fiber: number;
+  unit?: string;
+  /** Вес одной штуки — чтобы не набирать «60» для яйца руками. */
+  piece_g?: number | null;
+  /** Порция с упаковки. */
+  per_serving_g?: number | null;
+}
+export type FoodMeal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export const FOOD_MEALS: [FoodMeal, string][] = [
+  ['breakfast', 'Завтрак'], ['lunch', 'Обед'], ['dinner', 'Ужин'], ['snack', 'Перекус'],
+];
+export interface FoodEntryItem {
+  id: number; ingredient_id: number | null; name: string; grams: number;
+  kcal: number; protein: number; fat: number; carbs: number; fiber: number;
+}
+/** День дневника для кабинета специалиста. */
+export interface FoodDay {
+  date: string;
+  entries: FoodEntry[];
+  totals: { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
+}
+export interface FoodEntry {
+  id: number; eaten_on: string; meal: FoodMeal; meal_title: string;
+  note?: string | null; items: FoodEntryItem[];
+  totals: { kcal: number; protein: number; fat: number; carbs: number; fiber: number };
+}
 
 /* ---------- Каталог специалистов ---------- */
 

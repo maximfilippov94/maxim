@@ -34,7 +34,7 @@ export function SpecCard({ s, fav, onFav, onOpen, onPick, busy }: {
   const { p } = useApp();
   const revs = s.reviews_count ?? 0;
   const rate = s.rating ?? 0;
-  /* «Очень хвалят» — не украшение, а порог: пятёрка при единственном
+  /* «Рекомендуют» — не украшение, а порог: пятёрка при единственном
      отзыве ничего не значит, поэтому нужны и оценка, и число отзывов. */
   const praised = rate >= 4.8 && revs >= 3;
   const svcs = s.services ?? [];
@@ -68,7 +68,7 @@ export function SpecCard({ s, fav, onFav, onOpen, onPick, busy }: {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 7 }}>
                 <Icon name="star" size={13} color={p.premium} />
                 <Text style={{ ...FONT.small, fontWeight: '700', color: p.premium }}>
-                  Очень хвалят
+                  Рекомендуют
                 </Text>
               </View>
             ) : null}

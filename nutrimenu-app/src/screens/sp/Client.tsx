@@ -9,7 +9,7 @@ import { Image } from 'expo-image';
 import { useApp } from '../../store';
 import {
   api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
-  ClientTask, Subscription, MEAL_ORDER, MEAL_TITLES,
+  ClientTask, Subscription, FoodDay, MEAL_ORDER, MEAL_TITLES,
   thumbUrl,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -191,6 +191,7 @@ function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
         ))}
       </Card>
       <Adherence cid={c.id} />
+      <SpFoodLog cid={c.id} />
       {c.notes ? (
         <Card>
           <Label>Заметка</Label>
@@ -769,6 +770,50 @@ function TaskField({ value, onChange, placeholder, keyboardType, width }: {
         width, backgroundColor: p.inset, color: p.text, borderRadius: R.md,
         paddingHorizontal: S.md, paddingVertical: 11, fontSize: 15,
       }} />
+  );
+}
+
+/**
+ * Съеденное клиентом не по меню.
+ *
+ * Без этого специалист смотрит на «съедено 30%» и строит догадки,
+ * почему вес стоит: половина съеденного просто не попадала ему на
+ * глаза. В приверженность меню это не входит и входить не должно —
+ * съеденный торт не делает меню соблюдённым.
+ */
+function SpFoodLog({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [days, setDays] = useState<FoodDay[] | null | undefined>(undefined);
+
+  useEffect(() => {
+    api<{ days: FoodDay[] }>(`/specialist/clients/${cid}/food-log`)
+      .then(j => setDays(j.days ?? [])).catch(() => setDays(null));
+  }, [cid]);
+
+  if (days === undefined || days === null || !days.length) return null;
+
+  return (
+    <Card style={{ marginTop: S.md }}>
+      <Label>Ел не по меню</Label>
+      <Muted style={{ marginTop: S.sm }}>
+        За две недели. В приверженность меню не входит, в калории дня входит.
+      </Muted>
+      <View style={{ marginTop: S.md, gap: S.md }}>
+        {days.map(d => (
+          <View key={d.date}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <Text style={{ ...FONT.body, fontWeight: '700', color: p.text }}>{dmy(d.date)}</Text>
+              <Muted>{round(d.totals.kcal)} ккал · Б {d.totals.protein} Ж {d.totals.fat} У {d.totals.carbs}</Muted>
+            </View>
+            {d.entries.map(e => (
+              <Text key={e.id} style={{ ...FONT.small, color: p.text2, marginTop: 4, lineHeight: 18 }}>
+                {e.meal_title}: {e.items.map(i => `${i.name} ${round(i.grams)} г`).join(', ')}
+              </Text>
+            ))}
+          </View>
+        ))}
+      </View>
+    </Card>
   );
 }
 
