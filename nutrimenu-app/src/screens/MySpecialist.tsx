@@ -196,37 +196,25 @@ export default function MySpecialist() {
                 color: onlyFav ? p.onPrimary : p.text2 }}>Избранные</Text>
             </Pressable>
 
-            {rows.length === 0 ? (
-              <Empty icon="person.crop.circle.badge.questionmark"
-                title={list.length ? 'Никого не нашлось' : 'Каталог пуст'}
-                note={list.length
-                  ? 'Смягчите отбор — например, снимите «Избранные».'
-                  : 'Попросите у специалиста код приглашения.'} />
-            ) : rows.map((s, i) => (
-              <Animated.View key={s.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
-                <SpecCard s={s} busy={busy} fav={fav.includes(s.id)}
-                  onFav={() => toggleFav(s.id)}
-                  onOpen={() => router.push(s.slug
-                    ? `/spec/${s.id}?slug=${encodeURIComponent(s.slug)}`
-                    : `/spec/${s.id}`)}
-                  onPick={() => connect({ specialist_id: s.id })} />
-              </Animated.View>
-            ))}
-
-            {/* Код приглашения нужен меньшинству, поэтому он не занимает
-                верх экрана, а раскрывается по нажатию. */}
+            {/* Ввод кода — строка сразу под фильтрами. Раньше она стояла
+                в самом низу: человек с кодом пролистывал ради неё весь
+                каталог. Раскрывается по нажатию, чтобы не занимать
+                верх экрана полем ввода. */}
             <Pressable onPress={() => { haptic.tap(); setCodeOpen(v => !v); }}
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: S.sm,
-                paddingVertical: S.md, marginTop: S.sm,
+                minHeight: 44, paddingHorizontal: S.lg, marginBottom: S.md,
+                borderWidth: 1, borderColor: p.border, borderStyle: 'dashed',
+                borderRadius: R.lg,
               }}>
-              <Icon name="tag" size={17} color={p.accent} />
-              <Text style={{ ...FONT.body, fontWeight: '700', color: p.accent }}>
-                У меня есть код
+              <Icon name="tag" size={16} color={p.accent} />
+              <Text style={{ ...FONT.small, fontWeight: '600', color: p.text2, flex: 1 }}>
+                У меня есть код от специалиста
               </Text>
+              <Icon name="chevr" size={15} color={p.text3} />
             </Pressable>
             {codeOpen ? (
-              <Card>
+              <Card style={{ marginBottom: S.md }}>
                 <Label>Код приглашения</Label>
                 <Muted style={{ marginTop: S.sm }}>
                   Специалист может дать код или ссылку-приглашение.
@@ -250,6 +238,24 @@ export default function MySpecialist() {
                 </View>
               </Card>
             ) : null}
+
+            {rows.length === 0 ? (
+              <Empty icon="person.crop.circle.badge.questionmark"
+                title={list.length ? 'Никого не нашлось' : 'Каталог пуст'}
+                note={list.length
+                  ? 'Смягчите отбор — например, снимите «Избранные».'
+                  : 'Попросите у специалиста код приглашения.'} />
+            ) : rows.map((s, i) => (
+              <Animated.View key={s.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
+                <SpecCard s={s} busy={busy} fav={fav.includes(s.id)}
+                  onFav={() => toggleFav(s.id)}
+                  onOpen={() => router.push(s.slug
+                    ? `/spec/${s.id}?slug=${encodeURIComponent(s.slug)}`
+                    : `/spec/${s.id}`)}
+                  onPick={() => connect({ specialist_id: s.id })} />
+              </Animated.View>
+            ))}
+
           </>
         )}
       </ScrollView>
