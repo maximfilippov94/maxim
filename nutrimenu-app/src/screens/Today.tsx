@@ -13,6 +13,7 @@ import { Counter } from '../ui/Counter';
 import { SysButton } from '../ui/system';
 import { FoodRows, MealAdd } from '../ui/FoodBlock';
 import { ScreenHead } from '../ui/ScreenHead';
+import { PushNudge } from '../ui/PushNudge';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
 
@@ -109,6 +110,10 @@ export default function Today() {
       refreshControl={<RefreshControl refreshing={busy} onRefresh={onRefresh} tintColor={p.text3} />}>
 
       <ScreenHead eyebrow={todayLabel()} title="Сегодня" role="client" />
+
+      {/* Пока уведомления не включены — напоминание здесь: этот экран
+          человек открывает каждый день, остальные далеко не всегда. */}
+      <PushNudge />
 
       {err && (
         <Card style={{ marginBottom: S.md }}>
