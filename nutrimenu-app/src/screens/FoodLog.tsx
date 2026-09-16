@@ -34,6 +34,10 @@ const stepOf = (f: Food) =>
  * стоит у плиты с телефоном в одной руке, и каждое лишнее окно — это
  * ещё один способ потерять уже набранное.
  */
+/* Названия приёмов для заголовка: FOOD_MEALS хранит их парами. */
+const MEAL_TITLES_SHORT: Record<string,string> =
+  Object.fromEntries(FOOD_MEALS.map(([k, t]) => [k, t]));
+
 export default function FoodLog() {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
@@ -156,27 +160,15 @@ export default function FoodLog() {
   /* ---------- Шаг «поиск» ---------- */
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title="Съел своё" back />
+      {/* Приём в заголовке: ряд кнопок убран, и человек должен видеть,
+          куда попадёт добавленное. */}
+      <NavBar title={`${MEAL_TITLES_SHORT[meal] ?? 'Съел своё'} · ${MEAL_TIME[meal]}`} back />
       <ScrollView contentContainerStyle={{ paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32 }}
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.md }}>
-          {FOOD_MEALS.map(([v, t]) => {
-            const on = v === meal;
-            return (
-              <Pressable key={v} onPress={() => { haptic.select(); setMeal(v); }}
-                style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
-                  alignItems: 'flex-start',
-                  backgroundColor: on ? p.primary : p.surface,
-                  borderWidth: on ? 0 : 1, borderColor: p.border }}>
-                <Text style={{ ...FONT.body, fontWeight: on ? '600' : '400',
-                  color: on ? p.onPrimary : p.text2 }}>{t}</Text>
-                <Text style={{ fontSize: 10.5, opacity: 0.7,
-                  color: on ? p.onPrimary : p.text3 }}>{MEAL_TIME[v]}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        {/* Ряда приёмов здесь нет: приём уже выбран нажатием «Добавить
+            еду» в нужной секции дня и назван в заголовке экрана. Ряд
+            повторял этот выбор и занимал треть экрана. */}
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, marginTop: S.md,
           backgroundColor: p.surface, borderRadius: R.pill, paddingHorizontal: S.lg }}>

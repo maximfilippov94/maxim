@@ -295,14 +295,31 @@ function Bubble({ m, mine }: { m: ChatMessage; mine: boolean }) {
       }}>
         {att ? <Attachment url={att} mine={mine} /> : null}
         {m.body ? (
+          /* Время дописано в конец последней строки, а не стоит под
+             пузырём отдельной строкой: короткая реплика остаётся
+             однострочной, а длинная не оставляет под собой дыру. Если
+             время не влезает, оно переносится само. */
           <Text style={{ fontSize: 15, lineHeight: 20, color: mine ? p.onPrimary : p.text }}>
             {m.body}
+            {'   '}
+            <Text style={{
+              fontSize: 11, lineHeight: 20,
+              color: mine ? p.onPrimary : p.text3, opacity: mine ? 0.7 : 1,
+            }}>{hhmm(m.created_at)}</Text>
           </Text>
         ) : null}
+        {/* У вложения без подписи время ложится поверх нижнего угла на
+            затемнении — иначе под снимком висела бы пустая строка. */}
+        {att && !m.body ? (
+          <View style={{
+            position: 'absolute', right: 10, bottom: 10,
+            paddingHorizontal: 7, paddingVertical: 3, borderRadius: R.pill,
+            backgroundColor: 'rgba(0,0,0,0.45)',
+          }}>
+            <Text style={{ fontSize: 11, color: '#fff' }}>{hhmm(m.created_at)}</Text>
+          </View>
+        ) : null}
       </View>
-      <Text style={{ ...FONT.small, color: p.text3, marginTop: 2, marginHorizontal: 4 }}>
-        {hhmm(m.created_at)}
-      </Text>
     </Animated.View>
   );
 }

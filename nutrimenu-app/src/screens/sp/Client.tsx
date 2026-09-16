@@ -424,7 +424,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
           <View key={mt} style={{ marginBottom: S.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
               marginBottom: S.sm }}>
-              <Text style={{ ...FONT.h3, color: p.text }}>{MEAL_TITLES[mt]}</Text>
+              <Text style={{ ...FONT.h3, color: p.text, flexShrink: 1 }}>{MEAL_TITLES[mt]}</Text>
               <Pressable
                 onPress={() => {
                   haptic.tap();
@@ -439,10 +439,26 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
                 <Icon name="plus" size={14} color={p.primary} width={2.4} />
                 <Text style={{ ...FONT.small, color: p.accent }}>блюдо</Text>
               </Pressable>
+              {/* Не всё в меню рецепт: «150 г индейки» назначается
+                  продуктом, а не блюдом. */}
+              <Pressable
+                onPress={() => {
+                  haptic.tap();
+                  router.push({
+                    pathname: '/sp-add-food',
+                    params: { menu: menu.id, day, meal: mt, start: menu.start_date },
+                  });
+                }}
+                hitSlop={10}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
+                  marginLeft: S.md, opacity: pressed ? 0.5 : 1 })}>
+                <Icon name="plus" size={14} color={p.primary} width={2.4} />
+                <Text style={{ ...FONT.small, color: p.accent }}>продукт</Text>
+              </Pressable>
             </View>
             {group.length === 0 ? (
               <Card style={{ paddingVertical: 14 }}>
-                <Muted>Пусто — добавьте блюдо</Muted>
+                <Muted>Пусто — добавьте блюдо или продукт</Muted>
               </Card>
             ) : group.map(i => (
               <ItemCard key={i.id} item={i} grams={draft[i.id] ?? round(i.portion_g)}
