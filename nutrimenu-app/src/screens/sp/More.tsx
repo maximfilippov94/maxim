@@ -26,7 +26,7 @@ const THEMES: { key: ThemePref; label: string }[] = [
 ];
 
 export default function SpMore() {
-  const { p, themePref, setThemePref, me, signOut } = useApp();
+  const { p, themePref, setThemePref, me, signOut, feature } = useApp();
   const insets = useSafeAreaInsets();
   const [pr, setPr] = useState<SpProfile | null>(null);
   const idx = Math.max(0, THEMES.findIndex(t => t.key === themePref));
@@ -111,8 +111,10 @@ export default function SpMore() {
         <ListGroup>
           <ListRow first icon="gift" label="Заявки из каталога"
             onPress={() => router.push('/sp-leads')} />
-          <ListRow icon="heart" label="Лента"
-            onPress={() => router.push('/feed')} />
+          {feature('feed') && (
+            <ListRow icon="heart" label="Лента"
+              onPress={() => router.push('/feed')} />
+          )}
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/sp-notifications')} />
           <ListRow icon="spark" label="EQUA info"

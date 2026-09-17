@@ -39,7 +39,7 @@ const MEAL_TITLES_SHORT: Record<string,string> =
   Object.fromEntries(FOOD_MEALS.map(([k, t]) => [k, t]));
 
 export default function FoodLog() {
-  const { p } = useApp();
+  const { p, feature } = useApp();
   const insets = useSafeAreaInsets();
   const { meal: mealParam, code: codeParam } =
     useLocalSearchParams<{ meal?: string; code?: string }>();
@@ -184,7 +184,10 @@ export default function FoodLog() {
         </View>
 
         {/* Штрихкод вместо набора КБЖУ с этикетки: четыре числа руками —
-            верный способ бросить дневник на третий день. */}
+            верный способ бросить дневник на третий день.
+            Выключается с сервера: база штрихкодов внешняя, и когда она
+            молчит, кнопка ведёт к экрану, который ничего не найдёт. */}
+        {feature('scan') && (
         <Pressable onPress={() => { haptic.tap(); router.push(`/barcode?meal=${meal}`); }}
           style={({ pressed }) => ({
             flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -197,6 +200,7 @@ export default function FoodLog() {
             Сканировать штрихкод
           </Text>
         </Pressable>
+        )}
 
         {found === null ? (
           <ActivityIndicator color={p.accent} style={{ marginTop: S.xl }} />

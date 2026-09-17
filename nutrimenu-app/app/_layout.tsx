@@ -5,6 +5,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Notifications from 'expo-notifications';
 import { AppProvider, useApp } from '../src/store';
+import { UpdateGate } from '../src/ui/UpdateGate';
 import { setupNotificationHandler } from '../src/push';
 
 /* Пока приложение открыто, уведомление всё равно показываем баннером:
@@ -49,8 +50,11 @@ function Root() {
       </View>
     );
   }
+  /* Заслон обновления — снаружи всей навигации: если версия больше не
+     работает, человек не должен попасть ни на один экран, включая те,
+     куда его уводит нажатие на уведомление. */
   return (
-    <>
+    <UpdateGate>
       <StatusBar style={p.name === 'light' ? 'dark' : 'light'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg } }}>
         <Stack.Screen name="index" />
@@ -169,7 +173,7 @@ function Root() {
           }}
         />
       </Stack>
-    </>
+    </UpdateGate>
   );
 }
 

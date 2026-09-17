@@ -14,6 +14,7 @@ import { SysButton } from '../ui/system';
 import { FoodRows, MealAdd } from '../ui/FoodBlock';
 import { ScreenHead } from '../ui/ScreenHead';
 import { PushNudge } from '../ui/PushNudge';
+import { Announce } from '../ui/Announce';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
 
@@ -113,6 +114,9 @@ export default function Today() {
 
       {/* Пока уведомления не включены — напоминание здесь: этот экран
           человек открывает каждый день, остальные далеко не всегда. */}
+      {/* Объявление от сервиса идёт первым: оно про то, что происходит
+          прямо сейчас, а просьба включить уведомления подождёт. */}
+      <Announce />
       <PushNudge />
 
       {err && (

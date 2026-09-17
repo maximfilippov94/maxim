@@ -20,7 +20,7 @@ const THEMES: { key: ThemePref; label: string }[] = [
 ];
 
 export default function More() {
-  const { p, themePref, setThemePref, me, signOut } = useApp();
+  const { p, themePref, setThemePref, me, signOut, feature } = useApp();
   const hasSpec = !!me?.user?.specialist_id;
   const insets = useSafeAreaInsets();
   const idx = Math.max(0, THEMES.findIndex(t => t.key === themePref));
@@ -61,13 +61,21 @@ export default function More() {
             <>
               <ListRow first icon="chat" label="Мой специалист"
                 onPress={() => router.push('/specialist')} />
-              <ListRow icon="tag" label="Услуги и цены"
-                onPress={() => router.push('/services')} />
+              {/* Покупка услуг выключается с сервера: если приём оплаты
+                  встал, пункт не должен вести на форму, которая всё
+                  равно откажет. */}
+              {feature('payments') && (
+                <ListRow icon="tag" label="Услуги и цены"
+                  onPress={() => router.push('/services')} />
+              )}
               <ListRow icon="star" label="Отзыв о специалисте"
                 onPress={() => router.push('/review')} />
             </>
-          ) : (
+          ) : feature('catalog') ? (
             <ListRow first icon="users" label="Найти специалиста"
+              onPress={() => router.push('/specialist')} />
+          ) : (
+            <ListRow first icon="users" label="Мой специалист"
               onPress={() => router.push('/specialist')} />
           )}
         </ListGroup>
@@ -76,8 +84,10 @@ export default function More() {
         <ListGroup>
           <ListRow first icon="gift" label="Награды и баллы"
             onPress={() => router.push('/rewards')} />
-          <ListRow icon="heart" label="Лента"
-            onPress={() => router.push('/feed')} />
+          {feature('feed') && (
+            <ListRow icon="heart" label="Лента"
+              onPress={() => router.push('/feed')} />
+          )}
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/notifications')} />
           <ListRow icon="edit" label="Отчёт за неделю"

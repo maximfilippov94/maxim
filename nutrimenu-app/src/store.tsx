@@ -8,6 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PALETTES, Palette, ThemeName, ThemePref } from './theme';
 import { api, loadToken, setToken, Me, SignUp } from './api';
 import { registerPush, unregisterPush } from './push';
+import { AppConfig, DEFAULT_CONFIG, fetchAppConfig, featureOn } from './appConfig';
 
 interface Ctx {
   p: Palette;
@@ -26,6 +27,12 @@ interface Ctx {
      и так загружают «Клиенты» и «Чаты», и лишнего запроса не нужно. */
   unread: number;
   setUnread: (n: number) => void;
+  /* Что сервер разрешил и о чём просил сказать: объявление, требование
+     обновиться, выключенные возможности. Читается один раз при запуске —
+     чаще незачем, а лишний запрос на каждом экране заметен на слабой связи. */
+  cfg: AppConfig;
+  /** Включена ли возможность. По умолчанию да: молчание сервера ничего не прячет. */
+  feature: (key: string) => boolean;
 }
 const C = createContext<Ctx>(null as any);
 export const useApp = () => useContext(C);
@@ -36,12 +43,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   const [ready, setReady] = useState(false);
   const [unread, setUnreadState] = useState(0);
+  const [cfg, setCfg] = useState<AppConfig>(DEFAULT_CONFIG);
   const setUnread = useCallback((n: number) => setUnreadState(Math.max(0, n | 0)), []);
 
   useEffect(() => {
     (async () => {
       const saved = (await AsyncStorage.getItem('nm_theme')) as ThemePref | null;
       if (saved) setPref(saved);
+      /* Настройки спрашиваем до готовности экрана: объявление и экран
+         обновления должны быть в первом кадре, а не появляться через
+         секунду после того, как человек начал работать. */
+      fetchAppConfig().then(setCfg).catch(() => {});
       const t = await loadToken();
       if (t) {
         try { setMe(await api<Me>('/me')); registerPush(); }
@@ -118,6 +130,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setMe(null);
   }, []);
 
+  const feature = useCallback((key: string) => featureOn(cfg, key), [cfg]);
+
   const refreshMe = useCallback(async () => {
     try { setMe(await api<Me>('/me')); } catch { /* оставляем прежнее */ }
   }, []);
@@ -126,7 +140,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <C.Provider value={{
       p: PALETTES[resolved], themePref, setThemePref,
       me, ready, signIn, signInWithToken, signUp, signOut, refreshMe,
-      unread, setUnread,
+      unread, setUnread, cfg, feature,
     }}>
       {children}
     </C.Provider>
