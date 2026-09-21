@@ -11,7 +11,7 @@
  * значит вводить в заблуждение.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
@@ -22,9 +22,13 @@ import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
 import { Card, Label, Muted } from '../../ui/base';
 import { Icon } from '../../ui/Icon';
-import { SysSlider, SysConfirm, Empty } from '../../ui/system';
+import { SysConfirm, Empty } from '../../ui/system';
 import { round } from '../../format';
 import { haptic } from '../../haptics';
+
+/* Доли рецептурной порции. Подписи короткие: на кнопке шириной в четверть
+   экрана «полторы порции» не помещается ни на одном телефоне. */
+const PORTION_STEPS: [number, string][] = [[0.5, '\u00BD'], [1, '1'], [1.5, '1\u00BD'], [2, '2']];
 
 export default function SpMenuItem() {
   const { p } = useApp();
@@ -75,10 +79,13 @@ export default function SpMenuItem() {
     );
   }
 
-  /* Границы те же, что у ползунка в меню и что проверяет сервер. */
   const base = round(Number(q.base) || d.base_portion_g || 0) || round(Number(q.portion)) || 200;
-  const lo = Math.max(10, Math.round(base * 0.25 / 5) * 5);
-  const hi = Math.round(base * 2.5 / 5) * 5;
+  /* Порцию назначают долями рецепта, а не граммами: ползунок позволял
+     поставить почти килограмм блюда — столько не съедят, — а точную
+     цифру всё равно выбирали на глаз. «1» — это ровно тот вес, на
+     который рецепт рассчитан. */
+  const steps = PORTION_STEPS.map(([k, label]) => ({ k, label, g: round(base * k) }));
+  const active = steps.reduce((a, b) => (Math.abs(b.g - g) < Math.abs(a.g - g) ? b : a), steps[0]);
   const per = (v?: number | null) => round((v ?? 0) * g / 100);
   const photo = mediaUrl(d.photo_url);
   /* Во сколько раз порция отличается от рецептурной — на столько же
@@ -129,8 +136,30 @@ export default function SpMenuItem() {
                 ккал · Б {per(d.protein_100)} · Ж {per(d.fat_100)} · У {per(d.carbs_100)} г
               </Muted>
             </View>
-            <View style={{ marginTop: S.sm }}>
-              <SysSlider value={g} min={lo} max={hi} step={5} onChange={setG} onCommit={save} />
+            <View style={{ flexDirection: 'row', gap: S.xs, marginTop: S.sm }}>
+              {steps.map(st => {
+                const on = st.k === active.k;
+                return (
+                  <Pressable
+                    key={st.k}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on }}
+                    onPress={() => { haptic.select(); setG(st.g); save(st.g); }}
+                    style={{
+                      flex: 1, minHeight: 56, borderRadius: R.md, borderWidth: 1,
+                      borderColor: on ? p.primary : p.borderSoft,
+                      backgroundColor: on ? p.primarySoft : 'transparent',
+                      alignItems: 'center', justifyContent: 'center', gap: 2,
+                    }}>
+                    <Text style={{ fontSize: 17, fontWeight: '700', color: on ? p.primary : p.text }}>
+                      {st.label}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: on ? p.primary : p.text3 }}>
+                      {st.g} г
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </Card>
         </Animated.View>
