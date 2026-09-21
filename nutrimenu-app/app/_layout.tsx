@@ -3,6 +3,7 @@ import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
 import { AppProvider, useApp } from '../src/store';
 import { UpdateGate } from '../src/ui/UpdateGate';
@@ -55,6 +56,11 @@ function Root() {
      куда его уводит нажатие на уведомление. */
   return (
     <UpdateGate>
+      {/* «Уменьшение движения» из настроек телефона уважает всё
+          приложение сразу: появления, полосы и пульсации гаснут
+          там, где человек об этом попросил системой, а не в каждом
+          экране по отдельности. */}
+      <ReducedMotionConfig mode={ReduceMotion.System} />
       <StatusBar style={p.name === 'light' ? 'dark' : 'light'} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg } }}>
         <Stack.Screen name="index" />

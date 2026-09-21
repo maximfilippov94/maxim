@@ -143,7 +143,8 @@ export default function SpecProfile() {
           <View style={{ gap: 4 }}>
             <Text style={{ ...FONT.body, color: p.text2, lineHeight: 21 }}
               numberOfLines={bioOpen ? undefined : 4}>{s.bio}</Text>
-            <Pressable onPress={() => { haptic.tap(); setBioOpen(v => !v); }} hitSlop={8}>
+            <Pressable onPress={() => { haptic.tap(); setBioOpen(v => !v); }} hitSlop={8}
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
               <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
                 {bioOpen ? 'Свернуть' : 'Ещё'}
               </Text>
@@ -218,7 +219,7 @@ export default function SpecProfile() {
               ))}
               {edu.length > 1 ? (
                 <Pressable onPress={() => { haptic.tap(); setEduOpen(v => !v); }} hitSlop={8}
-                  style={{ marginTop: 4 }}>
+                  style={({ pressed }) => ({ marginTop: 4, opacity: pressed ? 0.5 : 1 })}>
                   <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
                     {eduOpen ? 'Свернуть'
                       : `Ещё ${edu.length - 1} ${plural(edu.length - 1, ['запись', 'записи', 'записей'])} об образовании`}
@@ -255,7 +256,9 @@ export default function SpecProfile() {
               {docs.map(d => (
                 <Card key={d.id} style={{ width: 116, padding: S.sm, gap: 6 }}>
                   {d.scan_url ? (
-                    <Pressable onPress={() => { haptic.tap(); setScan(d.scan_url!); }}>
+                    <Pressable onPress={() => { haptic.tap(); setScan(d.scan_url!); }}
+                      accessibilityRole="button" accessibilityLabel="Открыть скан документа"
+                      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.97 : 1 }] })}>
                       <Thumb url={d.scan_url} />
                     </Pressable>
                   ) : (

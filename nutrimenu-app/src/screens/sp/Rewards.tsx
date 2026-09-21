@@ -116,7 +116,8 @@ export default function SpRewards() {
                   </View>
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg }}>
-                  <Pressable onPress={() => { haptic.tap(); toggle(r); }} hitSlop={8}>
+                  <Pressable onPress={() => { haptic.tap(); toggle(r); }} hitSlop={8}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
                     <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
                       {r.is_active ? 'Скрыть' : 'Вернуть'}
                     </Text>

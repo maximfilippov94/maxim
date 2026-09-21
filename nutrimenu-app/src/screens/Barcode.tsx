@@ -144,9 +144,11 @@ export default function Barcode() {
           onPress={() => { haptic.tap(); router.replace(`/food-log?meal=${meal ?? ''}`); }} />
       </View>
       <Pressable onPress={() => { haptic.tap(); router.back(); }} hitSlop={12}
-        style={{ position: 'absolute', top: insets.top + 8, left: S.lg,
-          width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-          backgroundColor: 'rgba(0,0,0,0.45)' }}>
+        accessibilityRole="button" accessibilityLabel="Закрыть сканер"
+        style={({ pressed }) => ({ position: 'absolute', top: insets.top + 8, left: S.lg,
+          width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+          transform: [{ scale: pressed ? 0.94 : 1 }],
+          backgroundColor: 'rgba(0,0,0,0.45)' })}>
         <Icon name="close" size={20} color="#fff" width={2.2} />
       </Pressable>
     </View>

@@ -176,7 +176,9 @@ export default function MySpecialist() {
                 placeholderTextColor={p.text3}
                 style={{ flex: 1, color: p.text, paddingVertical: 11, fontSize: 14 }} />
               {q ? (
-                <Pressable onPress={() => setQ('')} hitSlop={10}>
+                <Pressable onPress={() => setQ('')} hitSlop={10}
+                  accessibilityRole="button" accessibilityLabel="Очистить поиск"
+                  style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
                   <Icon name="close" size={16} color={p.text3} />
                 </Pressable>
               ) : null}
@@ -187,12 +189,13 @@ export default function MySpecialist() {
                 ['endocrinologist', 'Эндокринологи'], ['coach', 'Коучи']] as [Prof, string][]} />
 
             <Pressable onPress={() => { haptic.select(); setOnlyFav(v => !v); }}
-              style={{
+              style={({ pressed }) => ({
                 flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
                 paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+                transform: [{ scale: pressed ? 0.95 : 1 }],
                 backgroundColor: onlyFav ? p.primary : p.surface,
                 borderWidth: onlyFav ? 0 : 1, borderColor: p.border, marginBottom: S.md,
-              }}>
+              })}>
               <Icon name="heart" size={14} color={onlyFav ? p.onPrimary : p.text2} />
               <Text style={{ fontSize: 14, fontWeight: onlyFav ? '600' : '400',
                 color: onlyFav ? p.onPrimary : p.text2 }}>Избранные</Text>
@@ -203,12 +206,13 @@ export default function MySpecialist() {
                 каталог. Раскрывается по нажатию, чтобы не занимать
                 верх экрана полем ввода. */}
             <Pressable onPress={() => { haptic.tap(); setCodeOpen(v => !v); }}
-              style={{
+              style={({ pressed }) => ({
                 flexDirection: 'row', alignItems: 'center', gap: S.sm,
                 minHeight: 44, paddingHorizontal: S.lg, marginBottom: S.md,
+                transform: [{ scale: pressed ? 0.99 : 1 }],
                 borderWidth: 1, borderColor: p.border, borderStyle: 'dashed',
                 borderRadius: R.lg,
-              }}>
+              })}>
               <Icon name="tag" size={16} color={p.accent} />
               <Text style={{ ...FONT.small, fontWeight: '600', color: p.text2, flex: 1 }}>
                 У меня есть код от специалиста

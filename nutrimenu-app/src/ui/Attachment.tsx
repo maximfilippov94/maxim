@@ -33,7 +33,9 @@ function Photo({ src }: { src: string }) {
   const { p } = useApp();
   const [ratio, setRatio] = useState(0.75);
   return (
-    <Pressable onPress={() => { haptic.tap(); Linking.openURL(src).catch(() => {}); }}>
+    <Pressable onPress={() => { haptic.tap(); Linking.openURL(src).catch(() => {}); }}
+      accessibilityRole="button" accessibilityLabel="Открыть вложение"
+      style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
       <Image
         source={{ uri: src }}
         onLoad={e => {
@@ -122,7 +124,9 @@ function FileRow({ src, mine }: { src: string; mine: boolean }) {
   const { p } = useApp();
   return (
     <Pressable onPress={() => { haptic.tap(); Linking.openURL(src).catch(() => {}); }}
-      style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+      accessibilityRole="button" accessibilityLabel="Открыть файл"
+      style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: S.sm,
+        opacity: pressed ? 0.6 : 1 })}>
       <Icon name="clip" size={16} color={mine ? p.onPrimary : p.text2} />
       <Text style={{ ...FONT.body, color: mine ? p.onPrimary : p.text }}>Открыть файл</Text>
     </Pressable>
