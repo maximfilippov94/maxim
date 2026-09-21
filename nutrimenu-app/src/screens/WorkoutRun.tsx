@@ -153,7 +153,7 @@ export default function WorkoutRun() {
             position: 'absolute', top: insets.top + 8, left: S.lg, right: S.lg,
             flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <RoundBtn icon="close" onPress={() => router.back()} />
+            <RoundBtn icon="close" label="Выйти из тренировки" onPress={() => router.back()} />
             <View style={{
               paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
               backgroundColor: 'rgba(9,16,18,0.55)',
@@ -162,7 +162,8 @@ export default function WorkoutRun() {
                 {i + 1} из {ex.length}
               </Text>
             </View>
-            <RoundBtn icon="info" onPress={() => { haptic.tap(); setInfo(true); }} />
+            <RoundBtn icon="info" label="Об упражнении"
+              onPress={() => { haptic.tap(); setInfo(true); }} />
           </View>
 
           <View style={{
@@ -273,12 +274,17 @@ export default function WorkoutRun() {
   );
 }
 
-function RoundBtn({ icon, onPress }: { icon: string; onPress: () => void }) {
+function RoundBtn({ icon, label, onPress }: {
+  icon: string; label: string; onPress: () => void;
+}) {
   const { p } = useApp();
   return (
+    /* 44 точки: в зале по этим кнопкам попадают мокрыми руками, и
+       «почти попал» здесь стоит дороже, чем на любом другом экране. */
     <Pressable onPress={onPress} hitSlop={8}
+      accessibilityRole="button" accessibilityLabel={label}
       style={({ pressed }) => ({
-        width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center',
+        width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
         backgroundColor: p.surface, transform: [{ scale: pressed ? 0.94 : 1 }],
       })}>
       <Icon name={icon as any} size={18} color={p.text} />
@@ -301,6 +307,7 @@ function NumField({ label, value, onChange, onStep, stepBy }: {
         backgroundColor: p.inset, borderRadius: R.md, overflow: 'hidden',
       }}>
         <Pressable onPress={() => onStep(-stepBy)}
+          accessibilityRole="button" accessibilityLabel={`${label}: меньше`}
           style={({ pressed }) => ({
             width: 44, height: 52, alignItems: 'center', justifyContent: 'center',
             opacity: pressed ? 0.6 : 1,
@@ -314,6 +321,7 @@ function NumField({ label, value, onChange, onStep, stepBy }: {
             fontSize: 19, fontWeight: '700', padding: 0,
           }} />
         <Pressable onPress={() => onStep(stepBy)}
+          accessibilityRole="button" accessibilityLabel={`${label}: больше`}
           style={({ pressed }) => ({
             width: 44, height: 52, alignItems: 'center', justifyContent: 'center',
             opacity: pressed ? 0.6 : 1,
@@ -473,8 +481,9 @@ function ExerciseSheet({ x, open, onClose }: {
           }}>
             {([['how', 'Описание'], ['mus', 'Мышцы'], ['tip', 'Советы']] as const).map(([k, l]) => (
               <Pressable key={k} onPress={() => { haptic.select(); setTab(k); }}
+                accessibilityRole="button" accessibilityState={{ selected: tab === k }}
                 style={{
-                  paddingVertical: 9, borderBottomWidth: 2, marginBottom: -1,
+                  minHeight: 44, justifyContent: 'center', borderBottomWidth: 2, marginBottom: -1,
                   borderBottomColor: tab === k ? p.primary : 'transparent',
                 }}>
                 <Text style={{

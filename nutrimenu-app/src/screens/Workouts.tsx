@@ -184,7 +184,9 @@ export default function Workouts() {
         }, indicator]} />
         {TABS.map(([k, l], i) => (
           <Pressable key={k} onPress={() => pick(k as any, i)}
-            style={{ flex: 1, minHeight: 38, alignItems: 'center', justifyContent: 'center' }}>
+            /* 44 точки — пальцевый минимум; ниже палец промахивается. */
+            style={{ flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+            accessibilityRole="button" accessibilityState={{ selected: tab === k }}>
             <Text style={{
               fontSize: 13.5, fontWeight: '700',
               color: tab === k ? p.text : p.text3,
@@ -512,7 +514,8 @@ function HistoryView({ list }: { list: WoHistoryItem[] | null }) {
               </Muted>
             </View>
             {s.feeling ? (
-              <Text style={{ fontSize: 20 }}>{WO_FEEL[s.feeling - 1][2]}</Text>
+              <Text accessibilityLabel={`Нагрузка: ${WO_FEEL[s.feeling - 1][1]}`}
+                style={{ fontSize: 20 }}>{WO_FEEL[s.feeling - 1][2]}</Text>
             ) : null}
           </Pressable>
         ))}

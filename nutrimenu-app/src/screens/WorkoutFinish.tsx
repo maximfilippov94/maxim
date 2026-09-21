@@ -64,14 +64,17 @@ export default function WorkoutFinish() {
           const on = feel === n;
           return (
             <Pressable key={n} onPress={() => { haptic.select(); setFeel(n); }}
+              accessibilityRole="button" accessibilityLabel={`Нагрузка: ${label}`}
+              accessibilityState={{ selected: on }}
               style={({ pressed }) => ({
-                flex: 1, alignItems: 'center', gap: 5, paddingVertical: 10,
+                flex: 1, alignItems: 'center', gap: 5, minHeight: 64, paddingVertical: 10,
                 borderRadius: R.md, borderWidth: 1.5,
                 borderColor: on ? p.primary : 'transparent',
                 backgroundColor: on ? p.primarySoft : p.surface,
                 transform: [{ scale: pressed ? 0.95 : 1 }],
               })}>
-              <Text style={{ fontSize: 24 }}>{face}</Text>
+              <Text accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+                style={{ fontSize: 24 }}>{face}</Text>
               <Text numberOfLines={1} style={{
                 fontSize: 11, fontWeight: '600', color: on ? p.accent : p.text3,
               }}>{label}</Text>
