@@ -93,7 +93,14 @@ export default function SpMore() {
 
         <ListHead>Работа</ListHead>
         <ListGroup>
-          <ListRow first icon="bowl" label="База блюд"
+          {/* Тренеру раздел нужен каждый день, остальным он не нужен
+              вовсе — показываем по профессии, а не всем подряд. */}
+          {pr?.profession === 'trainer' || pr?.profession === 'coach' ? (
+            <ListRow first icon="dumbbell" label="Подопечные и тренировки"
+              onPress={() => router.push('/sp-wo-clients')} />
+          ) : null}
+          <ListRow first={!(pr?.profession === 'trainer' || pr?.profession === 'coach')}
+            icon="bowl" label="База блюд"
             onPress={() => router.push('/sp-dishes')} />
           <ListRow icon="edit" label="Шаблоны меню"
             onPress={() => router.push('/sp-templates')} />

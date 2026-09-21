@@ -10,7 +10,7 @@ import { useApp } from '../../store';
 import {
   api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
   ClientTask, Subscription, FoodDay, MEAL_ORDER, MEAL_TITLES,
-  thumbUrl,
+  thumbUrl, WoProgress, WO_FEEL,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
@@ -22,9 +22,10 @@ import { round, kg, rub, plural, dmy, menuDate, dayTitle, dowShort, isToday } fr
 import { haptic } from '../../haptics';
 import { Loading, Fail } from '../Shopping';
 
-type Tab = 'overview' | 'menu' | 'tasks' | 'progress';
+type Tab = 'overview' | 'menu' | 'workouts' | 'tasks' | 'progress';
 const TABS: [Tab, string][] = [
-  ['overview', 'Обзор'], ['menu', 'Меню'], ['tasks', 'Задания'], ['progress', 'Прогресс'],
+  ['overview', 'Обзор'], ['menu', 'Меню'], ['workouts', 'Тренировки'],
+  ['tasks', 'Задания'], ['progress', 'Прогресс'],
 ];
 
 
@@ -133,9 +134,141 @@ export default function SpClientScreen() {
 
         {tab === 'overview' ? <Overview c={c} sub={sub} /> : null}
         {tab === 'menu' ? <MenuTab cid={cid} name={c.name} /> : null}
+        {tab === 'workouts' ? <WorkoutsTab cid={cid} /> : null}
         {tab === 'tasks' ? <TasksTab cid={cid} /> : null}
         {tab === 'progress' ? <ProgressTab cid={cid} /> : null}
       </ScrollView>
+    </View>
+  );
+}
+
+/**
+ * Тренировки клиента: восемь недель столбцами, сводка за месяц и
+ * занятия с оценкой.
+ *
+ * Бледный столбик позади зелёного — сколько стояло в плане: без него
+ * «две тренировки» не с чем сравнить, две из двух и две из пяти
+ * выглядят одинаково. Оценка и слова клиента стоят в строке занятия, а
+ * не мелким шрифтом внизу: это единственное, что он сказал о нагрузке
+ * сам.
+ */
+function WorkoutsTab({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [d, setD] = useState<WoProgress | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<WoProgress>(`/specialist/clients/${cid}/workout-progress`)
+      .then(setD).catch(e => setErr(e?.message ?? 'Не открылось'));
+  }, [cid]);
+
+  if (err) return <Muted>{err}</Muted>;
+  if (!d) return <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />;
+
+  const max = Math.max(1, ...d.weeks.map(w => Math.max(w.done + w.skipped, w.planned)));
+  const t = d.totals;
+
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', gap: S.xs, marginBottom: S.md }}>
+        {[[t.done, plural(t.done, ['тренировка', 'тренировки', 'тренировок'])],
+          [t.minutes, plural(t.minutes, ['минута', 'минуты', 'минут'])],
+          [t.kcal, 'ккал'],
+          [t.skipped, plural(t.skipped, ['пропуск', 'пропуска', 'пропусков'])]]
+          .map(([v, l]) => (
+            <Card key={String(l)} style={{ flex: 1, alignItems: 'center', paddingVertical: S.md, paddingHorizontal: 2 }}>
+              <Text style={{ fontSize: 19, fontWeight: '700', color: p.text }}>{String(v)}</Text>
+              <Text numberOfLines={1} style={{ fontSize: 10.5, color: p.text3 }}>{String(l)}</Text>
+            </Card>
+          ))}
+      </View>
+      <Muted style={{ marginBottom: S.lg }}>За последние 30 дней</Muted>
+
+      <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Восемь недель</Text>
+      <Card style={{ marginBottom: S.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 140, gap: S.xs }}>
+          {d.weeks.map((w, i) => {
+            const dt = new Date(w.week_start + 'T00:00:00');
+            return (
+              <View key={w.week_start} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                <View style={{ flex: 1, width: '100%', maxWidth: 26, justifyContent: 'flex-end' }}>
+                  {w.planned ? (
+                    <View style={{
+                      position: 'absolute', left: 0, right: 0, bottom: 0,
+                      height: `${(w.planned / max) * 100}%`,
+                      borderRadius: 6, backgroundColor: p.inset,
+                    }} />
+                  ) : null}
+                  {w.skipped ? (
+                    <Animated.View entering={FadeInDown.delay(i * 40).duration(320)} style={{
+                      height: `${(w.skipped / max) * 100}%`,
+                      borderRadius: 6, backgroundColor: p.danger + '33', marginBottom: 2,
+                    }} />
+                  ) : null}
+                  <Animated.View entering={FadeInDown.delay(i * 40).duration(320)} style={{
+                    height: `${(w.done / max) * 100}%`,
+                    borderRadius: 6, backgroundColor: p.primary,
+                  }} />
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: p.text }}>{w.done}</Text>
+                <Text style={{ fontSize: 10.5, color: p.text3 }}>
+                  {dt.getDate()}.{String(dt.getMonth() + 1).padStart(2, '0')}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        <View style={{ flexDirection: 'row', gap: S.lg, marginTop: S.md }}>
+          {[['выполнено', p.primary], ['пропущено', p.danger + '33']].map(([l, col]) => (
+            <View key={String(l)} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: String(col) }} />
+              <Text style={{ fontSize: 11.5, color: p.text3 }}>{String(l)}</Text>
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Последние занятия</Text>
+      {d.sessions.length ? (
+        <Card style={{ padding: 0 }}>
+          {d.sessions.map((s, i) => {
+            const f = s.feeling ? WO_FEEL[s.feeling - 1] : null;
+            return (
+              <View key={s.id} style={{
+                flexDirection: 'row', alignItems: 'flex-start', gap: S.md,
+                padding: S.md, borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+              }}>
+                <View style={{
+                  width: 30, height: 30, borderRadius: 15, alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: s.status === 'done' ? p.primary : p.danger + '22',
+                }}>
+                  <Icon name={s.status === 'done' ? 'check' : 'close'} size={15}
+                    color={s.status === 'done' ? p.onPrimary : p.danger} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14.5, fontWeight: '700', color: p.text }}>{s.title}</Text>
+                  <Muted>
+                    {dmy(s.planned_on)}
+                    {s.status === 'done'
+                      ? ` · ${Math.round((s.duration_sec ?? 0) / 60)} мин · ≈${s.kcal ?? 0} ккал`
+                      : ' · пропущена'}
+                  </Muted>
+                  {s.comment ? (
+                    <Text style={{ ...FONT.body, color: p.text2, marginTop: 4 }}>«{s.comment}»</Text>
+                  ) : null}
+                </View>
+                {f ? (
+                  <Text accessibilityLabel={`Нагрузка: ${f[1]}`} style={{ fontSize: 20 }}>{f[2]}</Text>
+                ) : null}
+              </View>
+            );
+          })}
+        </Card>
+      ) : (
+        <Card><Muted>Занятий пока не было. Первая тренировка появится здесь вместе
+          с оценкой нагрузки, как только клиент её проведёт.</Muted></Card>
+      )}
     </View>
   );
 }

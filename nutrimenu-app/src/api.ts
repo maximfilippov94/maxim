@@ -888,3 +888,27 @@ export const WO_FEEL: [number, string, string][] = [
   [1, 'Легко', '🙂'], [2, 'Нормально', '😌'], [3, 'Средне', '😐'],
   [4, 'Тяжело', '😤'], [5, 'На пределе', '🥵'],
 ];
+
+/* ---------- Тренировки глазами тренера ---------- */
+export interface WoClientRow {
+  id: number; name: string; avatar_url?: string | null; goal?: string | null;
+  today: WoPlanItem | null;
+  today_status: 'planned' | 'in_progress' | 'done' | 'skipped' | 'rest';
+  done30: number; missed30: number; pct30: number | null;
+  last: { planned_on: string; status: string; kcal: number | null;
+          duration_sec: number | null; feeling: number | null; title: string } | null;
+}
+export interface WoWeekBar {
+  week_start: string; done: number; skipped: number; planned: number;
+  kcal: number; minutes: number;
+}
+export interface WoProgress {
+  weeks: WoWeekBar[];
+  sessions: WoHistoryItem[];
+  totals: { done: number; skipped: number; kcal: number; minutes: number };
+}
+/* Подписи статуса дня у подопечного — те же слова, что в вебе. */
+export const WO_CLIENT_STATE: Record<string, string> = {
+  done: 'Завершил', in_progress: 'Выполняет тренировку',
+  skipped: 'Пропустил', planned: 'Сегодня по плану', rest: 'День отдыха',
+};
