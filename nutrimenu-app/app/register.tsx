@@ -11,9 +11,11 @@ import { haptic } from '../src/haptics';
 
 type Role = 'client' | 'specialist';
 
-const PROFESSIONS: ['nutritionist' | 'trainer' | 'coach', string][] = [
+type Prof = 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
+const PROFESSIONS: [Prof, string][] = [
   ['nutritionist', 'Нутрициолог'],
   ['trainer', 'Тренер'],
+  ['endocrinologist', 'Эндокринолог'],
   ['coach', 'Коуч'],
 ];
 
@@ -34,7 +36,7 @@ export default function Register() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
-  const [prof, setProf] = useState<'nutritionist' | 'trainer' | 'coach'>('nutritionist');
+  const [prof, setProf] = useState<Prof>('nutritionist');
   const [sex, setSex] = useState<'m' | 'f' | null>(null);
   const [age, setAge] = useState('');
   const [height, setHeight] = useState('');

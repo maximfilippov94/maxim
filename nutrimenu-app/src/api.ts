@@ -615,7 +615,7 @@ export interface SignUp {
   email: string;
   password: string;
   /** Профессия специалиста */
-  profession?: 'nutritionist' | 'trainer' | 'coach';
+  profession?: 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
   /** Анкета клиента: по ней считается предварительная норма */
   profile?: SignUpProfile;
 }
@@ -711,7 +711,8 @@ export interface SpProfile {
 }
 
 export const PROFESSION: Record<string, string> = {
-  nutritionist: 'Нутрициолог', trainer: 'Тренер', coach: 'Коуч',
+  nutritionist: 'Нутрициолог', trainer: 'Тренер',
+  endocrinologist: 'Эндокринолог', coach: 'Коуч',
 };
 
 /* ---------- Здоровье клиента ---------- */

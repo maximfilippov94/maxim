@@ -12,8 +12,10 @@ import { pickPhoto } from '../src/photo';
 import { uploadFile } from '../src/upload';
 import { haptic } from '../src/haptics';
 
-const PROFS: ['nutritionist' | 'trainer' | 'coach', string][] = [
-  ['nutritionist', 'Нутрициолог'], ['trainer', 'Тренер'], ['coach', 'Коуч'],
+type Prof = 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
+const PROFS: [Prof, string][] = [
+  ['nutritionist', 'Нутрициолог'], ['trainer', 'Тренер'],
+  ['endocrinologist', 'Эндокринолог'], ['coach', 'Коуч'],
 ];
 
 export default function SpProfileEdit() {
@@ -21,7 +23,7 @@ export default function SpProfileEdit() {
   const [pr, setPr] = useState<SpProfile | null>(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [prof, setProf] = useState<'nutritionist' | 'trainer' | 'coach'>('nutritionist');
+  const [prof, setProf] = useState<Prof>('nutritionist');
   const [avatar, setAvatar] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);

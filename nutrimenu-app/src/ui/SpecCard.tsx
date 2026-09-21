@@ -20,7 +20,8 @@ import { Muted } from './base';
 import { haptic } from '../haptics';
 
 export const PROF: Record<string, string> = {
-  nutritionist: 'Нутрициолог', trainer: 'Тренер', coach: 'Коуч',
+  nutritionist: 'Нутрициолог', trainer: 'Тренер',
+  endocrinologist: 'Эндокринолог', coach: 'Коуч',
 };
 
 export function SpecCard({ s, fav, onFav, onOpen, onPick, busy }: {

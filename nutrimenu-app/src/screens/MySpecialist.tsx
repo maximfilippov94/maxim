@@ -16,15 +16,17 @@ import { haptic } from '../haptics';
 import { Loading } from './Shopping';
 import { SpecCard, Face, VerifiedMark, PROF } from '../ui/SpecCard';
 
-type Prof = '' | 'nutritionist' | 'trainer' | 'coach';
+type Prof = '' | 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
 const FAV_KEY = 'nm_fav_sp';
 
 const TITLES: Record<Prof, string> = {
-  '': 'Специалисты', nutritionist: 'Нутрициологи', trainer: 'Тренеры', coach: 'Коучи',
+  '': 'Специалисты', nutritionist: 'Нутрициологи', trainer: 'Тренеры',
+  endocrinologist: 'Эндокринологи', coach: 'Коучи',
 };
 const NOUNS: Record<Prof, [string, string, string]> = {
   '': ['специалист', 'специалиста', 'специалистов'],
   nutritionist: ['нутрициолог', 'нутрициолога', 'нутрициологов'],
+  endocrinologist: ['эндокринолог', 'эндокринолога', 'эндокринологов'],
   trainer: ['тренер', 'тренера', 'тренеров'],
   coach: ['коуч', 'коуча', 'коучей'],
 };
@@ -181,8 +183,8 @@ export default function MySpecialist() {
             </View>
 
             <Pills scroll value={prof} onChange={setProf} style={{ marginBottom: S.sm }}
-              items={[['', 'Все'], ['nutritionist', 'Нутрициологи'],
-                ['trainer', 'Тренеры'], ['coach', 'Коучи']] as [Prof, string][]} />
+              items={[['', 'Все'], ['nutritionist', 'Нутрициологи'], ['trainer', 'Тренеры'],
+                ['endocrinologist', 'Эндокринологи'], ['coach', 'Коучи']] as [Prof, string][]} />
 
             <Pressable onPress={() => { haptic.select(); setOnlyFav(v => !v); }}
               style={{
