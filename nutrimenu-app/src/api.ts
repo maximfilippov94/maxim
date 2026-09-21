@@ -826,3 +826,65 @@ export interface TicketFull {
 export const TICKET_STATUS: Record<Ticket['status'], string> = {
   new: 'Ждёт ответа', in_progress: 'Ответили', closed: 'Закрыто',
 };
+
+/* ---------- Тренировки ----------
+   Программа собирается тренером один раз и назначается многим, поэтому
+   у клиента приходит не «моя тренировка», а пункт плана: день, шаблон
+   и что с ним стало. */
+export interface WoPlanItem {
+  date: string; dow: number;
+  assignment_id: number; workout_id: number;
+  title: string; description?: string | null;
+  duration_min: number; level: number; items: number;
+  cover?: string | null; kcal: number;
+  session_id: number | null;
+  status: 'planned' | 'in_progress' | 'done' | 'skipped';
+}
+export interface WoWeek {
+  week_start: string; week: WoPlanItem[];
+  today: WoPlanItem | null; next: WoPlanItem | null;
+  has_trainer: boolean;
+}
+export interface WoExercise {
+  id: number; sort_order: number;
+  sets: number | null; reps: number | null; rest_sec: number;
+  duration_sec: number | null; target_weight_kg: number | null;
+  name: string; slug: string; kind: 'strength' | 'cardio';
+  muscle_group: string; equipment: string; level: number;
+  muscles_main?: string | null; muscles_extra?: string | null;
+  instructions?: string | null; tips?: string | null;
+  image_start_url?: string | null; image_end_url?: string | null;
+  video_url?: string | null;
+}
+export interface WoSet {
+  id: number; workout_exercise_id: number; set_number: number;
+  reps_done: number | null; weight_kg: number | null; duration_sec: number | null;
+}
+export interface WoSession {
+  id: number; workout_id: number; assignment_id: number | null;
+  planned_on: string; started_at: string | null; finished_at: string | null;
+  duration_sec: number | null; kcal: number | null;
+  feeling: number | null; comment: string | null;
+  status: 'planned' | 'in_progress' | 'done' | 'skipped';
+  workout: { title: string; duration_min: number; level: number; description?: string | null };
+  exercises: WoExercise[];
+  sets: WoSet[];
+}
+export interface WoRecovery {
+  id: number; name: string; photo_url?: string | null;
+  portion_g: number; kcal: number; protein: number; fat: number; carbs: number;
+}
+export interface WoHistoryItem {
+  id: number; planned_on: string; status: 'done' | 'skipped';
+  duration_sec: number | null; kcal: number | null; feeling: number | null;
+  comment: string | null; title: string; duration_min: number; items: number;
+}
+
+export const WO_LEVELS: Record<number, string> = {
+  1: 'Начальный', 2: 'Средний', 3: 'Продвинутый',
+};
+/* Оценка нагрузки: пять ступеней, как на экране завершения. */
+export const WO_FEEL: [number, string, string][] = [
+  [1, 'Легко', '🙂'], [2, 'Нормально', '😌'], [3, 'Средне', '😐'],
+  [4, 'Тяжело', '😤'], [5, 'На пределе', '🥵'],
+];

@@ -36,6 +36,12 @@ export default function ClientTabs() {
         <NativeTabs.Trigger.Icon sf="calendar" />
         <NativeTabs.Trigger.Label>Неделя</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      {/* Тренировки стоят между планом питания и чатом: это третий
+          ежедневный экран, а не раздел «где-то в настройках». */}
+      <NativeTabs.Trigger name="workouts">
+        <NativeTabs.Trigger.Icon sf="figure.strengthtraining.traditional" />
+        <NativeTabs.Trigger.Label>Тренировки</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="chat">
         <NativeTabs.Trigger.Icon sf="bubble.left" />
         <NativeTabs.Trigger.Label>Чат</NativeTabs.Trigger.Label>
