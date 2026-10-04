@@ -721,6 +721,10 @@ export interface SpDashboard {
   /* Считается от плана и равна null, когда ни у кого из клиентов нет
      опубликованного меню: считать не от чего. */
   avg_adherence: number | null;
+  /* Записей в дневнике за неделю и сколько человек их вёл: низкая
+     приверженность при живом дневнике значит «ест своё», а не «бросил». */
+  own_entries_week?: number;
+  own_people_week?: number;
   avg_weight_delta: number | null;
   meals_today: number;
   meals_week: number;

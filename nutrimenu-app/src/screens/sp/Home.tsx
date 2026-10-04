@@ -142,6 +142,14 @@ export default function SpHome() {
           <View style={{ marginTop: 8 }}>
             <Bar value={(d?.avg_adherence ?? 0) / 100} />
           </View>
+          {/* Клиент может питаться по своим записям, а не по плану: тогда
+              процент низкий, но учёт человек ведёт. Молчать об этом —
+              значит показывать специалисту половину правды. */}
+          {d?.own_entries_week ? (
+            <Muted style={{ marginTop: 6 }}>
+              плюс {d.own_entries_week} {plural(d.own_entries_week, ['своя запись', 'свои записи', 'своих записей'])}
+            </Muted>
+          ) : null}
         </Card>
       </Animated.View>
 
