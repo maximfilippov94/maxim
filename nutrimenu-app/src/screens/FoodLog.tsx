@@ -6,7 +6,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, Food, FoodMeal, FOOD_MEALS, MEAL_TIME } from '../api';
 import { round, plural } from '../format';
-import { S, R, FONT } from '../theme';
+import { S, R, FONT, LAYOUT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
@@ -50,10 +50,16 @@ export default function FoodLog() {
     (FOOD_MEALS.find(m => m[0] === mealParam)?.[0]) ?? 'snack2');
   const [q, setQ] = useState('');
   const [found, setFound] = useState<Food[] | null>(null);
+  /* Обрыв связи и «ничего не нашлось» — разные вещи. Раньше оба случая
+     показывали одно и то же, и человек с пропавшей сетью начинал заводить
+     свой продукт вместо того, чтобы повторить поиск. */
+  const [searchErr, setSearchErr] = useState<string | null>(null);
+  const [searchTick, setSearchTick] = useState(0);
   const [picked, setPicked] = useState<Food | null>(null);
   const [grams, setGrams] = useState('100');
   const [cart, setCart] = useState<Picked[]>([]);
   const [own, setOwn] = useState(false);
+  const [scannedCode, setScannedCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -64,11 +70,13 @@ export default function FoodLog() {
     const t = setTimeout(async () => {
       try {
         const j = await api<{ foods: Food[] }>(`/client/foods?limit=30&q=${encodeURIComponent(q.trim())}`);
-        if (alive) setFound(j.foods ?? []);
-      } catch { if (alive) setFound([]); }
+        if (alive) { setFound(j.foods ?? []); setSearchErr(null); }
+      } catch (e: any) {
+        if (alive) { setFound([]); setSearchErr(e?.message ?? 'Не удалось найти'); }
+      }
     }, q.trim() ? 220 : 0);
     return () => { alive = false; clearTimeout(t); };
-  }, [q]);
+  }, [q, searchTick]);
 
   const open = useCallback((f: Food) => {
     haptic.tap();
@@ -85,7 +93,12 @@ export default function FoodLog() {
     let alive = true;
     api<{ food: Food }>(`/client/foods/barcode/${codeParam}`)
       .then(j => { if (alive && j.food) open(j.food); })
-      .catch(() => { if (alive) setErr('Товар не нашёлся, найдите его поиском'); });
+      .catch(() => {
+        /* Штрихкода нет ни у нас, ни в открытой базе. Человек стоит с
+           упаковкой в руках — предлагаем завести продукт, подставив
+           отсканированный код, чтобы не набирать его вручную. */
+        if (alive) { setScannedCode(String(codeParam)); setOwn(true); }
+      });
     return () => { alive = false; };
   }, [codeParam, open]);
 
@@ -154,8 +167,9 @@ export default function FoodLog() {
   }
 
   /* ---------- Шаг «свой продукт» ---------- */
-  if (own) return <OwnFood onDone={f => { setOwn(false); setFound([f]); open(f); }}
-                           onCancel={() => setOwn(false)} initial={q.trim()} />;
+  if (own) return <OwnFood onDone={f => { setOwn(false); setScannedCode(''); setFound([f]); open(f); }}
+                           onCancel={() => { setOwn(false); setScannedCode(''); }}
+                           initial={q.trim()} initialBarcode={scannedCode} />;
 
   /* ---------- Шаг «поиск» ---------- */
   return (
@@ -204,6 +218,13 @@ export default function FoodLog() {
 
         {found === null ? (
           <ActivityIndicator color={p.accent} style={{ marginTop: S.xl }} />
+        ) : searchErr ? (
+          <View style={{ gap: S.md, marginTop: S.lg, alignItems: 'flex-start' }}>
+            <Muted>{searchErr}</Muted>
+            <SysButton label="Повторить" onPress={() => {
+              haptic.tap(); setFound(null); setSearchErr(null); setSearchTick(n => n + 1);
+            }} />
+          </View>
         ) : found.length === 0 ? (
           <View style={{ gap: S.md, marginTop: S.lg, alignItems: 'flex-start' }}>
             <Muted>{q.trim() ? 'Такого продукта нет в справочнике.' : 'Начните вводить название.'}</Muted>
@@ -265,16 +286,21 @@ export default function FoodLog() {
 }
 
 /** Своего продукта нет в справочнике — заводим по упаковке. */
-function OwnFood({ initial, onDone, onCancel }: {
-  initial: string; onDone: (f: Food) => void; onCancel: () => void;
+function OwnFood({ initial, initialBarcode, onDone, onCancel }: {
+  initial: string; initialBarcode?: string; onDone: (f: Food) => void; onCancel: () => void;
 }) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(initial);
+  const [brand, setBrand] = useState('');
+  const [barcode, setBarcode] = useState(initialBarcode ?? '');
   const [kcal, setKcal] = useState('');
   const [prot, setProt] = useState('');
   const [fat, setFat] = useState('');
   const [carb, setCarb] = useState('');
+  /* Предложить продукт общей базе можно только со штрихкодом: без него
+     модератор не сверит состав с упаковкой. Так же устроено на сервере. */
+  const [suggest, setSuggest] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -283,12 +309,18 @@ function OwnFood({ initial, onDone, onCancel }: {
     if (!name.trim()) { setErr('Как называется продукт?'); return; }
     setBusy(true); setErr(null);
     try {
-      const j = await api<{ food: Food }>('/client/foods', { method: 'POST', body: {
-        name: name.trim(), kcal: num(kcal), protein: num(prot), fat: num(fat), carbs: num(carb) } });
+      const j = await api<{ food: Food; existing?: boolean }>('/client/foods', { method: 'POST', body: {
+        name: name.trim(),
+        brand: brand.trim() || undefined,
+        barcode: barcode.replace(/\D+/g, '') || undefined,
+        suggest_global: suggest || undefined,
+        kcal: num(kcal), protein: num(prot), fat: num(fat), carbs: num(carb) } });
+      /* Такой штрихкод уже known: сервер вернул готовую запись вместо новой,
+         и дублировать её незачем — сразу берём в приём пищи. */
       haptic.success(); onDone(j.food);
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не добавилось'); }
     finally { setBusy(false); }
-  }, [name, kcal, prot, fat, carb, onDone]);
+  }, [name, brand, barcode, suggest, kcal, prot, fat, carb, onDone]);
 
   const field = (label: string, v: string, set: (s: string) => void, numeric = true) => (
     <View style={{ flex: numeric ? 1 : undefined }}>
@@ -309,6 +341,8 @@ function OwnFood({ initial, onDone, onCancel }: {
           Значения указывайте на 100 г — так они написаны на этикетке.
         </Muted>
         {field('Название', name, setName, false)}
+        {field('Бренд', brand, setBrand, false)}
+        {field('Штрихкод', barcode, setBarcode)}
         <View style={{ flexDirection: 'row', gap: S.md }}>
           {field('Ккал', kcal, setKcal)}
           {field('Белки, г', prot, setProt)}
@@ -317,6 +351,29 @@ function OwnFood({ initial, onDone, onCancel }: {
           {field('Жиры, г', fat, setFat)}
           {field('Углеводы, г', carb, setCarb)}
         </View>
+        {/* Отдать продукт в общий справочник имеет смысл, когда на руках
+            упаковка: по штрихкоду его найдут остальные. */}
+        <Pressable
+          onPress={() => { haptic.select(); setSuggest(v => !v); setErr(null); }}
+          style={({ pressed }) => ({
+            flexDirection: 'row', alignItems: 'center', gap: S.md,
+            minHeight: LAYOUT.touch, opacity: pressed ? 0.8 : 1,
+          })}>
+          <View style={{
+            width: 24, height: 24, borderRadius: 7,
+            borderWidth: suggest ? 0 : 1.5, borderColor: p.btnLine,
+            backgroundColor: suggest ? p.primary : 'transparent',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            {suggest ? <Icon name="check" size={15} color={p.onPrimary} /> : null}
+          </View>
+          <Text style={{ ...FONT.callout, color: p.text, flex: 1 }}>
+            Предложить продукт в общий каталог
+          </Text>
+        </Pressable>
+        {suggest && !barcode.replace(/\D+/g, '')
+          ? <Muted>Для общего каталога нужен штрихкод с упаковки.</Muted>
+          : null}
         {err ? <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text> : null}
         <SysButton label="Добавить в справочник" variant="prominent" disabled={busy} onPress={save} />
       </ScrollView>

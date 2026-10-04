@@ -3,8 +3,9 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, WeekResponse, MEAL_ORDER, MEAL_TITLES } from '../api';
-import { S, R, FONT } from '../theme';
+import { api, thumbUrl, WeekResponse, MEAL_ORDER, MEAL_TITLES } from '../api';
+import { Image } from 'expo-image';
+import { S, R, FONT, LAYOUT } from '../theme';
 import { Card, Label, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Empty } from '../ui/system';
@@ -149,8 +150,20 @@ export default function Week() {
                           borderTopWidth: k ? 1 : 0, borderTopColor: p.borderSoft,
                           backgroundColor: pressed ? p.ov1 : 'transparent',
                         })}>
+                        {/* Снимок блюда: по названию «боул» и «салат» неделя
+                            читается как список слов, по фото — как еда. */}
+                        {thumbUrl(i)
+                          ? <Image
+                              source={{ uri: thumbUrl(i)! }}
+                              style={{ width: 46, height: 46, borderRadius: R.control, backgroundColor: p.inset }}
+                              contentFit="cover" transition={200} cachePolicy="memory-disk"
+                            />
+                          : <View style={{ width: 46, height: 46, borderRadius: R.control, backgroundColor: p.inset,
+                              alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon name="bowl" size={18} color={p.text3} />
+                            </View>}
                         <View style={{ flex: 1 }}>
-                          <Text style={{ ...FONT.body, color: p.text }}>{i.dish_name}</Text>
+                          <Text style={{ ...FONT.body, color: p.text }} numberOfLines={2}>{i.dish_name}</Text>
                           <Muted style={{ marginTop: 2 }}>
                             {round(i.portion_g)} г · {round(i.nutrition?.kcal)} ккал
                           </Muted>
@@ -163,6 +176,29 @@ export default function Week() {
               );
             })
           )}
+
+          {/* Из недели человек чаще всего идёт за покупками: меню на руках,
+              осталось понять, что купить. В вебе эта кнопка стоит там же. */}
+          <Pressable
+            onPress={() => { haptic.tap(); router.push('/shopping'); }}
+            style={({ pressed }) => ({
+              flexDirection: 'row', alignItems: 'center', gap: S.md,
+              minHeight: LAYOUT.rowMin, marginTop: S.lg,
+              paddingHorizontal: S.lg, paddingVertical: S.md,
+              borderRadius: R.lg, backgroundColor: p.surface,
+              borderWidth: 1, borderColor: p.border,
+              opacity: pressed ? 0.9 : 1,
+            })}>
+            <View style={{ width: 42, height: 42, borderRadius: R.control,
+              backgroundColor: p.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="cart" size={19} color={p.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...FONT.h3, color: p.text }}>Список покупок</Text>
+              <Muted>Продукты на ближайшую неделю</Muted>
+            </View>
+            <Icon name="chevr" size={16} color={p.text3} />
+          </Pressable>
 
           <Muted style={{ marginTop: S.lg, textAlign: 'center' }}>
             {menu.days_count} {plural(menu.days_count, ['день', 'дня', 'дней'])} в меню
