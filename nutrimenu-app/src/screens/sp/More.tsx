@@ -96,8 +96,12 @@ export default function SpMore() {
           {/* Тренеру раздел нужен каждый день, остальным он не нужен
               вовсе — показываем по профессии, а не всем подряд. */}
           {pr?.profession === 'trainer' || pr?.profession === 'coach' ? (
-            <ListRow first icon="dumbbell" label="Подопечные и тренировки"
-              onPress={() => router.push('/sp-wo-clients')} />
+            <>
+              <ListRow first icon="dumbbell" label="Тренировки"
+                onPress={() => router.push('/sp-workouts')} />
+              <ListRow icon="user" label="Подопечные"
+                onPress={() => router.push('/sp-wo-clients')} />
+            </>
           ) : null}
           <ListRow first={!(pr?.profession === 'trainer' || pr?.profession === 'coach')}
             icon="bowl" label="База блюд"

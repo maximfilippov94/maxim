@@ -994,6 +994,76 @@ export interface WoProgress {
   sessions: WoHistoryItem[];
   totals: { done: number; skipped: number; kcal: number; minutes: number };
 }
+/* --- Тренировки, которые тренер собирает ---------------------------
+   Клиентские типы выше описывают готовую тренировку в работе; здесь —
+   та же тренировка со стороны того, кто её составляет: со счётчиками,
+   составом и назначениями. */
+export interface SpWorkoutRow {
+  id: number; title: string; description?: string | null;
+  duration_min: number; level: number;
+  is_active: number;
+  /** Сколько упражнений в составе. */
+  items: number;
+  /** Скольким клиентам назначена сейчас. */
+  assigned: number;
+}
+export interface SpAssignment {
+  id: number; workout_id: number; client_id: number;
+  client_name?: string;
+  start_date: string; repeat_kind: 'once' | 'weekly';
+  weekdays?: string | null;
+  status: 'active' | 'ended';
+  /** Приходит в списке назначений клиента, не в карточке тренировки. */
+  title?: string; duration_min?: number; level?: number; items?: number;
+}
+export interface SpWorkoutFull extends SpWorkoutRow {
+  exercises: WoExercise[];
+  assignments: SpAssignment[];
+}
+/** Упражнение из общей библиотеки: её ведёт владелец, тренер выбирает. */
+export interface ExerciseRow {
+  id: number; slug: string; name: string;
+  muscle_group: string; kind: 'strength' | 'cardio';
+  equipment: string; level: number;
+  muscles_main?: string | null; muscles_extra?: string | null;
+  instructions?: string | null; tips?: string | null;
+  image_start_url?: string | null; image_end_url?: string | null;
+  video_url?: string | null; met?: number | null;
+}
+/* Словари приходят вместе с библиотекой — не держим второй список в
+   приложении, чтобы он не разошёлся с сервером. */
+export interface ExerciseLib {
+  exercises: ExerciseRow[];
+  groups: Record<string, string>;
+  equipment: Record<string, string>;
+  levels: Record<string, string>;
+}
+/** Строка состава, пока её правят: ещё без номеров из базы. */
+export interface WoDraftRow {
+  exercise_id: number;
+  name: string;
+  kind: 'strength' | 'cardio';
+  sets?: number | null; reps?: number | null;
+  rest_sec: number;
+  duration_sec?: number | null;
+  target_weight_kg?: number | null;
+  note?: string;
+}
+/** Дни недели в том же виде, в каком их принимает сервер: 1 — понедельник. */
+export const WEEKDAYS: [number, string][] = [
+  [1, 'Пн'], [2, 'Вт'], [3, 'Ср'], [4, 'Чт'], [5, 'Пт'], [6, 'Сб'], [7, 'Вс'],
+];
+/** Дни назначения приходят то строкой «1,4», то списком — разбираем оба. */
+export function assignDays(a: SpAssignment): number[] {
+  const raw = String(a.weekdays ?? '').trim();
+  if (!raw) return [];
+  try {
+    const j = JSON.parse(raw);
+    if (Array.isArray(j)) return j.map(Number).filter(d => d >= 1 && d <= 7);
+  } catch { /* не JSON — значит перечисление через запятую */ }
+  return raw.split(',').map(Number).filter(d => d >= 1 && d <= 7);
+}
+
 /* Подписи статуса дня у подопечного — те же слова, что в вебе. */
 export const WO_CLIENT_STATE: Record<string, string> = {
   done: 'Завершил', in_progress: 'Выполняет тренировку',

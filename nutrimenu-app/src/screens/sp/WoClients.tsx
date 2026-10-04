@@ -46,6 +46,25 @@ export default function WoClients() {
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <NavBar back title="Подопечные" />
+      {/* Две стороны одного раздела: что составлено и кто это делает. */}
+      <View style={{
+        flexDirection: 'row', margin: S.lg, marginBottom: S.sm,
+        backgroundColor: p.inset, borderRadius: R.control, padding: 3,
+      }}>
+        {([['Программы', false], ['Подопечные', true]] as [string, boolean][]).map(([label, on]) => (
+          <Pressable key={label}
+            onPress={() => { if (!on) { haptic.tap(); router.replace('/sp-workouts'); } }}
+            style={{
+              flex: 1, height: 36, alignItems: 'center', justifyContent: 'center',
+              borderRadius: R.control - 3,
+              backgroundColor: on ? p.surface : 'transparent',
+            }}>
+            <Text style={{
+              fontSize: 14, fontWeight: on ? '600' : '400', color: on ? p.text : p.text2,
+            }}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
       <ScrollView contentContainerStyle={{
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 140,
       }} showsVerticalScrollIndicator={false}>

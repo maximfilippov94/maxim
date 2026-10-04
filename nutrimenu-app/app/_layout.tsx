@@ -86,6 +86,11 @@ function Root() {
         <Stack.Screen name="sp-verification" />
         <Stack.Screen name="sp-reviews" />
         <Stack.Screen name="sp-rewards" />
+        <Stack.Screen name="sp-workouts" />
+        <Stack.Screen name="sp-workout/[id]" />
+        <Stack.Screen name="sp-workout-form" />
+        <Stack.Screen name="sp-workout-build" />
+        <Stack.Screen name="sp-workout-assign" />
         <Stack.Screen name="register" />
         <Stack.Screen name="forgot" />
         <Stack.Screen name="progress" />

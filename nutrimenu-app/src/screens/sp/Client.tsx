@@ -10,7 +10,7 @@ import { useApp } from '../../store';
 import {
   api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
   ClientTask, Subscription, FoodDay, MEAL_ORDER, MEAL_TITLES,
-  thumbUrl, WoProgress, WO_FEEL,
+  thumbUrl, WoProgress, WO_FEEL, SpAssignment, WEEKDAYS, assignDays,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
@@ -155,11 +155,17 @@ export default function SpClientScreen() {
 function WorkoutsTab({ cid }: { cid: number }) {
   const { p } = useApp();
   const [d, setD] = useState<WoProgress | null>(null);
+  const [asg, setAsg] = useState<SpAssignment[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     api<WoProgress>(`/specialist/clients/${cid}/workout-progress`)
       .then(setD).catch(e => setErr(e?.message ?? 'Не открылось'));
+    /* Что назначено сейчас — отдельный вопрос от того, что уже сделано:
+       по одним итогам не видно, есть ли у человека план на эту неделю
+       вообще. */
+    api<{ assignments: SpAssignment[] }>(`/specialist/clients/${cid}/workouts`)
+      .then(r => setAsg(r.assignments ?? [])).catch(() => setAsg([]));
   }, [cid]);
 
   if (err) return <Muted>{err}</Muted>;
@@ -183,6 +189,31 @@ function WorkoutsTab({ cid }: { cid: number }) {
           ))}
       </View>
       <Muted style={{ marginBottom: S.lg }}>За последние 30 дней</Muted>
+
+      <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Назначено сейчас</Text>
+      <Card style={{ marginBottom: S.lg }}>
+        {asg == null ? <ActivityIndicator color={p.primary} />
+          : !asg.length ? (
+            <Muted>Ничего не назначено — в плане у клиента пусто.</Muted>
+          ) : asg.map((a, i) => (
+            <View key={a.id} style={{
+              paddingTop: i ? S.sm : 0, marginTop: i ? S.sm : 0,
+              borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: p.border,
+            }}>
+              <Text numberOfLines={1} style={{ ...FONT.body, color: p.text }}>
+                {a.title ?? `Тренировка ${a.workout_id}`}
+              </Text>
+              <Text style={{ ...FONT.small, color: p.text3, marginTop: 1 }}>
+                {a.repeat_kind === 'weekly'
+                  ? `каждую неделю: ${assignDays(a)
+                      .map(n => WEEKDAYS.find(([k]) => k === n)?.[1] ?? '')
+                      .filter(Boolean).join(', ') || '—'}`
+                  : `один раз, ${String(a.start_date ?? '').slice(0, 10).split('-').reverse().join('.')}`}
+                {a.items != null ? ` · ${a.items} ${plural(a.items, ['упражнение', 'упражнения', 'упражнений'])}` : ''}
+              </Text>
+            </View>
+          ))}
+      </Card>
 
       <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Восемь недель</Text>
       <Card style={{ marginBottom: S.lg }}>
