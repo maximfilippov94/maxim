@@ -100,6 +100,7 @@ function Root() {
         <Stack.Screen name="sp-health" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="specialist" />
+        <Stack.Screen name="ai-chat" />
         <Stack.Screen name="dish/[id]" />
         {/* Системная шторка iOS с фиксаторами высоты: тянется пальцем,
             фон остаётся видимым — привычное поведение, а не своё окно. */}

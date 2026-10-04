@@ -20,6 +20,7 @@ export default function Chat() {
       subtitle={spec ? 'ваш специалист' : 'специалист не назначен'}
       avatarUrl={spec?.avatar_url}
       emptyNote="Напишите специалисту — он ответит здесь."
+      typingEndpoint="/client/chat-typing"
       /* Под строкой ввода только панель вкладок — отступ считается по ней */
       bottomInset={44}
     />

@@ -6,7 +6,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Keyboard, ActivityIndicator,
+  View, Text, ScrollView, Keyboard, ActivityIndicator, Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -25,6 +25,8 @@ import { setAudioModeAsync } from 'expo-audio';
 import { pickMedia, shootPhoto } from '../photo';
 import { uploadFile } from '../upload';
 import { haptic } from '../haptics';
+import { mdLite } from './mdLite';
+import { Icon } from './Icon';
 
 const hhmm = (s: string) => String(s).slice(11, 16);
 
@@ -54,11 +56,24 @@ export interface ChatViewProps {
   /** Отступ снизу под панель вкладок */
   bottomInset?: number;
   emptyNote?: string;
+  /** Куда сообщать, что человек набирает текст. Без адреса не сообщаем. */
+  typingEndpoint?: string;
+  /* --- Режим EQUA AI ---------------------------------------------------
+     Лента та же: сообщения идут через те же маршруты, собеседник —
+     AI-специалист. Отличается поведение вокруг ответа: он приходит не от
+     человека, а от модели, и его ждут здесь и сейчас. */
+  /** Подпись в пузыре ожидания, например «EQUA AI печатает…». */
+  typingLabel?: string;
+  /** Разобрать ответ собеседника как лёгкую разметку модели. */
+  markdown?: boolean;
+  /** Оценка ответа: 1 — понравился, 0 — нет. Без неё сердца не рисуются. */
+  onReact?: (messageId: number, rating: 1 | 0) => void;
 }
 
 export function ChatView({
   endpoint, attachEndpoint, extra, mineType,
   title, subtitle, avatarUrl, back, bottomInset = 96, emptyNote,
+  typingEndpoint, typingLabel, markdown, onReact,
 }: ChatViewProps) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
@@ -67,6 +82,8 @@ export function ChatView({
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const sv = useRef<ScrollView>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const [peerTyping, setPeerTyping] = useState(false);
 
   /* Строка ввода едет вместе с клавиатурой и прилипает к её верхнему
      краю — как в мессенджерах. Отдельно висящая панель, из-под которой
@@ -85,8 +102,8 @@ export function ChatView({
 
   const load = useCallback(async () => {
     try {
-      const r = await api<{ messages: ChatMessage[] }>(endpoint);
-      setMsgs(r.messages ?? []); setErr(null);
+      const r = await api<{ messages: ChatMessage[]; typing?: boolean }>(endpoint);
+      setMsgs(r.messages ?? []); setPeerTyping(!!r.typing); setErr(null);
     } catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); }
   }, [endpoint]);
 
@@ -103,7 +120,12 @@ export function ChatView({
     const after = (msgs ?? []).reduce((m, x) => (x.id > m ? x.id : m), 0);
     try {
       const sep = endpoint.includes('?') ? '&' : '?';
-      const r = await api<{ messages: ChatMessage[] }>(`${endpoint}${sep}after_id=${after}`);
+      const r = await api<{ messages: ChatMessage[]; typing?: boolean }>(
+        `${endpoint}${sep}after_id=${after}`);
+      /* Сервер говорит, печатает ли собеседник прямо сейчас. Признак
+         живёт несколько секунд и обновляется тем же опросом, что и
+         сообщения, — отдельного запроса ради него не нужно. */
+      setPeerTyping(!!r.typing);
       const fresh = (r.messages ?? []).filter(x => x.id > after);
       if (fresh.length) setMsgs(m => [...(m ?? []), ...fresh]);
     } catch { /* сеть моргнула — попробуем на следующем круге */ }
@@ -135,20 +157,69 @@ export function ChatView({
     setDraft('');
     haptic.tap();
     setBusy(true);
+    /* Ответ модели ждут здесь и сейчас, и ждать его можно долго. Даём
+       возможность прервать: запрос обрывается, а написанное остаётся
+       в ленте — человек сам решит, спрашивать ли заново. */
+    const ctl = typingLabel ? new AbortController() : null;
+    abortRef.current = ctl;
     try {
       /* Сервер возвращает созданную строку: подменяем ею свою временную,
          чтобы у сообщения появился настоящий номер и оно не пришло
          второй раз опросом. */
-      const r = await api<{ message?: ChatMessage }>(endpoint, { method: 'POST', body: { ...extra, body } });
+      const r = await api<{ message?: ChatMessage }>(endpoint, {
+        method: 'POST', body: { ...extra, body }, signal: ctl?.signal,
+      });
       if (r?.message) setMsgs(m => (m ?? []).map(x => (x.id === local.id ? r.message! : x)));
       else await load();
     } catch (e: any) {
       haptic.error();
-      setMsgs(m => (m ?? []).filter(x => x.id !== local.id));
-      setDraft(body);
-      setErr(e?.message ?? 'Сообщение не отправилось');
-    } finally { setBusy(false); }
-  }, [draft, busy, endpoint, extra, mineType, load]);
+      /* Прервали сами — это не ошибка: вопрос остаётся в ленте, ругаться
+         на человека за собственное нажатие незачем. */
+      if (!ctl?.signal.aborted) {
+        setMsgs(m => (m ?? []).filter(x => x.id !== local.id));
+        setDraft(body);
+        setErr(e?.message ?? 'Сообщение не отправилось');
+      }
+    } finally { setBusy(false); abortRef.current = null; }
+  }, [draft, busy, endpoint, extra, mineType, load, typingLabel]);
+
+  /* Собеседнику видно, что ему пишут. Сообщаем не на каждую букву:
+     сервер держит признак несколько секунд, поэтому хватает одного
+     сигнала на начало набора и одного на его окончание. */
+  const typingSent = useRef(false);
+  const typingOff = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stopTyping = useCallback(() => {
+    if (typingOff.current) { clearTimeout(typingOff.current); typingOff.current = null; }
+    if (!typingEndpoint || !typingSent.current) return;
+    typingSent.current = false;
+    api(typingEndpoint, { method: 'POST', body: { ...extra, active: false }, dedupe: false })
+      .catch(() => {});
+  }, [typingEndpoint, extra]);
+
+  const notifyTyping = useCallback((active: boolean) => {
+    if (!typingEndpoint) return;
+    if (!active) { stopTyping(); return; }
+    if (typingOff.current) clearTimeout(typingOff.current);
+    if (!typingSent.current) {
+      typingSent.current = true;
+      api(typingEndpoint, { method: 'POST', body: { ...extra, active: true }, dedupe: false })
+        .catch(() => {});
+    }
+    /* Перестал печатать — через несколько секунд снимаем признак сами,
+       иначе «печатает» будет висеть у собеседника до отправки. */
+    typingOff.current = setTimeout(stopTyping, 4000);
+  }, [typingEndpoint, extra, stopTyping]);
+
+  /* Ушли с экрана с набранным текстом — признак снимаем, иначе он
+     останется висеть у собеседника. */
+  useEffect(() => stopTyping, [stopTyping]);
+
+  /** Прервать ожидание ответа модели. */
+  const stop = useCallback(() => {
+    haptic.tap();
+    abortRef.current?.abort();
+  }, []);
 
   const upload = useCallback(async (file: { uri: string; name: string; type: string }) => {
     setBusy(true); setErr(null);
@@ -220,10 +291,37 @@ export function ChatView({
                     marginTop: i ? S.lg : 0, marginBottom: S.md,
                   }}>{dayLabel(mm.created_at)}</Text>
                 ) : null}
-                <Bubble m={mm} mine={mm.author_type === mineType} />
+                <Bubble m={mm} mine={mm.author_type === mineType}
+                  markdown={markdown} onReact={onReact} />
               </View>
             );
           })}
+          {/* Пока модель думает — отдельный пузырь вместо пустоты. Рядом
+              «Остановить»: ждать молча непонятно сколько. */}
+          {(typingLabel && busy) || peerTyping ? (
+            <Animated.View entering={FadeInDown.duration(180)}
+              style={{ alignItems: 'flex-start', marginBottom: S.sm }}>
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: S.sm,
+                backgroundColor: p.surface, borderWidth: 1, borderColor: p.border,
+                borderRadius: R.lg, borderBottomLeftRadius: 4,
+                paddingHorizontal: 12, paddingVertical: 10,
+              }}>
+                <ActivityIndicator size="small" color={p.text3} />
+                <Text style={{ ...FONT.callout, color: p.text3 }}>
+                  {busy && typingLabel ? typingLabel : `${title} печатает`}
+                </Text>
+                {/* Прервать можно только собственное ожидание ответа
+                    модели. Человека на том конце остановить нельзя. */}
+                {busy && typingLabel ? <Pressable onPress={stop} hitSlop={10}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1, paddingLeft: S.sm })}>
+                  <Text style={{ ...FONT.callout, color: p.accent, fontWeight: '700' }}>
+                    Остановить
+                  </Text>
+                </Pressable> : null}
+              </View>
+            </Animated.View>
+          ) : null}
         </ScrollView>
       )}
 
@@ -258,7 +356,7 @@ export function ChatView({
       <View style={{ paddingHorizontal: S.lg, paddingTop: S.sm, paddingBottom: S.sm }}>
         <ChatBar
           value={draft}
-          onChange={t => { setDraft(t); setErr(null); }}
+          onChange={t => { setDraft(t); setErr(null); notifyTyping(t.length > 0); }}
           onSend={send}
           onAttach={attach}
           onVoice={voice}
@@ -273,8 +371,13 @@ export function ChatView({
   );
 }
 
-function Bubble({ m, mine }: { m: ChatMessage; mine: boolean }) {
+function Bubble({ m, mine, markdown, onReact }: {
+  m: ChatMessage; mine: boolean;
+  markdown?: boolean;
+  onReact?: (messageId: number, rating: 1 | 0) => void;
+}) {
   const { p } = useApp();
+  const [rated, setRated] = useState<1 | 0 | null>(null);
   const att = m.attachment_url;
   /* У картинок и видео своя рамка — пузырь вокруг них лишний. */
   const bare = !!att && !m.body;
@@ -300,7 +403,21 @@ function Bubble({ m, mine }: { m: ChatMessage; mine: boolean }) {
              однострочной, а длинная не оставляет под собой дыру. Если
              время не влезает, оно переносится само. */
           <Text style={{ fontSize: 15, lineHeight: 20, color: mine ? p.onPrimary : p.text }}>
-            {m.body}
+            {/* Ответ модели приходит markdown-ом. Разбираем его в жирный
+                текст и маркеры — звёздочки посреди реплики выглядят как
+                сбой, а не как разметка. */}
+            {markdown && !mine
+              ? mdLite(m.body).map((line, li, all) => (
+                  <Text key={li}>
+                    {line.map((sp, si) => (
+                      <Text key={si} style={sp.bold ? { fontWeight: '700' } : undefined}>
+                        {sp.text}
+                      </Text>
+                    ))}
+                    {li < all.length - 1 ? '\n' : ''}
+                  </Text>
+                ))
+              : m.body}
             {'   '}
             <Text style={{
               fontSize: 11, lineHeight: 20,
@@ -320,6 +437,28 @@ function Bubble({ m, mine }: { m: ChatMessage; mine: boolean }) {
           </View>
         ) : null}
       </View>
+      {/* Оценка ответа. Не палец вверх и вниз, а сердце и перечёркнутое
+          сердце — так в вебе: речь о том, попал ли совет, а не о том,
+          прав ли собеседник. */}
+      {onReact && !mine && m.id > 0 ? (
+        <View style={{ flexDirection: 'row', gap: S.xs, marginTop: 2, marginLeft: 4 }}>
+          {([1, 0] as const).map(r => (
+            <Pressable key={r} hitSlop={8}
+              onPress={() => { haptic.select(); setRated(r); onReact(m.id, r); }}
+              style={({ pressed }) => ({
+                width: 32, height: 32, borderRadius: 16,
+                alignItems: 'center', justifyContent: 'center',
+                opacity: pressed ? 0.6 : 1,
+              })}>
+              <Icon
+                name={r === 1 ? 'heart' : 'heart-off'}
+                size={16}
+                color={rated === r ? p.accent : p.text3}
+              />
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
     </Animated.View>
   );
 }

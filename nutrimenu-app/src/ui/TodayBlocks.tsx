@@ -207,7 +207,7 @@ export function TodayPlanSource({
   const left = typeof ai?.days_left === 'number' ? ai.days_left : null;
   return (
     <Pressable
-      onPress={() => { haptic.select(); router.push('/client/chat'); }}
+      onPress={() => { haptic.select(); router.push('/ai-chat'); }}
       style={({ pressed }) => [
         styles.row,
         { backgroundColor: p.surface, borderColor: p.border, opacity: pressed ? 0.9 : 1 },
