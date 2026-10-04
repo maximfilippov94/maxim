@@ -146,7 +146,7 @@ export function TodayCycle({ health }: { health: HealthResponse | null }) {
 
   return (
     <Pressable
-      onPress={() => { haptic.select(); router.push('/health'); }}
+      onPress={() => { haptic.select(); router.push('/cycle'); }}
       style={({ pressed }) => [
         styles.row,
         { backgroundColor: tint.fill, borderColor: p.border, opacity: pressed ? 0.9 : 1 },
