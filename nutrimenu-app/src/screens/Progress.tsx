@@ -23,6 +23,22 @@ const dmy = (s?: string | null) => {
   return p.length === 3 ? `${p[2]}.${p[1]}` : s;
 };
 
+/** Плитка сводки: подпись, число, пояснение под ним. */
+function Tile({ label, value, foot }: { label: string; value: string; foot: string }) {
+  const { p } = useApp();
+  return (
+    <View style={{
+      flex: 1, backgroundColor: p.surface, borderRadius: R.md,
+      borderWidth: 1, borderColor: p.border, padding: S.md,
+    }}>
+      <Text style={{ ...FONT.caption, color: p.text3 }}>{label}</Text>
+      <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>{value}</Text>
+      <Text style={{ ...FONT.label, color: p.text3, marginTop: 4, letterSpacing: 0 }}
+        numberOfLines={1}>{foot}</Text>
+    </View>
+  );
+}
+
 type Tab = 'weight' | 'measure' | 'photo';
 const TABS: [Tab, string][] = [['weight', 'Вес'], ['measure', 'Замеры'], ['photo', 'Фото']];
 
@@ -123,11 +139,22 @@ export default function Progress() {
                     ? `${ws.length} ${plural(ws.length, ['измерение', 'измерения', 'измерений'])} с ${dmy(ws[0].measured_on)}`
                     : 'Измерений пока нет'}
                 </Text>
+
+                {/* Старт и число записей — отдельными плитками, как в вебе:
+                    изменение «−3,2 кг» без веса, от которого считали,
+                    читается наполовину. */}
+                {ws.length > 1 ? (
+                  <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
+                    <Tile label="Старт" value={`${kg(first)} кг`} foot={dmy(ws[0].measured_on)} />
+                    <Tile label="Измерений" value={String(ws.length)}
+                      foot={`последнее ${dmy(ws[ws.length - 1].measured_on)}`} />
+                  </View>
+                ) : null}
                 {ws.length >= 2 ? (
                   <View style={{ marginTop: 10 }}>
                     {/* График системный: оси, подписи и перестроение при
                         новой записи рисует сама Swift Charts. */}
-                    <SysChart color={p.mp}
+                    <SysChart color={p.mp} fmt={v => kg(v)}
                       points={ws.map(w => ({ x: dmy(w.measured_on), y: +w.weight_kg }))} />
                   </View>
                 ) : (
@@ -152,10 +179,23 @@ export default function Progress() {
               <>
                 <ListHead>История веса</ListHead>
                 <ListGroup>
-                  {ws.slice().reverse().map((w, i) => (
-                    <ListRow key={w.id} first={i === 0}
-                      label={dmy(w.measured_on)} value={`${kg(+w.weight_kg)} кг`} />
-                  ))}
+                  {ws.slice().reverse().map((w, i, arr) => {
+                    /* Насколько сдвинулось с прошлого раза: человек смотрит
+                       историю именно за этим, а не за списком чисел. */
+                    const prev = arr[i + 1];
+                    const step = prev ? +w.weight_kg - +prev.weight_kg : null;
+                    const shown = step != null && Math.abs(step) >= 0.05;
+                    return (
+                      <ListRow key={w.id} first={i === 0}
+                        label={dmy(w.measured_on)}
+                        value={`${kg(+w.weight_kg)} кг`}
+                        right={shown ? (
+                          <Text style={{ ...FONT.small, color: step! < 0 ? p.mp : p.mf }}>
+                            {step! > 0 ? '+' : '−'}{kg(Math.abs(step!))}
+                          </Text>
+                        ) : undefined} />
+                    );
+                  })}
                 </ListGroup>
               </>
             ) : null}

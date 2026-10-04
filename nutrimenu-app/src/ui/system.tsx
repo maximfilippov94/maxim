@@ -16,6 +16,7 @@ import { useApp } from '../store';
 import { S, R, FONT } from '../theme';
 import { hasExpoUI } from '../native';
 import { Icon } from './Icon';
+import { LineChart } from './Chart';
 import { haptic } from '../haptics';
 
 export const sysNative = hasExpoUI && Platform.OS === 'ios';
@@ -333,10 +334,13 @@ function DatePlain({ value, onChange, min, max }: {
  * График веса. На iOS — Swift Charts: те же оси, та же анимация
  * перестроения и то же поведение при повороте, что в «Здоровье».
  */
-export function SysChart({ points, color, height = 150 }: {
+export function SysChart({ points, color, height = 150, labels = true, fmt }: {
   points: { x: string; y: number }[];
   color?: string;
   height?: number;
+  /** Подписи осей и крайних точек. */
+  labels?: boolean;
+  fmt?: (v: number) => string;
 }) {
   const { p } = useApp();
   const c = color ?? p.mp;
@@ -354,36 +358,7 @@ export function SysChart({ points, color, height = 150 }: {
       </Host>
     );
   }
-  return <ChartPlain points={points} color={c} height={height} />;
-}
-
-/** Запасной график: линия с заливкой под ней — как в вебе. */
-function ChartPlain({ points, color, height }: {
-  points: { x: string; y: number }[]; color: string; height: number;
-}) {
-  const Svg = require('react-native-svg');
-  const { default: SvgRoot, Polyline, Polygon, Circle, Defs, LinearGradient, Stop } = Svg;
-  const W = 320, H = height, PX = 8, PY = 18, n = points.length;
-  if (n < 2) return <View style={{ height }} />;
-  const v = points.map(pt => pt.y);
-  const mn = Math.min(...v), mx = Math.max(...v);
-  const pad = (mx - mn) * 0.3 || 1, lo = mn - pad, hi = mx + pad;
-  const X = (i: number) => PX + i * (W - 2 * PX) / (n - 1);
-  const Y = (val: number) => PY + (hi - val) / (hi - lo) * (H - 2 * PY);
-  const pts = v.map((val, i) => `${X(i).toFixed(1)},${Y(val).toFixed(1)}`).join(' ');
-  return (
-    <SvgRoot width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
-      <Defs>
-        <LinearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={color} stopOpacity="0.16" />
-          <Stop offset="1" stopColor={color} stopOpacity="0" />
-        </LinearGradient>
-      </Defs>
-      <Polygon points={`${PX},${H} ${pts} ${W - PX},${H}`} fill="url(#wg)" />
-      <Polyline points={pts} fill="none" stroke={color} strokeWidth={2}
-        strokeLinecap="round" strokeLinejoin="round" />
-      <Circle cx={X(0)} cy={Y(v[0])} r={3} fill={color} />
-      <Circle cx={X(n - 1)} cy={Y(v[n - 1])} r={4.5} fill={color} />
-    </SvgRoot>
-  );
+  /* Запасной чертёж живёт в своём модуле: у него есть оси и подписи, и
+     кроме графиков прогресса его ждут вода и выручка. */
+  return <LineChart points={points} color={c} height={height} labels={labels} fmt={fmt} />;
 }

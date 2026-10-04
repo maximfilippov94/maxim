@@ -32,7 +32,7 @@ export function ListHead({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ListRow({ icon, label, value, onPress, first, danger, tint, action }: {
+export function ListRow({ icon, label, value, onPress, first, danger, tint, action, right }: {
   icon?: string;
   label: string;
   /** Правая подпись вместо шеврона — для строк без перехода */
@@ -44,6 +44,8 @@ export function ListRow({ icon, label, value, onPress, first, danger, tint, acti
   tint?: string;
   /** Строка что-то делает здесь же, а не открывает экран — шеврон не нужен */
   action?: boolean;
+  /** Своя подпись за правым краем значения: цветная дельта, метка. */
+  right?: React.ReactNode;
 }) {
   const { p } = useApp();
   const color = danger ? p.danger : p.text;
@@ -63,6 +65,7 @@ export function ListRow({ icon, label, value, onPress, first, danger, tint, acti
         marginLeft: icon ? 0 : 0,
       }}>{label}</Text>
       {value ? <Text style={{ fontSize: 15, color: p.text3, marginRight: onPress && !action ? 8 : 0 }}>{value}</Text> : null}
+      {right ? <View style={{ marginLeft: 10, minWidth: 54, alignItems: 'flex-end' }}>{right}</View> : null}
       {onPress && !action ? <Icon name="chevr" size={14} color={p.text3} width={2} /> : null}
     </View>
   );
