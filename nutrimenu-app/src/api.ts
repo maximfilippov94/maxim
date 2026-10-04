@@ -718,7 +718,9 @@ export interface SpDashboard {
   clients: number;
   published_menus: number;
   unread_messages: number;
-  avg_adherence: number;
+  /* Считается от плана и равна null, когда ни у кого из клиентов нет
+     опубликованного меню: считать не от чего. */
+  avg_adherence: number | null;
   avg_weight_delta: number | null;
   meals_today: number;
   meals_week: number;

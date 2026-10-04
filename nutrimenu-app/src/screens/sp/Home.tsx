@@ -133,8 +133,11 @@ export default function SpHome() {
         </Card>
         <Card style={{ flex: 1 }}>
           <Label>Приверженность</Label>
+          {/* Сервер считает её от плана и отдаёт null, когда ни у кого нет
+              опубликованного меню. Ноль в этом месте — неправда: это не
+              «никто не ест», а «считать пока не от чего». */}
           <Text style={{ fontSize: 26, fontWeight: '700', color: p.text, marginTop: 3 }}>
-            {d?.avg_adherence ?? 0}%
+            {d?.avg_adherence == null ? '—' : `${d.avg_adherence}%`}
           </Text>
           <View style={{ marginTop: 8 }}>
             <Bar value={(d?.avg_adherence ?? 0) / 100} />

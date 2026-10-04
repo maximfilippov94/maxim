@@ -68,7 +68,9 @@ export default function SpAnalytics() {
           <Card style={{ marginTop: S.md }}>
             <Label>Приверженность меню</Label>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-              <Text style={{ ...FONT.num, color: p.text }}>{d.avg_adherence}%</Text>
+              <Text style={{ ...FONT.num, color: p.text }}>
+                {d.avg_adherence == null ? '—' : `${d.avg_adherence}%`}
+              </Text>
               <Muted style={{ marginLeft: 8 }}>
                 по {scored.length} {plural(scored.length, ['клиенту', 'клиентам', 'клиентам'])}
               </Muted>
