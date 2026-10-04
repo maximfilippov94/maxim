@@ -2,7 +2,7 @@
  * Клиент к существующему бэкенду EQUA. Ни один эндпоинт не меняется —
  * приложение говорит с тем же /api/v1, что и веб-версия.
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { readToken, writeToken } from './tokenStore';
 
 /** Адрес сервера. На проде — боевой домен, при разработке подменяется. */
 export const API_BASE =
@@ -11,16 +11,23 @@ export const API_BASE =
 let token: string | null = null;
 
 export async function loadToken() {
-  token = await AsyncStorage.getItem('nm_token');
+  token = await readToken();
   return token;
 }
 export async function setToken(t: string | null) {
   token = t;
-  if (t) await AsyncStorage.setItem('nm_token', t);
-  else await AsyncStorage.removeItem('nm_token');
+  await writeToken(t);
 }
 export function getToken() {
   return token;
+}
+
+/* Сессия протухла — об этом должно узнать приложение целиком, а не тот
+   экран, которому не повезло спросить первым. Иначе человек видит ошибку
+   на одном экране и рабочий интерфейс на соседнем. */
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
 }
 
 export class ApiError extends Error {
@@ -51,9 +58,75 @@ const RETRY_STATUS = [429, 502, 503, 504];
 
 const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+/* Ответы на GET держим недолго: экран «Сегодня» открывается с трёх
+   разных мест подряд, и каждый раз дёргать сервер незачем. Срок короткий —
+   данные про съеденное меняются в ту же минуту. */
+const GET_TTL_MS = 2500;
+const getCache = new Map<string, { at: number; data: any }>();
+const getInflight = new Map<string, Promise<any>>();
+/* Двойной тап по кнопке не должен создавать две записи: пока одинаковая
+   мутация выполняется, повторные вызовы получают тот же Promise. */
+const mutationInflight = new Map<string, Promise<any>>();
+
+/** Сбросить кэш GET — после любой записи, которая меняет видимые данные. */
+export function dropGetCache(prefix?: string) {
+  if (!prefix) { getCache.clear(); return; }
+  for (const k of [...getCache.keys()]) if (k.startsWith(prefix)) getCache.delete(k);
+}
+
+export interface ApiOptions {
+  method?: string;
+  body?: any;
+  retry?: boolean;
+  /** Отмена снаружи: уход с экрана, новый запрос поиска, «Остановить». */
+  signal?: AbortSignal;
+  /** Не брать и не класть в кэш — для данных, которые нужны свежими. */
+  noCache?: boolean;
+  /** Разрешить одинаковые параллельные мутации (по умолчанию склеиваются). */
+  dedupe?: boolean;
+}
+
 export async function api<T = any>(
   path: string,
-  opt: { method?: string; body?: any; retry?: boolean } = {},
+  opt: ApiOptions = {},
+): Promise<T> {
+  const method0 = (opt.method ?? 'GET').toUpperCase();
+  const cacheable = method0 === 'GET' && !opt.noCache && !opt.signal;
+  if (cacheable) {
+    const hit = getCache.get(path);
+    if (hit && Date.now() - hit.at < GET_TTL_MS) return hit.data as T;
+    const pending = getInflight.get(path);
+    if (pending) return pending as Promise<T>;
+  }
+  const mutation = method0 !== 'GET' && opt.dedupe !== false;
+  const mutationKey = mutation
+    ? method0 + ' ' + path + ' ' + (opt.body instanceof FormData ? 'form' : JSON.stringify(opt.body ?? null))
+    : '';
+  if (mutation && mutationInflight.has(mutationKey)) {
+    return mutationInflight.get(mutationKey) as Promise<T>;
+  }
+
+  const job = request<T>(path, opt);
+
+  if (cacheable) {
+    getInflight.set(path, job);
+    job.then(
+      data => { getCache.set(path, { at: Date.now(), data }); },
+      () => {},
+    ).finally(() => getInflight.delete(path));
+  }
+  if (mutation) {
+    mutationInflight.set(mutationKey, job);
+    job.catch(() => {}).finally(() => mutationInflight.delete(mutationKey));
+    /* Любая запись могла изменить то, что лежит в кэше чтений. */
+    job.then(() => dropGetCache(), () => {});
+  }
+  return job;
+}
+
+async function request<T = any>(
+  path: string,
+  opt: ApiOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   let body: string | FormData | undefined;
@@ -84,17 +157,28 @@ export async function api<T = any>(
        бесконечности: телефон в лифте не рвёт сокет, а просто молчит. */
     const abort = new AbortController();
     const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+    /* Отмена снаружи: человек ушёл с экрана, набрал в поиске дальше или
+       нажал «Остановить». Запрос обрывается сразу, а не доживает до
+       таймаута, занимая соединение. */
+    const outer = opt.signal;
+    const relay = () => abort.abort();
+    if (outer) {
+      if (outer.aborted) { clearTimeout(timer); throw new ApiError('Запрос отменён', 0); }
+      outer.addEventListener('abort', relay);
+    }
     try {
       res = await fetch(API_BASE + '/api/v1' + path, {
         method, headers, body, signal: abort.signal,
       });
     } catch {
+      if (outer?.aborted) throw new ApiError('Запрос отменён', 0);
       if (attempt < tries - 1 && timeLeft()) { await wait(BACKOFF[attempt]); continue; }
       /* Обрыв связи и ошибка сервера — разные вещи: на первом показываем
          «нет сети», на втором сообщение с сервера. */
       throw new ApiError('Нет связи с сервером. Проверьте интернет.', 0);
     } finally {
       clearTimeout(timer);
+      if (outer) outer.removeEventListener('abort', relay);
     }
 
     if (RETRY_STATUS.includes(res.status) && attempt < tries - 1 && timeLeft()) {
@@ -109,6 +193,9 @@ export async function api<T = any>(
       /* пустое тело — оставляем {} */
     }
     if (!res.ok) {
+      /* Протухшая сессия — случай для всего приложения, а не для одного
+         экрана: сообщаем наверх, там решат увести на вход. */
+      if (res.status === 401 && token) onUnauthorized?.();
       /* «Сервер занят» отличаем от настоящей ошибки: первое стоит
          просто повторить рукой, второе — повод разбираться. */
       const busy = RETRY_STATUS.includes(res.status)

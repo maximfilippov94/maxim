@@ -7,6 +7,7 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import * as Notifications from 'expo-notifications';
 import { AppProvider, useApp } from '../src/store';
 import { UpdateGate } from '../src/ui/UpdateGate';
+import { ToastHost } from '../src/ui/Toast';
 import { setupNotificationHandler } from '../src/push';
 
 /* Пока приложение открыто, уведомление всё равно показываем баннером:
@@ -56,12 +57,16 @@ function Root() {
      куда его уводит нажатие на уведомление. */
   return (
     <UpdateGate>
+      {/* Короткие сообщения («+10 баллов», «Сохранено») живут над всей
+          навигацией: их показывает любой экран, а всплывают они в одном
+          и том же месте над доком. */}
       {/* «Уменьшение движения» из настроек телефона уважает всё
           приложение сразу: появления, полосы и пульсации гаснут
           там, где человек об этом попросил системой, а не в каждом
           экране по отдельности. */}
       <ReducedMotionConfig mode={ReduceMotion.System} />
       <StatusBar style={p.name === 'light' ? 'dark' : 'light'} />
+      <ToastHost>
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" />
@@ -179,6 +184,7 @@ function Root() {
           }}
         />
       </Stack>
+      </ToastHost>
     </UpdateGate>
   );
 }

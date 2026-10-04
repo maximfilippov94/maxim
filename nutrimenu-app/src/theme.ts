@@ -1,8 +1,15 @@
 /**
- * Палитры приложения — фирменные цвета EQUA, те же значения, что в вебе:
- * #2E7D63 «здоровье и рост», #121820 «уверенность», #9AA3AD «баланс»,
- * фон #F5F6F7, разделители #E5E7EB.
- * Отклонения от брендбука только по контрасту, они помечены.
+ * Тема EQUA для мобильного клиента.
+ *
+ * Значения взяты из текущего веба (`app/css/tokens.css`, релиз v211) и из
+ * UI-контракта `IOS_DESIGN_SYSTEM.md` (v208/v209). Это не вольный пересказ:
+ * палитра, радиусы, высоты и тайминги совпадают с вебом числом в число,
+ * иначе мобильное приложение и PWA разъедутся на первой же правке.
+ *
+ * Акцент продукта — лаймовый #DFFF3A. Он лежит в заливке кнопок и выделений,
+ * а текст поверх него тёмный: лайм на белом даёт мало контраста, поэтому для
+ * надписей и мелких значков берётся `accent` (в светлой теме это глубокий
+ * оливковый #536300), а не сама заливка.
  */
 export type ThemeName = 'dark' | 'light';
 export type ThemePref = ThemeName | 'auto';
@@ -16,85 +23,109 @@ export interface Palette {
   text: string;
   text2: string;
   text3: string;
-  primary: string;      // заливка кнопок: фирменный зелёный
-  /* Тот же зелёный, но пригодный для текста и мелких значков: на своём
-     фоне #2E7D63 даёт 3,5:1 — заливке хватает, надписи нет. */
+  primary: string;      // заливка кнопок и выделений: фирменный лайм
+  /** Акцент, пригодный для текста и мелких значков на фоне страницы. */
   accent: string;
   primaryHover: string;
+  primaryPress: string;
   primarySoft: string;
+  primarySofter: string;
   onPrimary: string;    // текст поверх акцентной заливки
   mp: string; mf: string; mc: string;   // белки / жиры / углеводы
   premium: string;
   premiumSoft: string;
   border: string;
   borderSoft: string;
+  /** Обводка кнопки без заливки: штатный `border` для неё слишком бледный. */
+  btnLine: string;
   track: string;        // подложка прогресс-баров
   ov1: string; ov2: string; ov3: string;
+  good: string;
   danger: string;
-  warn: string;        // расхождение заметное, но не ошибка
-
+  warn: string;
+  water: string;
+  /** Материал плавающих панелей: док, тулбар, шапка листа. */
+  material: string;
+  materialStrong: string;
+  separator: string;
   videoBg: string;
   shadow: string;
 }
 
-/** Тёмная тема: фирменный #121820 и зелёный акцент. Тема по умолчанию. */
+/** Тёмная тема — основная для EQUA. */
 export const NAVY: Palette = {
   name: 'dark',
   page: '#121820',
   bg: '#121820',
-  surface: '#1B222C',
-  inset: '#242C38',
-  text: '#F5F6F7',
-  text2: '#9AA3AD',        // фирменный «дополнительный», 6,9:1 на фоне
-  text3: '#8B95A1',
-  primary: '#2E7D63',
-  accent: '#4CA585',       // 5,9:1 на фоне; сам #2E7D63 даёт 3,5:1
-  primaryHover: '#37946F',
-  primarySoft: 'rgba(46,125,99,0.20)',
-  onPrimary: '#FFFFFF',
-  mp: '#4CA585', mf: '#E0A44A', mc: '#6FA3EE',
-  premium: '#E8C46A',
-  premiumSoft: 'rgba(232,196,106,0.14)',
+  surface: '#1A222B',
+  inset: '#222C36',
+  text: '#F7F7F4',
+  text2: '#ACB6C1',
+  text3: '#9AA3AD',
+  primary: '#DFFF3A',
+  accent: '#DFFF3A',
+  primaryHover: '#E8FF79',
+  primaryPress: '#C9EB24',
+  primarySoft: 'rgba(223,255,58,0.14)',
+  primarySofter: 'rgba(223,255,58,0.08)',
+  onPrimary: '#121820',
+  mp: '#BBA1F4', mf: '#DFFF3A', mc: '#80CEE4',
+  premium: '#F4BD71',
+  premiumSoft: 'rgba(244,189,113,0.14)',
   border: 'rgba(255,255,255,0.07)',
-  borderSoft: 'rgba(255,255,255,0.05)',
-  track: 'rgba(255,255,255,0.09)',
+  borderSoft: 'rgba(255,255,255,0.04)',
+  btnLine: 'rgba(255,255,255,0.38)',
+  track: 'rgba(255,255,255,0.07)',
   ov1: 'rgba(255,255,255,0.04)',
   ov2: 'rgba(255,255,255,0.06)',
   ov3: 'rgba(255,255,255,0.09)',
-  danger: '#E2564D',
-  warn: '#E0A44A',
+  good: '#A5DB80',
+  danger: '#FF9393',
+  warn: '#F4BD71',
+  water: '#3EA5C8',
+  material: 'rgba(26,34,43,0.84)',
+  materialStrong: 'rgba(26,34,43,0.96)',
+  separator: 'rgba(247,247,244,0.11)',
   videoBg: '#0C1118',
   shadow: '#000000',
 };
 
+/** Светлая тема: ivory-фон, белые карточки, тот же лайм в действии. */
 export const PORCELAIN: Palette = {
   name: 'light',
-  page: '#E8EAED',
-  bg: '#F5F6F7',           // фирменный фон
+  page: '#F7F7F4',
+  bg: '#F7F7F4',
   surface: '#FFFFFF',
-  inset: '#ECEEF1',
-  text: '#121820',         // фирменный тёмный
-  text2: '#5B6572',
-  /* Фирменный #9AA3AD на светлом фоне даёт 2,3:1 — годится разделителям
-     и неактивным элементам, но не подписям. Для текста берём глубже. */
-  text3: '#6B7480',
-  primary: '#2E7D63',      // с белым текстом 5,0:1
-  accent: '#216A52',       // 6,0:1 на фоне — для ссылок и мелких подписей
-  primaryHover: '#276B55',
-  primarySoft: '#E6F1EC',
-  onPrimary: '#FFFFFF',
-  mp: '#2E7D63', mf: '#C98620', mc: '#3F79D6',
-  premium: '#B4600F',
-  premiumSoft: '#FBEEDA',
-  border: '#E5E7EB',       // фирменный разделитель
-  borderSoft: 'rgba(18,24,32,0.055)',
-  track: '#E5E7EB',
+  inset: '#ECEDE8',
+  text: '#121820',
+  text2: '#52606C',
+  text3: '#64707A',
+  primary: '#DFFF3A',
+  /* Сам лайм на светлом фоне нечитаем как текст — для надписей оливковый. */
+  accent: '#536300',
+  primaryHover: '#E8FF79',
+  primaryPress: '#C9EB24',
+  primarySoft: 'rgba(223,255,58,0.27)',
+  primarySofter: 'rgba(223,255,58,0.13)',
+  onPrimary: '#121820',
+  mp: '#8062B4', mf: '#6B7D0B', mc: '#287B92',
+  premium: '#996110',
+  premiumSoft: 'rgba(153,97,16,0.12)',
+  border: 'rgba(18,24,32,0.08)',
+  borderSoft: 'rgba(18,24,32,0.04)',
+  btnLine: 'rgba(18,24,32,0.50)',
+  track: 'rgba(18,24,32,0.08)',
   ov1: 'rgba(18,24,32,0.04)',
   ov2: 'rgba(18,24,32,0.07)',
-  ov3: 'rgba(18,24,32,0.1)',
-  danger: '#D3453C',
-  warn: '#C98620',
-  videoBg: '#ECEEF1',
+  ov3: 'rgba(18,24,32,0.10)',
+  good: '#47792B',
+  danger: '#B72B3B',
+  warn: '#996110',
+  water: '#3EA5C8',
+  material: 'rgba(255,255,255,0.84)',
+  materialStrong: 'rgba(255,255,255,0.96)',
+  separator: 'rgba(18,24,32,0.11)',
+  videoBg: '#ECEDE8',
   shadow: '#121820',
 };
 
@@ -103,16 +134,58 @@ export const PALETTES: Record<ThemeName, Palette> = {
   light: PORCELAIN,
 };
 
-/** Шкала отступов: одно значение на всё приложение, без «на глаз». */
-export const S = { xs: 4, sm: 6, md: 9, lg: 14, xl: 20, xxl: 28 } as const;
-export const R = { sm: 10, md: 13, lg: 16, xl: 20, pill: 999 } as const;
+/** Отступы по сетке в 4 px — как требует UI-контракт. */
+export const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28 } as const;
 
+/** Радиусы: control 14, карточка 22, лист 28 — значения веба. */
+export const R = { sm: 10, control: 14, md: 18, lg: 22, xl: 28, pill: 999 } as const;
+
+/**
+ * Геометрия экрана. Боковое поле 20 — единственное на всё приложение;
+ * высота дока нужна, чтобы содержимое прокручивалось мимо него, а не под ним.
+ */
+export const LAYOUT = {
+  screenPad: 20,
+  dockHeight: 72,
+  dockGap: 12,
+  /** Минимальная цель нажатия. Меньше — промах пальцем. */
+  touch: 44,
+  controlHeight: 50,
+  controlCompact: 42,
+  rowMin: 60,
+  rowMax: 72,
+  toolbar: 44,
+} as const;
+
+/**
+ * Типографика по контракту: 34 — крупный заголовок, 28 — обычный заголовок
+ * экрана, 22 — раздел, 16 — текст, 15 — выноска, 14 — подзаголовок,
+ * 12 — подпись. Ключи оставлены прежними, чтобы не переписывать все экраны.
+ */
 export const FONT = {
-  h1: { fontSize: 33, fontWeight: '700' as const, letterSpacing: -0.9 },
-  h2: { fontSize: 20, fontWeight: '700' as const, letterSpacing: -0.4 },
-  h3: { fontSize: 15, fontWeight: '600' as const, letterSpacing: -0.2 },
-  body: { fontSize: 14, fontWeight: '400' as const },
-  small: { fontSize: 12.5, fontWeight: '400' as const },
-  label: { fontSize: 10, fontWeight: '600' as const, letterSpacing: 1.5 },
+  large: { fontSize: 34, fontWeight: '700' as const, letterSpacing: -1.0 },
+  h1: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.7 },
+  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.4 },
+  h3: { fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.2 },
+  body: { fontSize: 16, fontWeight: '400' as const },
+  callout: { fontSize: 15, fontWeight: '400' as const },
+  small: { fontSize: 14, fontWeight: '400' as const },
+  caption: { fontSize: 12, fontWeight: '400' as const },
+  label: { fontSize: 11, fontWeight: '600' as const, letterSpacing: 1.2 },
   num: { fontSize: 32, fontWeight: '700' as const, letterSpacing: -1.1 },
 };
+
+/**
+ * Движение. Коротко и спокойно: нажатие почти незаметно сжимает элемент,
+ * переходы в пятую долю секунды, лист выезжает за треть. Подпрыгивающий
+ * интерфейс контракт запрещает прямо.
+ */
+export const MOTION = {
+  press: 140,
+  pressScale: 0.985,
+  standard: 220,
+  sheet: 320,
+  /** Пружина для выбора и листов: без заметного перелёта. */
+  spring: { damping: 22, stiffness: 240, mass: 1 },
+  springSheet: { damping: 26, stiffness: 220, mass: 1 },
+} as const;

@@ -17,6 +17,9 @@ import { PushNudge } from '../ui/PushNudge';
 import { Announce } from '../ui/Announce';
 import { round, kg, todayLabel, plural } from '../format';
 import { haptic } from '../haptics';
+import { useToast } from '../ui/Toast';
+import { TodayWorkout, TodayCycle, TodayPlanSource } from '../ui/TodayBlocks';
+import type { WorkoutToday, HealthResponse, AiAccess } from '../ui/TodayBlocks';
 
 export default function Today() {
   const { p, me } = useApp();
@@ -25,13 +28,37 @@ export default function Today() {
   const [data, setData] = useState<TodayResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* Тренировка и цикл живут в своих разделах, но на «Сегодня» показываются
+     строкой. Грузим их рядом с планом, не блокируя его: если раздел не
+     отвечает, экран всё равно открывается — просто без этой строки. */
+  const [wo, setWo] = useState<WorkoutToday | null>(null);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
+  /* Имя ведущего специалиста живёт в своём разделе: в `/me` его нет, а
+     выдумывать поле нельзя. Берём первого живого — AI показывается
+     отдельной строкой и сюда не попадает. */
+  const [specName, setSpecName] = useState<string | null>(null);
+  const toast = useToast();
 
   const load = useCallback(async () => {
-    try { setData(await api<TodayResponse>('/client/today')); setErr(null); }
+    try {
+      const j = await api<TodayResponse & { ai_access?: AiAccess | null }>('/client/today');
+      setData(j); setErr(null);
+    }
     catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  const loadSide = useCallback(async () => {
+    api<WorkoutToday>('/client/workouts').then(setWo).catch(() => {});
+    api<HealthResponse>('/client/health').then(setHealth).catch(() => {});
+    api<{ specialists?: { name?: string; is_ai?: number | boolean }[] }>('/client/my-specialist')
+      .then(j => {
+        const human = (j.specialists ?? []).find(x => !x.is_ai);
+        setSpecName(human?.name ?? null);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => { load(); loadSide(); }, [load, loadSide]);
 
   /* Вода и вес меняются на других экранах, а этот остаётся в памяти —
      без перечитывания при возврате он показывал бы вчерашнее число. */
@@ -41,29 +68,46 @@ export default function Today() {
     setBusy(true); await load(); setBusy(false);
   }, [load]);
 
-  /* Отметка «съедено» рисуется сразу, запрос уходит следом: ожидание ответа
-     на каждое нажатие в списке из восьми блюд ощущается как залипание. */
-  const toggle = useCallback(async (item: MealItem) => {
-    const eaten = item.log_status === 'eaten';
+  /* Запрос отметки без лишнего: оптимистичное обновление и откат при
+     ошибке. Отдельно от уведомления, чтобы кнопка «Отменить» вызывала
+     именно его, а не обработчик самого себя. */
+  const postStatus = useCallback(async (item: MealItem, status: 'eaten' | 'planned') => {
+    const before = item.log_status;
     haptic.select();
     setData(d => d && ({
       ...d,
-      items: d.items.map(x => x.id === item.id
-        ? { ...x, log_status: eaten ? 'planned' : 'eaten' } : x),
+      items: d.items.map(x => x.id === item.id ? { ...x, log_status: status } : x),
     }));
     try {
-      await api(`/client/meals/${item.id}/log`, {
-        method: 'POST', body: { status: eaten ? 'planned' : 'eaten' },
-      });
+      await api(`/client/meals/${item.id}/log`, { method: 'POST', body: { status } });
       load();
+      return true;
     } catch {
       haptic.error();
       setData(d => d && ({
         ...d,
-        items: d.items.map(x => x.id === item.id ? { ...x, log_status: item.log_status } : x),
+        items: d.items.map(x => x.id === item.id ? { ...x, log_status: before } : x),
       }));
+      return false;
     }
   }, [load]);
+
+  /* Отметка «съедено» рисуется сразу, запрос уходит следом: ожидание ответа
+     на каждое нажатие в списке из восьми блюд ощущается как залипание.
+     Промах пальцем по соседнему блюду иначе пришлось бы искать и снимать
+     руками — отмена висит рядом с начислением. */
+  const toggle = useCallback(async (item: MealItem) => {
+    const next = item.log_status === 'eaten' ? 'planned' : 'eaten';
+    const ok = await postStatus(item, next);
+    if (ok && next === 'eaten') {
+      toast('+10 баллов', {
+        kind: 'award',
+        sub: `${item.dish_name} · отмечено`,
+        actionLabel: 'Отменить',
+        onAction: () => { postStatus({ ...item, log_status: 'eaten' }, 'planned'); },
+      });
+    }
+  }, [postStatus, toast]);
 
   if (!data && !err) {
     return (
@@ -243,6 +287,19 @@ export default function Today() {
             </View>
           </Card>
         </Pressable>
+      </Animated.View>
+
+      {/* Кто ведёт план, движение на сегодня и женское здоровье — три
+          строки перед планом питания. Порядок тот же, что в вебе: человек
+          сперва видит, с кем работает и что у него сегодня, и только потом
+          разбирает еду по приёмам. */}
+      <Animated.View entering={FadeInDown.delay(120).duration(300)} style={{ gap: S.sm, marginBottom: S.md }}>
+        <TodayPlanSource
+          specialistName={specName}
+          ai={(data as any)?.ai_access ?? null}
+        />
+        <TodayWorkout data={wo} />
+        <TodayCycle health={health} />
       </Animated.View>
 
       {/* Приёмы пищи. Пока специалиста нет, ждать нечего: меню составляет

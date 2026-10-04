@@ -6,7 +6,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { Appearance, Platform, useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PALETTES, Palette, ThemeName, ThemePref } from './theme';
-import { api, loadToken, setToken, Me, SignUp } from './api';
+import { api, loadToken, setToken, setUnauthorizedHandler, Me, SignUp } from './api';
 import { registerPush, unregisterPush } from './push';
 import { AppConfig, DEFAULT_CONFIG, fetchAppConfig, featureOn } from './appConfig';
 
@@ -61,6 +61,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       setReady(true);
     })();
+  }, []);
+
+  /* Сессия может протухнуть не на запуске, а посреди работы: пароль сменили
+     на другом устройстве, сеанс закрыли из панели. Тогда любой запрос
+     возвращает 401, и приложение целиком возвращается на вход — без этого
+     человек остался бы на экране с данными, которые уже не обновляются. */
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setToken(null).catch(() => {});
+      setMe(null);
+    });
+    return () => setUnauthorizedHandler(null);
   }, []);
 
   const resolved: ThemeName =
