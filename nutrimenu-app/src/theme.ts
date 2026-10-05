@@ -211,6 +211,13 @@ export function macroColor(p: Palette, cur: number, target: number): string {
 export const CYCLE = '#C28D7F';
 
 /**
+ * Звезда оценки — янтарная, значение из веба (`.dish-rate-stars button.on`,
+ * `.dish-community-rating .ic`). Один цвет на оценку блюда и отзыв о
+ * специалисте: раньше они были разными оттенками.
+ */
+export const STAR = '#F5AE32';
+
+/**
  * Смешение цвета с подложкой — то же, что `color-mix(in srgb, a p%, b)`
  * в CSS веба: доля цвета поверх фона панели, в sRGB, без гаммы.
  */

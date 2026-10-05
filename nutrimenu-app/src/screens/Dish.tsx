@@ -6,7 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, mediaUrl, DishItem, Replacement, ReplacementSource, MEAL_TITLES } from '../api';
-import { S, R, FONT } from '../theme';
+import { S, R, FONT, STAR, alpha } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
@@ -16,11 +16,9 @@ import { haptic } from '../haptics';
 
 const REASONS = ['Не было времени', 'Не было продуктов', 'Не хотелось', 'Ел(а) другое', 'Другое'];
 
-/* Звезда оценки янтарная в обеих темах — значение из веба
-   (`.dish-rate-stars button.on`). Это не акцент продукта: лайм здесь
-   спорил бы с отметкой «съедено», которая им же и красится. */
-const STAR = '#F5AE32';
-const STAR_SOFT = 'rgba(245,174,50,0.13)';
+/* Подложка выбранной звезды — те же 13 %, что в вебе. Сам цвет один
+   на всё приложение и лежит в theme. */
+const STAR_SOFT = alpha(STAR, 13);
 
 export default function Dish() {
   const { p } = useApp();

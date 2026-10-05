@@ -14,9 +14,11 @@ import { haptic } from '../haptics';
 import { hasExpoUI } from '../native';
 import { Loading, Fail } from './Shopping';
 
-/* Ходовые объёмы: стакан, кружка, бутылка. Четвёртой кнопкой отмена —
-   промахнуться легко, а ждать до завтра из-за лишнего стакана глупо. */
-const STEPS = [200, 300, 500];
+/* Те же объёмы, что в вебе: 100, 250, 500. Были 200/300/500 — свой
+   набор, из-за которого одно и то же действие на сайте и в приложении
+   добавляло разное. Отмена убирает 250 мл, тоже как там. */
+const STEPS = [100, 250, 500];
+const UNDO = 250;
 /* Нормы на выбор. Сервер принимает от 500 до 6000 мл, но шкала из шести
    кнопок на телефоне не читается: четыре частых значения закрывают почти
    всех, а точную цифру человек всё равно не знает. */
@@ -66,7 +68,7 @@ function Steps({ onAdd }: { onAdd: (ml: number) => void }) {
           ))}
         </HStack>
         {/* Промахнуться легко, а ждать до завтра из-за лишнего стакана глупо */}
-        <Button label={`Отменить ${STEPS[0]} мл`} onPress={() => onAdd(-STEPS[0])}
+        <Button label={`Убрать ${UNDO} мл`} onPress={() => onAdd(-UNDO)}
           modifiers={[buttonStyle('plain')]} />
       </VStack>
     </Host>
@@ -95,9 +97,9 @@ function StepsPlain({ onAdd }: { onAdd: (ml: number) => void }) {
 function CancelPlain({ onAdd }: { onAdd: (ml: number) => void }) {
   const { p } = useApp();
   return (
-    <Pressable onPress={() => onAdd(-STEPS[0])} hitSlop={10}
+    <Pressable onPress={() => onAdd(-UNDO)} hitSlop={10}
       style={({ pressed }) => ({ alignSelf: 'center', marginTop: S.lg, opacity: pressed ? 0.5 : 1 })}>
-      <Text style={{ ...FONT.small, color: p.text3 }}>Отменить последние {STEPS[0]} мл</Text>
+      <Text style={{ ...FONT.small, color: p.text3 }}>Убрать {UNDO} мл</Text>
     </Pressable>
   );
 }

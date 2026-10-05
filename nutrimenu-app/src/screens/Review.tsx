@@ -19,7 +19,7 @@ import { useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, MyReview } from '../api';
-import { S, R, FONT } from '../theme';
+import { S, R, FONT, STAR, alpha } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
@@ -121,11 +121,13 @@ export default function ReviewScreen() {
                       style={({ pressed }) => ({
                         width: 52, height: 52, borderRadius: R.md,
                         alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: n <= rating ? p.premiumSoft : p.inset,
+                        backgroundColor: n <= rating ? alpha(STAR, 13) : p.inset,
                         transform: [{ scale: pressed ? 0.94 : 1 }],
                       })}>
+                      {/* Тот же янтарный, что у оценки блюда: звёзды в
+                          приложении были разных оттенков. */}
                       <Icon name="star" size={24}
-                        color={n <= rating ? p.premium : p.text3} width={1.9} />
+                        color={n <= rating ? STAR : p.text3} width={1.9} />
                     </Pressable>
                   ))}
                 </View>
