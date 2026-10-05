@@ -937,6 +937,10 @@ export interface WoPlanItem {
   cover?: string | null; kcal: number;
   session_id: number | null;
   status: 'planned' | 'in_progress' | 'done' | 'skipped';
+  /* Кто составил программу: сервер кладёт оба поля в каждую позицию
+     плана, для AI-тренера имя подставляется как «EQUA AI». */
+  is_ai?: number | boolean;
+  trainer_name?: string | null;
 }
 export interface WoWeek {
   week_start: string; week: WoPlanItem[];

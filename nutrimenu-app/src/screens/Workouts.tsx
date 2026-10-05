@@ -16,6 +16,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeInDown, useAnimatedStyle, useSharedValue, withTiming, Easing,
 } from 'react-native-reanimated';
@@ -341,51 +342,81 @@ function HeroCard({ it, badge, onStart, onSkip }: {
 }) {
   const { p } = useApp();
   const cover = mediaUrl(it.cover);
+  /* Название лежит на снимке, как в вебе (`.wo-ref-photo-title`): под
+     фотографией оно начинало новую карточку, и тренировка читалась как
+     две разные вещи — картинка и текст рядом с ней. */
   return (
-    <Card style={{ padding: 0, overflow: 'hidden', marginBottom: S.lg }}>
-      <View style={{
-        aspectRatio: cover ? 16 / 10 : 16 / 4, backgroundColor: p.inset,
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        {cover ? (
-          <Image source={{ uri: cover }} style={{ width: '100%', height: '100%' }}
-            contentFit="cover" transition={220} />
-        ) : <Icon name="dumbbell" size={26} color={p.text3} />}
+    <>
+      <Text style={{ fontSize: 13, color: p.text3, marginBottom: S.sm }}>{badge}</Text>
+      <Card style={{ padding: 0, overflow: 'hidden', marginBottom: S.lg, borderRadius: R.xl }}>
         <View style={{
-          position: 'absolute', top: 12, left: 12, paddingHorizontal: 11, paddingVertical: 6,
-          borderRadius: 999, backgroundColor: p.primary,
+          aspectRatio: cover ? 16 / 11 : 16 / 4, backgroundColor: p.inset,
+          alignItems: 'center', justifyContent: 'center',
         }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: p.onPrimary }}>{badge}</Text>
+          {cover ? (
+            <Image source={{ uri: cover }} style={{ width: '100%', height: '100%' }}
+              contentFit="cover" transition={220} />
+          ) : <Icon name="dumbbell" size={26} color={p.text3} />}
+          {/* Затемнение снизу: белый заголовок на светлом кадре иначе
+              пропадает, и это видно не на каждом снимке. */}
+          {cover ? (
+            <LinearGradient colors={['transparent', 'rgba(8,13,21,0.85)']}
+              style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '62%' }} />
+          ) : null}
+          <View style={{ position: 'absolute', left: S.lg, right: S.lg, bottom: S.lg }}>
+            <Text style={{ fontSize: 27, fontWeight: '700', letterSpacing: -0.9,
+              color: cover ? '#fff' : p.text }}>
+              {it.title}
+            </Text>
+          </View>
         </View>
-      </View>
-      <View style={{ padding: S.lg }}>
-        <Text style={{ ...FONT.h2, color: p.text }}>{it.title}</Text>
-        <Muted style={{ marginTop: 2 }}>{meta(it)}</Muted>
-        {it.description ? (
-          <Text style={{ ...FONT.body, color: p.text2, marginTop: S.md }}>{it.description}</Text>
-        ) : null}
-        <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.lg, marginBottom: S.lg }}>
-          {[[String(it.duration_min), 'минут'], ['≈' + it.kcal, 'ккал'],
-            [String(it.items), plural(it.items, ['упражнение', 'упражнения', 'упражнений'])]]
-            .map(([v, l]) => (
-              <View key={l} style={{
-                flex: 1, backgroundColor: p.inset, borderRadius: R.md,
-                paddingVertical: 11, alignItems: 'center',
-              }}>
-                <Text style={{ fontSize: 19, fontWeight: '700', color: p.text }}>{v}</Text>
-                <Text numberOfLines={1} style={{ fontSize: 11.5, color: p.text3 }}>{l}</Text>
+
+        <View style={{ padding: S.lg }}>
+          {/* Длительность, состав и расход — строкой со значками, как
+              `.wo-ref-meta`: три плитки занимали полэкрана ради трёх чисел. */}
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.lg }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Icon name="clock" size={15} color={p.text3} width={1.8} />
+              <Text style={{ ...FONT.small, color: p.text2 }}>{it.duration_min} мин</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Icon name="dumbbell" size={15} color={p.text3} width={1.8} />
+              <Text style={{ ...FONT.small, color: p.text2 }}>
+                {it.items} {plural(it.items, ['упражнение', 'упражнения', 'упражнений'])}
+              </Text>
+            </View>
+            {it.kcal > 0 ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Icon name="flame" size={15} color={p.text3} width={1.8} />
+                <Text style={{ ...FONT.small, color: p.text2 }}>≈{it.kcal} ккал</Text>
               </View>
-            ))}
+            ) : null}
+          </View>
+
+          {it.description ? (
+            <Text style={{ ...FONT.body, color: p.text2, marginTop: S.md }}>{it.description}</Text>
+          ) : null}
+
+          <Text style={{ fontSize: 13, color: p.text3, marginTop: S.md, marginBottom: S.lg }}>
+            {attribution(it)}
+          </Text>
+
+          <SysButton label={it.status === 'in_progress' ? 'Продолжить тренировку' : 'Начать тренировку'}
+            variant="prominent" onPress={() => { haptic.tap(); onStart(it); }} />
+          <Pressable onPress={() => onSkip(it)}
+            style={({ pressed }) => ({ marginTop: S.md, alignItems: 'center', opacity: pressed ? 0.5 : 1 })}>
+            <Text style={{ ...FONT.body, color: p.text3 }}>Пропустить сегодня</Text>
+          </Pressable>
         </View>
-        <SysButton label={it.status === 'in_progress' ? 'Продолжить тренировку' : 'Начать тренировку'}
-          variant="prominent" onPress={() => { haptic.tap(); onStart(it); }} />
-        <Pressable onPress={() => onSkip(it)}
-          style={({ pressed }) => ({ marginTop: S.md, alignItems: 'center', opacity: pressed ? 0.5 : 1 })}>
-          <Text style={{ ...FONT.body, color: p.text3 }}>Пропустить сегодня</Text>
-        </Pressable>
-      </View>
-    </Card>
+      </Card>
+    </>
   );
+}
+
+/** Кто составил программу — теми же словами, что в вебе (`woAttribution`). */
+function attribution(it: WoPlanItem): string {
+  if (it.is_ai) return 'Программа EQUA AI';
+  return it.trainer_name ? `Тренер: ${it.trainer_name}` : 'Программа тренера';
 }
 
 /* ---------- Вид «Программа» ---------- */
