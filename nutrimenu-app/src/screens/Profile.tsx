@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, TextInput, Switch } from 'react-native';
+import { View, Text, ScrollView, TextInput, Switch, Pressable, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, Preferences, parseList, Specialist } from '../api';
+import { api, mediaUrl, Preferences, parseList, Specialist } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -12,6 +12,8 @@ import { Icon } from '../ui/Icon';
 import { SysButton } from '../ui/system';
 import { kg } from '../format';
 import { haptic } from '../haptics';
+import { pickPhoto } from '../photo';
+import { uploadForm } from '../upload';
 import { Loading } from './Shopping';
 
 /** Список через запятую — так его вводят и в вебе. */
@@ -32,6 +34,23 @@ export default function Profile() {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  /* Снимок профиля меняется отсюда: в вебе он кликабелен, в приложении
+     его можно было только посмотреть. Сервер сам ужимает картинку до
+     1100 точек, поэтому отправляем как есть. */
+  const changePhoto = useCallback(async () => {
+    const file = await pickPhoto(true);
+    if (!file) return;
+    setPhotoBusy(true); setMsg(null);
+    try {
+      await uploadForm('/client/avatar', file, 'photo');
+      haptic.success();
+      await refreshMe();
+    } catch (e: any) {
+      haptic.error(); setMsg(e?.message ?? 'Снимок не загрузился');
+    } finally { setPhotoBusy(false); }
+  }, [refreshMe]);
 
   useEffect(() => {
     api<{ preferences: Preferences }>('/client/preferences').then(r => {
@@ -92,18 +111,33 @@ export default function Profile() {
 
         <Animated.View entering={FadeInDown.duration(240)}>
           <Card style={{ marginTop: S.md, marginBottom: S.md, alignItems: 'center', paddingVertical: S.xl }}>
-            {u?.avatar_url ? (
-              <Image source={{ uri: u.avatar_url }}
-                style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: p.inset }}
-                contentFit="cover" transition={200} cachePolicy="memory-disk" />
-            ) : (
+            <Pressable onPress={changePhoto} disabled={photoBusy} hitSlop={8}
+              style={({ pressed }) => ({ opacity: pressed || photoBusy ? 0.6 : 1 })}>
+              {u?.avatar_url ? (
+                <Image source={{ uri: mediaUrl(u.avatar_url)! }}
+                  style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: p.inset }}
+                  contentFit="cover" transition={200} cachePolicy="memory-disk" />
+              ) : (
+                <View style={{
+                  width: 76, height: 76, borderRadius: 38, backgroundColor: p.primarySoft,
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Icon name="user" size={34} color={p.primary} />
+                </View>
+              )}
+              {/* Значок камеры на краю: без него снимок не выглядит
+                  нажимаемым, и смену фото никто не находит. */}
               <View style={{
-                width: 76, height: 76, borderRadius: 38, backgroundColor: p.primarySoft,
+                position: 'absolute', right: -2, bottom: -2,
+                width: 28, height: 28, borderRadius: 14,
                 alignItems: 'center', justifyContent: 'center',
+                backgroundColor: p.primary, borderWidth: 2, borderColor: p.surface,
               }}>
-                <Icon name="user" size={34} color={p.primary} />
+                {photoBusy
+                  ? <ActivityIndicator size="small" color={p.onPrimary} />
+                  : <Icon name="camera" size={14} color={p.onPrimary} width={2} />}
               </View>
-            )}
+            </Pressable>
             <Text style={{ ...FONT.h2, color: p.text, marginTop: S.md }}>{u?.name ?? '—'}</Text>
             {u?.email ? <Muted style={{ marginTop: 2 }}>{u.email}</Muted> : null}
           </Card>
