@@ -19,10 +19,13 @@ export default function ClientTabs() {
        темы наш: UIKit о нём не знает и берёт оформление у телефона —
        оттого на светлой теме панель выходила серой, если система была
        в тёмном режиме. */
+    /* Выделенная вкладка красится `accent`, а не заливочным лаймом: на
+       светлой теме лайм на светлом фоне не читается. Для этого `accent`
+       в палитре и есть — в светлой теме это оливковый. */
     <NativeTabs
-      tintColor={p.primary}
+      tintColor={p.accent}
       blurEffect={p.name === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
-      iconColor={{ default: p.text2, selected: p.primary }}
+      iconColor={{ default: p.text2, selected: p.accent }}
       labelStyle={{
         default: { color: p.text2 },
         selected: { color: p.accent },

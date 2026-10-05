@@ -72,7 +72,7 @@ export default function SpProfession() {
         paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: insets.bottom + 40,
       }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-        {!list ? <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} /> : null}
+        {!list ? <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} /> : null}
 
         <Muted style={{ marginBottom: S.lg, lineHeight: 19 }}>
           От профессии зависит, какие разделы вам открыты. Поменять её может
@@ -108,7 +108,7 @@ export default function SpProfession() {
                         <Text style={{
                           flex: 1, fontSize: 16, color: p.text, fontWeight: on ? '600' : '400',
                         }}>{label}</Text>
-                        {on ? <Icon name="check" size={16} color={p.primary} width={2.4} /> : null}
+                        {on ? <Icon name="check" size={16} color={p.accent} width={2.4} /> : null}
                       </View>
                     )}
                   </Pressable>

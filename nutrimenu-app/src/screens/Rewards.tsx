@@ -356,7 +356,7 @@ function TaskSheet({ task, onClose, onDone }: {
             }} />
 
           {err ? <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text> : null}
-          {busy ? <ActivityIndicator color={p.primary} /> : null}
+          {busy ? <ActivityIndicator color={p.accent} /> : null}
 
           {needPhoto ? (
             <View style={{ gap: S.sm }}>

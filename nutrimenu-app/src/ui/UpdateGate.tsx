@@ -34,7 +34,7 @@ export function UpdateGate({ children }: { children: React.ReactNode }) {
         width: 64, height: 64, borderRadius: 32, backgroundColor: p.primarySoft,
         alignItems: 'center', justifyContent: 'center', marginBottom: S.sm,
       }}>
-        <Icon name="device" size={30} color={p.primary} width={2} />
+        <Icon name="device" size={30} color={p.accent} width={2} />
       </View>
 
       <Text style={{ ...FONT.h2, color: p.text, textAlign: 'center' }}>

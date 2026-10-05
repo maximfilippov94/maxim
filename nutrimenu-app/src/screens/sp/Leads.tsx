@@ -79,7 +79,7 @@ export default function SpLeads() {
                         flexDirection: 'row', alignItems: 'center', gap: 6,
                         marginTop: S.sm, opacity: pressed ? 0.5 : 1,
                       })}>
-                      <Icon name="chat" size={14} color={p.primary} />
+                      <Icon name="chat" size={14} color={p.accent} />
                       <Text style={{ ...FONT.body, color: p.accent }}>{l.contact}</Text>
                     </Pressable>
                   ) : null}

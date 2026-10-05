@@ -71,7 +71,7 @@ export default function SpInvite() {
       </Muted>
 
       {err ? <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text> : null}
-      {!d && !err ? <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} /> : null}
+      {!d && !err ? <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} /> : null}
 
       {d?.code ? (
         <>

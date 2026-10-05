@@ -33,7 +33,7 @@ export default function SpWork() {
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }

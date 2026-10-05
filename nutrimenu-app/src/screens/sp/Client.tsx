@@ -169,7 +169,7 @@ function WorkoutsTab({ cid }: { cid: number }) {
   }, [cid]);
 
   if (err) return <Muted>{err}</Muted>;
-  if (!d) return <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />;
+  if (!d) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
 
   const max = Math.max(1, ...d.weeks.map(w => Math.max(w.done + w.skipped, w.planned)));
   const t = d.totals;
@@ -192,7 +192,7 @@ function WorkoutsTab({ cid }: { cid: number }) {
 
       <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Назначено сейчас</Text>
       <Card style={{ marginBottom: S.lg }}>
-        {asg == null ? <ActivityIndicator color={p.primary} />
+        {asg == null ? <ActivityIndicator color={p.accent} />
           : !asg.length ? (
             <Muted>Ничего не назначено — в плане у клиента пусто.</Muted>
           ) : asg.map((a, i) => (
@@ -585,7 +585,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     finally { setBusy(false); }
   }, [menu, day, load]);
 
-  if (menu === undefined) return <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />;
+  if (menu === undefined) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
 
   if (!menu) {
     return (
@@ -694,7 +694,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
                 hitSlop={10}
                 style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
                   opacity: pressed ? 0.5 : 1 })}>
-                <Icon name="plus" size={14} color={p.primary} width={2.4} />
+                <Icon name="plus" size={14} color={p.accent} width={2.4} />
                 <Text style={{ ...FONT.small, color: p.accent }}>блюдо</Text>
               </Pressable>
               {/* Не всё в меню рецепт: «150 г индейки» назначается
@@ -710,7 +710,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
                 hitSlop={10}
                 style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
                   marginLeft: S.md, opacity: pressed ? 0.5 : 1 })}>
-                <Icon name="plus" size={14} color={p.primary} width={2.4} />
+                <Icon name="plus" size={14} color={p.accent} width={2.4} />
                 <Text style={{ ...FONT.small, color: p.accent }}>продукт</Text>
               </Pressable>
             </View>
@@ -762,7 +762,7 @@ function Action({ icon, label, onPress }: {
         borderColor: p.borderSoft,
         opacity: pressed ? 0.6 : 1,
       })}>
-      <Icon name={icon} size={19} color={p.primary} width={1.9} />
+      <Icon name={icon} size={19} color={p.accent} width={1.9} />
       <Text style={{ fontSize: 12.5, fontWeight: '600', color: p.text2 }} numberOfLines={1}>
         {label}
       </Text>
@@ -962,7 +962,7 @@ function TasksTab({ cid }: { cid: number }) {
     catch { haptic.error(); load(); }
   }, [load]);
 
-  if (!list) return <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />;
+  if (!list) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
 
   return (
     <Animated.View entering={FadeInDown.duration(220)}>
@@ -1100,7 +1100,7 @@ function ProgressTab({ cid }: { cid: number }) {
       .then(setD).catch(() => setD(null));
   }, [cid]);
 
-  if (d === undefined) return <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />;
+  if (d === undefined) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
   const ws = d?.weights ?? [];
   if (!ws.length) {
     return <Empty icon="scalemass" title="Замеров нет"
@@ -1242,7 +1242,7 @@ function Adherence({ cid }: { cid: number }) {
       </View>
       {a.planned ? (
         <View style={{ flexDirection: 'row', marginTop: S.md }}>
-          <Split n={a.eaten} label="съел" color={p.primary} />
+          <Split n={a.eaten} label="съел" color={p.accent} />
           <Split n={a.skipped} label="не ел" color={p.warn} />
           <Split n={a.unlogged} label="не отметил" color={p.danger} />
         </View>

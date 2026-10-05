@@ -228,8 +228,8 @@ export default function DishEdit() {
           <Pressable onPress={save} disabled={busy} hitSlop={10}
             style={({ pressed }) => ({ opacity: pressed || busy ? 0.5 : 1 })}>
             {busy
-              ? <ActivityIndicator color={p.primary} />
-              : <Text style={{ fontSize: 17, fontWeight: '600', color: p.primary }}>Готово</Text>}
+              ? <ActivityIndicator color={p.accent} />
+              : <Text style={{ fontSize: 17, fontWeight: '600', color: p.accent }}>Готово</Text>}
           </Pressable>
         ) : undefined} />
 
@@ -275,7 +275,7 @@ export default function DishEdit() {
                 backgroundColor: p.surface, borderRadius: R.pill,
                 paddingHorizontal: 14, paddingVertical: 8,
               }}>
-                {cover ? <ActivityIndicator color={p.primary} size="small" />
+                {cover ? <ActivityIndicator color={p.accent} size="small" />
                   : <Icon name="clip" size={15} color={p.text2} />}
                 <Text style={{ ...FONT.small, color: p.text }}>
                   {photo ? 'Заменить фото' : 'Заглавное фото'}
@@ -333,8 +333,8 @@ export default function DishEdit() {
                   flexDirection: 'row', alignItems: 'center', gap: 5,
                   opacity: pressed ? 0.5 : 1,
                 })}>
-                <Icon name="plus" size={15} color={p.primary} width={2.2} />
-                <Text style={{ ...FONT.small, color: p.primary, fontWeight: '600' }}>продукт</Text>
+                <Icon name="plus" size={15} color={p.accent} width={2.2} />
+                <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>продукт</Text>
               </Pressable>
             ) : null}
           </View>
@@ -382,8 +382,8 @@ export default function DishEdit() {
                   flexDirection: 'row', alignItems: 'center', gap: 5,
                   opacity: pressed ? 0.5 : 1,
                 })}>
-                <Icon name="plus" size={15} color={p.primary} width={2.2} />
-                <Text style={{ ...FONT.small, color: p.primary, fontWeight: '600' }}>шаг</Text>
+                <Icon name="plus" size={15} color={p.accent} width={2.2} />
+                <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>шаг</Text>
               </Pressable>
             ) : null}
           </View>

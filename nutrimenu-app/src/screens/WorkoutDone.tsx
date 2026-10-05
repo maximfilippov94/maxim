@@ -65,7 +65,7 @@ export default function WorkoutDone() {
   if (!s) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg, justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }

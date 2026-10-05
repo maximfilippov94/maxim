@@ -369,7 +369,7 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
                     return left ? (
                       <Pressable onPress={() => { haptic.tap(); intake(m); }} hitSlop={8}
                         style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-                        <Text style={{ ...FONT.small, color: p.primary, fontWeight: '600' }}>
+                        <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
                           Принял{target > 1 ? ` · ${taken} из ${target}` : ''}
                         </Text>
                       </Pressable>

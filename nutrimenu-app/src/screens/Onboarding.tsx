@@ -132,7 +132,7 @@ export default function Onboarding() {
       }}>
         {step > 1 ? (
           <Pressable onPress={() => { haptic.tap(); setStep(s => s - 1); setErr(null); }} hitSlop={12}>
-            <Icon name="back" size={22} color={p.primary} width={2.2} />
+            <Icon name="back" size={22} color={p.accent} width={2.2} />
           </Pressable>
         ) : null}
         <Logo width={74} color={p.text} />
@@ -238,7 +238,7 @@ export default function Onboarding() {
       <View style={{
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + S.md, gap: S.sm,
       }}>
-        {busy ? <ActivityIndicator color={p.primary} style={{ marginBottom: S.sm }} /> : null}
+        {busy ? <ActivityIndicator color={p.accent} style={{ marginBottom: S.sm }} /> : null}
         <SysButton label={step === TOTAL ? 'Сохранить анкету' : 'Далее'} variant="prominent"
           disabled={busy} onPress={next} />
         {step === TOTAL ? (
@@ -275,7 +275,7 @@ function Choice({ label, note, on, onPress }: {
               <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>{note}</Text>
             ) : null}
           </View>
-          {on ? <Icon name="check" size={16} color={p.primary} width={2.4} /> : null}
+          {on ? <Icon name="check" size={16} color={p.accent} width={2.4} /> : null}
         </View>
       )}
     </Pressable>

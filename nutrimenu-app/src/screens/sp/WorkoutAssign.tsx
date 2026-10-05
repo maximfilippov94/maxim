@@ -97,7 +97,7 @@ export default function SpWorkoutAssign() {
       }} showsVerticalScrollIndicator={false}>
 
         <Label>Кому</Label>
-        {!clients ? <ActivityIndicator color={p.primary} style={{ marginTop: 20 }} />
+        {!clients ? <ActivityIndicator color={p.accent} style={{ marginTop: 20 }} />
           : !clients.length ? (
             <Empty icon="person.2" title="Клиентов пока нет" height={200}
               note="Назначать тренировки можно тем, кто подключил вашу услугу или пришёл по вашему коду." />

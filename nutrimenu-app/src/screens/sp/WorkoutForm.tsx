@@ -90,7 +90,7 @@ export default function SpWorkoutForm() {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         <NavBar back title="Правка тренировки" />
-        <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />
       </View>
     );
   }

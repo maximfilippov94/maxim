@@ -117,7 +117,7 @@ export default function SpWorkout() {
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         <NavBar back title="Тренировка" />
         {err ? <Muted style={{ padding: S.lg }}>{err}</Muted>
-          : <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />}
+          : <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />}
       </View>
     );
   }
@@ -131,7 +131,7 @@ export default function SpWorkout() {
         <Pressable hitSlop={10}
           onPress={() => { haptic.tap();
             router.push({ pathname: '/sp-workout-form', params: { id: String(id) } }); }}>
-          <Text style={{ ...FONT.body, color: p.primary }}>Правка</Text>
+          <Text style={{ ...FONT.body, color: p.accent }}>Правка</Text>
         </Pressable>
       } />
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}

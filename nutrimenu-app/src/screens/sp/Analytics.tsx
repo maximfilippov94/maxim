@@ -77,7 +77,7 @@ export default function SpAnalytics() {
             </View>
             {scored.length >= 2 ? (
               <View style={{ marginTop: S.md }}>
-                <SysChart color={p.primary} height={130}
+                <SysChart color={p.accent} height={130}
                   points={scored.slice(0, 20).map((v, i) => ({ x: String(i + 1), y: v }))} />
               </View>
             ) : (

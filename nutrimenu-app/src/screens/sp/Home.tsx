@@ -35,7 +35,7 @@ export default function SpHome() {
   if (!d && !err) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }
@@ -108,7 +108,7 @@ export default function SpHome() {
                     width: 32, height: 32, borderRadius: 16, backgroundColor: p.primarySoft,
                     alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <Icon name={icon} size={16} color={p.primary} />
+                    <Icon name={icon} size={16} color={p.accent} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ ...FONT.h3, color: p.text }}>{title}</Text>

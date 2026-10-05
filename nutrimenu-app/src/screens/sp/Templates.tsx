@@ -105,7 +105,7 @@ export default function SpTemplates() {
                   flexDirection: 'row', alignItems: 'center', gap: 6,
                   marginTop: S.md, opacity: pressed ? 0.5 : 1,
                 })}>
-                <Icon name="plus" size={14} color={p.primary} width={2.4} />
+                <Icon name="plus" size={14} color={p.accent} width={2.4} />
                 <Text style={{ ...FONT.small, color: p.accent }}>
                   {pick === t.id ? 'Скрыть список' : 'Применить к клиенту'}
                 </Text>

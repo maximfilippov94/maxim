@@ -140,7 +140,7 @@ export default function Workouts() {
   if (!d) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg, justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }
@@ -503,7 +503,7 @@ function Mark({ status }: { status: WoPlanItem['status'] }) {
 /* ---------- Вид «История» ---------- */
 function HistoryView({ list }: { list: WoHistoryItem[] | null }) {
   const { p } = useApp();
-  if (!list) return <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />;
+  if (!list) return <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />;
   if (!list.length)
     return (
       <Empty icon="chart.bar" title="История пуста"

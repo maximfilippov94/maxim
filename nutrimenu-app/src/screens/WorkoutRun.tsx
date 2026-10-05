@@ -128,7 +128,7 @@ export default function WorkoutRun() {
   if (!s || !x) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg, justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }

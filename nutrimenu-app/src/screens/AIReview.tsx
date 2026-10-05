@@ -73,7 +73,7 @@ export default function AIReview() {
         <NavBar back title="Как идёт план" />
         {err ? <Muted style={{ padding: S.lg }}>{err}</Muted> : (
           <View style={{ alignItems: 'center', paddingTop: 50, gap: S.md }}>
-            <ActivityIndicator color={p.primary} />
+            <ActivityIndicator color={p.accent} />
             <Muted>Анализируем последние 7 дней</Muted>
           </View>
         )}

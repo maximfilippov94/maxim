@@ -157,7 +157,7 @@ export default function AI() {
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         <NavBar back title="EQUA AI" />
         {err ? <Muted style={{ padding: S.lg }}>{err}</Muted>
-          : <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />}
+          : <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />}
       </View>
     );
   }
@@ -323,7 +323,7 @@ export default function AI() {
                     <View style={{ marginTop: S.md, gap: 5 }}>
                       {(AI_PLAN_WHAT[t.plan] ?? []).map(line => (
                         <View key={line} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-                          <Icon name="check" size={13} color={p.primary} width={2.2} />
+                          <Icon name="check" size={13} color={p.accent} width={2.2} />
                           <Text style={{ ...FONT.small, color: p.text2, flex: 1, lineHeight: 18 }}>
                             {line}
                           </Text>
@@ -355,7 +355,7 @@ export default function AI() {
                           </Pressable>
                         </View>
                         {quote ? (
-                          <Text style={{ ...FONT.small, color: p.primary, marginTop: 6 }}>
+                          <Text style={{ ...FONT.small, color: p.accent, marginTop: 6 }}>
                             Код принят: −{quote.percent}%, к оплате {rub(quote.total_kop)}
                           </Text>
                         ) : null}

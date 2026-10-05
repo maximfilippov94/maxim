@@ -159,7 +159,7 @@ export default function AddDish() {
       ) : null}
 
       {!list ? (
-        <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} />
+        <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />
       ) : shown.length === 0 ? (
         <Empty icon="fork.knife"
           title={scope === 'mine' ? 'Своих блюд для этого приёма нет' : 'Ничего не нашли'}
@@ -255,7 +255,7 @@ function Portion({ dish, width, busy, err, onBack, onAdd }: {
       <View style={{ flexDirection: 'row', alignItems: 'center', padding: S.xl, paddingBottom: S.md }}>
         <Pressable onPress={onBack} hitSlop={12}
           style={({ pressed }) => ({ marginRight: S.md, opacity: pressed ? 0.5 : 1 })}>
-          <Icon name="back" size={21} color={p.primary} width={2.2} />
+          <Icon name="back" size={21} color={p.accent} width={2.2} />
         </Pressable>
         <Text style={{ ...FONT.h2, color: p.text, flex: 1 }} numberOfLines={1}>
           {dish.name}

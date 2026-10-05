@@ -137,7 +137,7 @@ export default function Profile() {
                   width: 76, height: 76, borderRadius: 38, backgroundColor: p.primarySoft,
                   alignItems: 'center', justifyContent: 'center',
                 }}>
-                  <Icon name="user" size={34} color={p.primary} />
+                  <Icon name="user" size={34} color={p.accent} />
                 </View>
               )}
               {/* Значок камеры на краю: без него снимок не выглядит

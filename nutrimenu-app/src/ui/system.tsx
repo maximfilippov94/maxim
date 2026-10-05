@@ -57,9 +57,16 @@ export function SysButton({ label, onPress, variant = 'plainGlass', icon, width,
       <Button onPress={onPress}
         role={variant === 'destructive' ? 'destructive' : undefined}
         modifiers={mods}>
+        {/* Цвет подписи задаём сами. Без него SwiftUI подбирает его под
+            тёмную тему и ставит белый — на лаймовой заливке он не
+            читается. На сайте текст поверх акцента всегда тёмный
+            (`var(--on-primary)`). */}
         <HStack spacing={7} modifiers={[m.frame({ maxWidth: width ? undefined : 9999 })]}>
-          {icon ? <SImage systemName={icon} size={16} /> : <></>}
-          <SText modifiers={[m.font({ size: 16, weight: 'semibold' })]}>{label}</SText>
+          {icon ? <SImage systemName={icon} size={16}
+            modifiers={variant === 'prominent' ? [m.foregroundStyle(p.onPrimary)] : []} /> : <></>}
+          <SText modifiers={variant === 'prominent'
+            ? [m.font({ size: 16, weight: 'semibold' }), m.foregroundStyle(p.onPrimary)]
+            : [m.font({ size: 16, weight: 'semibold' })]}>{label}</SText>
         </HStack>
       </Button>
     </Host>
@@ -117,7 +124,7 @@ export function Empty({ icon, title, note, height = 240 }: {
         width: 52, height: 52, borderRadius: R.lg, backgroundColor: p.primarySoft,
         alignItems: 'center', justifyContent: 'center', marginBottom: S.lg,
       }}>
-        <Icon name="bowl" size={24} color={p.primary} />
+        <Icon name="bowl" size={24} color={p.accent} />
       </View>
       <Text style={{ ...FONT.h3, color: p.text, textAlign: 'center' }}>{title}</Text>
       {note ? (

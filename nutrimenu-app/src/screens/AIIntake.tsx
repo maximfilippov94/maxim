@@ -88,7 +88,7 @@ export default function AIIntake() {
 
         {!d && busy ? (
           <View style={{ alignItems: 'center', paddingTop: 50, gap: S.md }}>
-            <ActivityIndicator color={p.primary} />
+            <ActivityIndicator color={p.accent} />
             <Muted>Читаем ваши ответы</Muted>
           </View>
         ) : null}

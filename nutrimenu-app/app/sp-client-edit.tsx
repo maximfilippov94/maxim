@@ -69,7 +69,7 @@ export default function EditClient() {
   if (!c) {
     return (
       <View style={{ flex: 1, backgroundColor: p.surface, justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }

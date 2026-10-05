@@ -81,7 +81,7 @@ function CycleBar() {
     <NavBar title="Цикл" back right={
       <Pressable hitSlop={10}
         onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
-        <Icon name="device" size={19} color={p.primary} width={1.8} />
+        <Icon name="device" size={19} color={p.accent} width={1.8} />
       </Pressable>
     } />
   );
@@ -167,7 +167,7 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         {embedded ? null : <CycleBar />}
-        <ActivityIndicator color={p.primary} style={{ marginTop: S.xxl }} />
+        <ActivityIndicator color={p.accent} style={{ marginTop: S.xxl }} />
       </View>
     );
   }

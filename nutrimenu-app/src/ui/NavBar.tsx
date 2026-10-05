@@ -42,7 +42,7 @@ export function NavBar({ title, back, logo, right, onBack }: {
               alignItems: 'flex-start', justifyContent: 'center',
               opacity: pressed ? 0.5 : 1,
             })}>
-            <Icon name="back" size={22} color={p.primary} width={2.2} />
+            <Icon name="back" size={22} color={p.accent} width={2.2} />
           </Pressable>
         ) : null}
         {right ? (

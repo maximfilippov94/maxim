@@ -167,7 +167,7 @@ export default function SpAddFood() {
         </View>
 
         {loading ? (
-          <ActivityIndicator style={{ marginTop: S.xl }} color={p.primary} />
+          <ActivityIndicator style={{ marginTop: S.xl }} color={p.accent} />
         ) : found.length === 0 ? (
           <Empty icon="magnifyingglass" title="Ничего не нашлось"
             note={q.trim() ? 'Попробуйте другое название.' : 'Начните вводить название.'} />
@@ -191,7 +191,7 @@ export default function SpAddFood() {
                       {round(f.kcal)} ккал · Б {f.protein} Ж {f.fat} У {f.carbs} / 100 г
                     </Muted>
                   </View>
-                  <Icon name="plus" size={16} color={p.primary} width={2.4} />
+                  <Icon name="plus" size={16} color={p.accent} width={2.4} />
                 </Pressable>
               </Animated.View>
             ))}

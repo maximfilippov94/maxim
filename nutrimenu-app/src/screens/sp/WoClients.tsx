@@ -69,7 +69,7 @@ export default function WoClients() {
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 140,
       }} showsVerticalScrollIndicator={false}>
         {err ? <Muted>{err}</Muted> : null}
-        {!rows ? <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />
+        {!rows ? <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />
           : !rows.length ? (
             <Empty icon="person.2" title="Подопечных пока нет"
               note="Клиент появится здесь, как только подключит вашу услугу или придёт по вашему коду." />

@@ -71,7 +71,7 @@ export default function SpProfileEdit() {
   if (!pr) {
     return (
       <View style={{ flex: 1, backgroundColor: p.surface, justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }

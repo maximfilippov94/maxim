@@ -264,7 +264,7 @@ export function ChatView({
       {back}
 
       {msgs === null && !err ? (
-        <ActivityIndicator color={p.primary} style={{ marginTop: topPad + 20 }} />
+        <ActivityIndicator color={p.accent} style={{ marginTop: topPad + 20 }} />
       ) : empty ? (
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <Empty icon="bubble.left.and.bubble.right"

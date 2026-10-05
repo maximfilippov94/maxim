@@ -68,7 +68,7 @@ export default function SpPromotion() {
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         <NavBar back title="Продвижение" />
         {err ? <Muted style={{ padding: S.lg }}>{err}</Muted>
-          : <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />}
+          : <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />}
       </View>
     );
   }

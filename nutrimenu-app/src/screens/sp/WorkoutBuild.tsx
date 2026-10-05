@@ -166,7 +166,7 @@ export default function SpWorkoutBuild() {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         <NavBar back title="Состав" />
-        <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />
       </View>
     );
   }
@@ -246,7 +246,7 @@ export default function SpWorkoutBuild() {
           <NavBar title="Библиотека" onBack={() => setPickOpen(false)} back
             right={
               <Pressable onPress={() => { haptic.tap(); setPickOpen(false); }} hitSlop={10}>
-                <Text style={{ ...FONT.body, color: p.primary, fontWeight: '600' }}>Готово</Text>
+                <Text style={{ ...FONT.body, color: p.accent, fontWeight: '600' }}>Готово</Text>
               </Pressable>
             } />
 
@@ -281,7 +281,7 @@ export default function SpWorkoutBuild() {
               })}
           </ScrollView>
 
-          {!lib ? <ActivityIndicator color={p.primary} style={{ marginTop: 30 }} /> : (
+          {!lib ? <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} /> : (
             <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
               showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {!found.length ? (

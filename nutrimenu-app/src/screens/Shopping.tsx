@@ -320,7 +320,7 @@ export function Loading({ title }: { title: string }) {
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <NavBar title={title} back />
-      <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />
+      <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />
     </View>
   );
 }

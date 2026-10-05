@@ -335,8 +335,8 @@ export default function Services() {
                   <Text style={{ ...FONT.small, color: p.text2 }}>{period(s.kind, s.period_days)}</Text>
                   {on ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Icon name="check" size={14} color={p.primary} width={2.2} />
-                      <Text style={{ ...FONT.small, fontWeight: '600', color: p.primary }}>подключена</Text>
+                      <Icon name="check" size={14} color={p.accent} width={2.2} />
+                      <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>подключена</Text>
                     </View>
                   ) : (
                     <Pressable disabled={busy}

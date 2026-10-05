@@ -96,7 +96,7 @@ export default function SpDishes() {
         right={
           <Pressable onPress={() => { haptic.tap(); router.push('/sp-dish-edit'); }} hitSlop={10}
             style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-            <Icon name="plus" size={21} color={p.primary} width={2.2} />
+            <Icon name="plus" size={21} color={p.accent} width={2.2} />
           </Pressable>
         } />
       <ScrollView contentContainerStyle={{

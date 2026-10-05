@@ -72,7 +72,7 @@ export default function SpWorkouts() {
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <NavBar back title="Тренировки" right={
         <Pressable onPress={() => { haptic.tap(); router.push('/sp-workout-form'); }} hitSlop={10}>
-          <Text style={{ ...FONT.body, color: p.primary, fontWeight: '600' }}>Новая</Text>
+          <Text style={{ ...FONT.body, color: p.accent, fontWeight: '600' }}>Новая</Text>
         </Pressable>
       } />
       <Seg onClients={() => router.replace('/sp-wo-clients')} />
@@ -80,7 +80,7 @@ export default function SpWorkouts() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 140 }}
         showsVerticalScrollIndicator={false}>
         {err ? <Muted style={{ paddingHorizontal: S.lg }}>{err}</Muted> : null}
-        {!rows ? <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />
+        {!rows ? <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />
           : !rows.length ? (
             <Empty icon="dumbbell" title="Тренировок пока нет"
               note="Соберите первую из библиотеки упражнений — потом её можно назначить сразу нескольким клиентам и повторять каждую неделю." />

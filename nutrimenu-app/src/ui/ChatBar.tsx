@@ -145,7 +145,7 @@ export function ChatBar({ value, onChange, onSend, onAttach, onVoice, busy, onEr
         />
         {busy ? (
           <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
-            <ActivityIndicator color={p.primary} />
+            <ActivityIndicator color={p.accent} />
           </View>
         ) : has ? (
           <Round icon="send" filled onPress={onSend} />

@@ -58,4 +58,8 @@ echo "== Рекомендации =="
 WEB="$WEB" BASE="$BASE" php "$HERE/recs-test.php"
 
 echo
+echo "== Дневник еды =="
+WEB="$WEB" BASE="$BASE" php "$HERE/foodlog-test.php"
+
+echo
 echo "Проверки пройдены."

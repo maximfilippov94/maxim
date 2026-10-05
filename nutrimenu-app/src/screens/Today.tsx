@@ -40,9 +40,15 @@ export default function Today() {
   const [specName, setSpecName] = useState<string | null>(null);
   const toast = useToast();
 
-  const load = useCallback(async () => {
+  /* `fresh` — мимо кэша чтений. Нужен при возврате с других экранов:
+     добавленная еда, записанный вес и выпитая вода меняются там, а
+     кэш GET живёт две с половиной секунды — этого хватало, чтобы
+     вернувшийся человек увидел прежние числа и решил, что запись
+     не сохранилась. */
+  const load = useCallback(async (fresh?: boolean) => {
     try {
-      const j = await api<TodayResponse & { ai_access?: AiAccess | null }>('/client/today');
+      const j = await api<TodayResponse & { ai_access?: AiAccess | null }>(
+        '/client/today', fresh ? { noCache: true } : undefined);
       setData(j); setErr(null);
     }
     catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); }
@@ -63,10 +69,10 @@ export default function Today() {
 
   /* Вода и вес меняются на других экранах, а этот остаётся в памяти —
      без перечитывания при возврате он показывал бы вчерашнее число. */
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useFocusEffect(useCallback(() => { load(true); }, [load]));
 
   const onRefresh = useCallback(async () => {
-    setBusy(true); await load(); setBusy(false);
+    setBusy(true); await load(true); setBusy(false);
   }, [load]);
 
   /* Запрос отметки без лишнего: оптимистичное обновление и откат при
@@ -113,7 +119,7 @@ export default function Today() {
   if (!data && !err) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: p.bg }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }

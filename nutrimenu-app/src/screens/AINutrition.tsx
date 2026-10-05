@@ -161,7 +161,7 @@ export default function AINutrition() {
   if (!ready) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={p.primary} />
+        <ActivityIndicator color={p.accent} />
       </View>
     );
   }
@@ -177,7 +177,7 @@ export default function AINutrition() {
             haptic.tap();
             if (step) { setStep(s => s - 1); setErr(null); } else router.back();
           }}>
-          <Icon name="back" size={22} color={p.primary} width={2.2} />
+          <Icon name="back" size={22} color={p.accent} width={2.2} />
         </Pressable>
         <Text style={{ ...FONT.label, color: p.text3 }}>EQUA AI · ПИТАНИЕ</Text>
         <Text style={{ ...FONT.small, color: p.text3, marginLeft: 'auto' }}>
@@ -223,7 +223,7 @@ export default function AINutrition() {
                         <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>{note}</Text>
                       ) : null}
                     </View>
-                    {on ? <Icon name="check" size={16} color={p.primary} width={2.4} /> : null}
+                    {on ? <Icon name="check" size={16} color={p.accent} width={2.4} /> : null}
                   </View>
                 )}
               </Pressable>
@@ -274,7 +274,7 @@ export default function AINutrition() {
       </ScrollView>
 
       <View style={{ paddingHorizontal: S.lg, paddingBottom: insets.bottom + S.md, gap: S.sm }}>
-        {busy ? <ActivityIndicator color={p.primary} style={{ marginBottom: 4 }} /> : null}
+        {busy ? <ActivityIndicator color={p.accent} style={{ marginBottom: 4 }} /> : null}
         <SysButton label={last ? 'Отправить ответы' : 'Далее'} variant="prominent"
           disabled={busy} onPress={next} />
         {q.type !== 'choice' && !value ? (

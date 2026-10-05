@@ -117,7 +117,7 @@ export default function Dish() {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         <NavBar back />
-        <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator color={p.accent} style={{ marginTop: 40 }} />
       </View>
     );
   }
