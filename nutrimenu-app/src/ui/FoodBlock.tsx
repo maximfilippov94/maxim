@@ -7,15 +7,16 @@
  * что и назначенное блюдо, а «Добавить еду» — последней строкой секции,
  * а не общей кнопкой внизу экрана.
  */
-import React, { useCallback } from 'react';
-import { View, Text, Pressable, Alert } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, TextInput, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '../store';
-import { api, FoodEntry } from '../api';
-import { round, plural } from '../format';
-import { S, FONT } from '../theme';
+import { api, FoodEntry, FoodEntryItem } from '../api';
+import { round } from '../format';
+import { S, R, FONT } from '../theme';
 import { Icon } from './Icon';
 import { haptic } from '../haptics';
+import { SysButton } from './system';
 
 export function FoodRows({ entries, onChanged, first }: {
   entries: FoodEntry[]; onChanged: () => void;
@@ -24,23 +25,35 @@ export function FoodRows({ entries, onChanged, first }: {
 }) {
   const { p } = useApp();
 
-  /* Запись может состоять из нескольких продуктов: если убирают один
-     из многих, честно предупреждаем, что уйдут все. Правка отдельной
-     строки внутри записи потребовала бы отдельного экрана ради
-     редкого случая. */
-  const drop = useCallback((e: FoodEntry) => {
-    const n = e.items.length;
-    Alert.alert(
-      n > 1 ? 'Убрать запись целиком?' : 'Убрать запись?',
-      n > 1 ? `В ней ${n} ${plural(n, ['продукт', 'продукта', 'продуктов'])}.` : undefined,
-      [
-        { text: 'Отмена', style: 'cancel' },
-        { text: 'Убрать', style: 'destructive', onPress: async () => {
-          try { await api(`/client/food-log/${e.id}`, { method: 'DELETE' }); haptic.success(); onChanged(); }
-          catch { haptic.error(); }
-        } },
-      ]);
+  /* Убираем один продукт, а не всю запись: в одной записи их бывает
+     несколько, и крестик у строки должен убирать именно её — сервер
+     это умеет (`/client/food-log/:id/items/:id`), приложение раньше
+     сносило запись целиком вместе с соседними продуктами. */
+  const drop = useCallback((e: FoodEntry, it: FoodEntryItem) => {
+    Alert.alert('Убрать продукт?', it.name, [
+      { text: 'Отмена', style: 'cancel' },
+      { text: 'Убрать', style: 'destructive', onPress: async () => {
+        try {
+          await api(`/client/food-log/${e.id}/items/${it.id}`, { method: 'DELETE' });
+          haptic.success(); onChanged();
+        } catch { haptic.error(); }
+      } },
+    ]);
   }, [onChanged]);
+
+  /* Правка порции. В вебе это шторка «Размер порции» с пересчётом КБЖУ;
+     здесь строка раскрывается на месте — КБЖУ всё равно пересчитает
+     сервер, а второй экран ради одного числа не нужен. */
+  const [edit, setEdit] = useState<number | null>(null);
+  const [grams, setGrams] = useState('');
+  const saveGrams = useCallback(async (e: FoodEntry, it: FoodEntryItem) => {
+    const g = Math.round(Number(grams.replace(',', '.')));
+    if (!(g > 0 && g <= 5000)) { haptic.error(); return; }
+    try {
+      await api(`/client/food-log/${e.id}/items/${it.id}`, { method: 'PATCH', body: { grams: g } });
+      setEdit(null); haptic.success(); onChanged();
+    } catch { haptic.error(); }
+  }, [grams, onChanged]);
 
   if (!entries.length) return null;
   let k = 0;
@@ -50,21 +63,43 @@ export function FoodRows({ entries, onChanged, first }: {
         const top = !(first && k++ === 0);
         return (
           <View key={`${e.id}-${it.id}`} style={{
-            flexDirection: 'row', alignItems: 'center', gap: S.md,
             paddingVertical: 10, paddingHorizontal: 12,
             borderTopWidth: top ? 1 : 0, borderTopColor: p.borderSoft,
           }}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '600', color: p.text }}>
-                {it.name}
-              </Text>
-              <Text style={{ ...FONT.small, color: p.text3, marginTop: 3 }}>
-                {round(it.grams)} г · {round(it.kcal)} ккал
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+              <Pressable style={{ flex: 1, minWidth: 0 }}
+                onPress={() => {
+                  haptic.tap();
+                  setGrams(String(round(it.grams)));
+                  setEdit(v => (v === it.id ? null : it.id));
+                }}>
+                <Text numberOfLines={1} style={{ fontSize: 15, fontWeight: '600', color: p.text }}>
+                  {it.name}
+                </Text>
+                <Text style={{ ...FONT.small, color: p.text3, marginTop: 3 }}>
+                  {round(it.grams)} г · {round(it.kcal)} ккал
+                </Text>
+              </Pressable>
+              <Pressable hitSlop={10} onPress={() => { haptic.tap(); drop(e, it); }}>
+                <Icon name="close" size={17} color={p.text3} />
+              </Pressable>
             </View>
-            <Pressable hitSlop={10} onPress={() => { haptic.tap(); drop(e); }}>
-              <Icon name="close" size={17} color={p.text3} />
-            </Pressable>
+
+            {edit === it.id ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, marginTop: S.sm }}>
+                <TextInput value={grams} onChangeText={setGrams} keyboardType="number-pad"
+                  autoFocus selectTextOnFocus
+                  accessibilityLabel="Количество в граммах"
+                  style={{
+                    width: 92, backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+                    paddingHorizontal: 12, paddingVertical: 9, fontSize: 15,
+                  }} />
+                <Text style={{ ...FONT.small, color: p.text3 }}>г</Text>
+                <View style={{ flex: 1 }} />
+                <SysButton label="Сохранить" variant="prominent" height={40}
+                  onPress={() => saveGrams(e, it)} />
+              </View>
+            ) : null}
           </View>
         );
       }))}

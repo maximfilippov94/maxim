@@ -205,6 +205,18 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
     finally { setBusy(false); }
   }, [load, toast]);
 
+  /* Удалить запись самочувствия за день — маршрут веба
+     (`clCycleDayDelete`). Без него ошибочную отметку было не снять
+     целиком: можно было только переключать поля по одному. */
+  const dropDay = useCallback(async (date: string) => {
+    setBusy(true);
+    try {
+      await api(`/client/health/cycle/day/${date}`, { method: 'DELETE' });
+      haptic.success(); setPicked(null); await load();
+    } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не удалилось', { kind: 'err' }); }
+    finally { setBusy(false); }
+  }, [load, toast]);
+
   const saveDay = useCallback(async (date: string, key: string, value: string) => {
     /* Повторное нажатие по той же отметке снимает её: выбрать «боли нет»
        и передумать — обычное дело, а отдельной кнопки «очистить» в
@@ -482,6 +494,17 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
                   </View>
                 </View>
               ))}
+              {log ? (
+                <SysButton label="Удалить запись за день" variant="destructive" height={44}
+                  disabled={busy}
+                  onPress={() => {
+                    Alert.alert('Удалить запись?',
+                      'Отметки самочувствия за этот день будут стёрты.', [
+                        { text: 'Отмена', style: 'cancel' },
+                        { text: 'Удалить', style: 'destructive', onPress: () => dropDay(picked) },
+                      ]);
+                  }} />
+              ) : null}
             </Card>
           </Animated.View>
         ) : (

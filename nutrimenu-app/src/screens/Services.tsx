@@ -14,7 +14,7 @@ import { useApp } from '../store';
 import { api, ServicesResponse, Subscription } from '../api';
 import { S, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
-import { Card, Label, Muted } from '../ui/base';
+import { Card, Label, Muted, Pills } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Face } from '../ui/Face';
 import { SysButton, Empty } from '../ui/system';
@@ -39,6 +39,16 @@ const left = (s: Subscription) => {
   return `осталось ${d} ${plural(d, ['день', 'дня', 'дней'])}`;
 };
 
+/** Причины отказа от услуги — тот же список, что в вебе (`clSubCancel`). */
+const CANCEL_REASONS: [string, string][] = [
+  ['price', 'Слишком дорого'],
+  ['not_using', 'Больше не нужна'],
+  ['expectations', 'Не оправдала ожидания'],
+  ['communication', 'Не подошло общение'],
+  ['technical', 'Технические проблемы'],
+  ['other', 'Другая причина'],
+];
+
 export default function Services() {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
@@ -46,6 +56,11 @@ export default function Services() {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [disputing, setDisputing] = useState(false);
+  /* Отказ от услуги: причина обязательна, комментарий — нет. Список
+     причин тот же, что в вебе (`clSubCancel`). */
+  const [cancelling, setCancelling] = useState(false);
+  const [reason, setReason] = useState('');
+  const [cancelNote, setCancelNote] = useState('');
   const [note, setNote] = useState('');
   /* Выбранная услуга, промокод и ответ проверки — лист подключения. */
   const [pick, setPick] = useState<{ id: number; title: string } | null>(null);
@@ -153,6 +168,20 @@ export default function Services() {
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось отправить'); }
     finally { setBusy(false); }
   }, [note, load]);
+
+  /* Завершение услуги. Заработанные дни остаются специалисту,
+     неотработанная часть возвращается в зачёт — так же считает сервер. */
+  const sendCancel = useCallback(async (sub: Subscription) => {
+    if (!reason) { haptic.error(); setErr('Выберите причину'); return; }
+    setBusy(true);
+    try {
+      await api(`/client/subscriptions/${sub.id}/cancel`, {
+        method: 'POST', body: { reason, note: cancelNote.trim() },
+      });
+      haptic.success(); setCancelling(false); setReason(''); setCancelNote(''); await load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не получилось'); }
+    finally { setBusy(false); }
+  }, [reason, cancelNote, load]);
 
   if (err && !d) return <Fail title="Услуги и цены" text={err} />;
   if (!d) return <Loading title="Услуги и цены" />;
@@ -313,6 +342,37 @@ export default function Services() {
               {d.note ? (
                 <Muted style={{ marginTop: S.sm, lineHeight: 18 }}>{d.note}</Muted>
               ) : null}
+
+              {/* Отказ от услуги. В вебе это отдельная шторка с причиной
+                  и комментарием; здесь та же форма раскрывается в
+                  карточке — экран один, уходить некуда. */}
+              {cancelling ? (
+                <View style={{ marginTop: S.md }}>
+                  <Muted style={{ lineHeight: 18 }}>
+                    Заработанные дни останутся специалисту, неотработанная часть вернётся вам.
+                  </Muted>
+                  <View style={{ marginTop: S.md }}><Label>Почему завершаете</Label></View>
+                  <View style={{ marginTop: 6 }}>
+                    <Pills items={CANCEL_REASONS} value={reason} onChange={setReason} />
+                  </View>
+                  <TextInput value={cancelNote} onChangeText={setCancelNote} multiline
+                    placeholder="Комментарий — необязательно" placeholderTextColor={p.text3}
+                    style={{ ...FONT.body, color: p.text, backgroundColor: p.inset, borderRadius: 12,
+                      paddingHorizontal: 14, paddingVertical: 12, marginTop: S.md, minHeight: 72,
+                      textAlignVertical: 'top' }} />
+                  <View style={{ marginTop: S.md, gap: S.sm }}>
+                    <SysButton label="Завершить услугу" variant="destructive"
+                      disabled={busy} onPress={() => sendCancel(sub)} />
+                    <SysButton label="Отмена" variant="quiet"
+                      onPress={() => { setCancelling(false); setReason(''); setCancelNote(''); }} />
+                  </View>
+                </View>
+              ) : (
+                <View style={{ marginTop: S.md }}>
+                  <SysButton label="Отказаться от услуги" variant="quiet"
+                    onPress={() => { haptic.tap(); setErr(null); setCancelling(true); }} />
+                </View>
+              )}
             </Card>
           </Animated.View>
         ) : null}

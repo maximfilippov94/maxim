@@ -881,6 +881,9 @@ export interface Med {
   /** Напоминание об окончании курса */
   reminder_enabled?: number | boolean;
   reminder_on?: string | null;
+  /** Ежедневное напоминание принимать, со временем */
+  intake_reminder_enabled?: number | boolean;
+  intake_reminder_time?: string | null;
 }
 export interface Lab {
   id: number; title: string; taken_on?: string | null;
@@ -889,6 +892,9 @@ export interface Lab {
   doc_type?: string | null; lab_name?: string | null;
   share_nutritionist?: number | boolean;
   share_endocrinologist?: number | boolean;
+  /** Что написал специалист, посмотрев документ, и видел ли это клиент */
+  specialist_comment?: string | null;
+  client_seen_at?: string | null;
 }
 export interface Recommendation {
   id: number; body: string; created_at: string;

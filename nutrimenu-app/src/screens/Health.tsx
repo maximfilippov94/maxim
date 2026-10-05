@@ -184,7 +184,7 @@ export default function HealthScreen({ clientId, title }: {
           ) : null}
 
           {tab === 'docs' ? (
-            <Labs list={d.labs} edit={edit} postTo={write.labs}
+            <Labs list={d.labs} edit={edit} postTo={write.labs} spec={spec}
               onAdd={load} onRemove={id => remove('labs', id)} onError={setErr} />
           ) : null}
         </ScrollView>
@@ -331,10 +331,24 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
      его собственную настройку уведомления, у специалиста такого нет. */
   const [remind, setRemind] = useState<number | null>(null);
   const [remindDay, setRemindDay] = useState(() => new Date());
+  /* Второе напоминание — ежедневное, о самом приёме, со временем:
+     сервер держит его отдельным маршрутом (`intake-reminder`). */
+  const [atTime, setAtTime] = useState('09:00');
   async function saveReminder(m: Med, enabled: boolean) {
     try {
       await api(`/client/health/meds/${m.id}/reminder`, {
         method: 'PATCH', body: { enabled, reminder_on: enabled ? ymd(remindDay) : '' },
+      });
+      setRemind(null); haptic.success(); onAdd();
+    } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
+  }
+  async function saveIntakeReminder(m: Med, enabled: boolean) {
+    if (enabled && !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(atTime)) {
+      haptic.error(); onError('Время в виде 09:00'); return;
+    }
+    try {
+      await api(`/client/health/meds/${m.id}/intake-reminder`, {
+        method: 'PATCH', body: { enabled, time: enabled ? atTime : '' },
       });
       setRemind(null); haptic.success(); onAdd();
     } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
@@ -414,11 +428,14 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
                       onPress={() => {
                         haptic.tap();
                         setRemindDay(m.reminder_on ? new Date(m.reminder_on + 'T00:00:00') : new Date());
+                        setAtTime(m.intake_reminder_time || '09:00');
                         setRemind(v => (v === m.id ? null : m.id));
                       }}
                       style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
                       <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
-                        {m.reminder_enabled ? `Напомнит ${day(m.reminder_on)}` : 'Напомнить об окончании'}
+                        {m.intake_reminder_enabled
+                          ? `Напомнит каждый день в ${m.intake_reminder_time}`
+                          : m.reminder_enabled ? `Напомнит ${day(m.reminder_on)}` : 'Напоминания'}
                       </Text>
                     </Pressable>
                   ) : null}
@@ -430,7 +447,7 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
                   раскрывается прямо в карточке курса. */}
               {remind === m.id ? (
                 <View style={{ gap: S.sm, marginTop: S.xs }}>
-                  <Muted>Дата напоминания</Muted>
+                  <Muted>Напомнить об окончании курса</Muted>
                   <SysDate value={remindDay} onChange={setRemindDay} min={new Date()} />
                   <View style={{ flexDirection: 'row', gap: S.sm }}>
                     <View style={{ flex: 1 }}>
@@ -441,6 +458,28 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
                       <View style={{ flex: 1 }}>
                         <SysButton label="Отключить" height={44}
                           onPress={() => saveReminder(m, false)} />
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <Muted style={{ marginTop: S.sm }}>Напоминать принимать каждый день</Muted>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+                    <TextInput value={atTime} onChangeText={setAtTime}
+                      placeholder="09:00" placeholderTextColor={p.text3}
+                      keyboardType="numbers-and-punctuation" maxLength={5}
+                      accessibilityLabel="Время напоминания"
+                      style={{
+                        width: 92, backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+                        paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
+                      }} />
+                    <View style={{ flex: 1 }}>
+                      <SysButton label="Включить" height={44}
+                        onPress={() => saveIntakeReminder(m, true)} />
+                    </View>
+                    {m.intake_reminder_enabled ? (
+                      <View style={{ flex: 1 }}>
+                        <SysButton label="Выключить" height={44}
+                          onPress={() => saveIntakeReminder(m, false)} />
                       </View>
                     ) : null}
                   </View>
@@ -456,8 +495,8 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
 
 /* -------------------------------------------------------------- анализы */
 
-function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
-  list: Lab[]; edit: boolean; postTo: string;
+function Labs({ list, edit, postTo, spec, onAdd, onRemove, onError }: {
+  list: Lab[]; edit: boolean; postTo: string; spec: boolean;
   onAdd: () => void; onRemove: (id: number) => void; onError: (m: string) => void;
 }) {
   const { p } = useApp();
@@ -500,9 +539,23 @@ function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
      остался бы в истории браузера. */
   const [viewer, setViewer] = useState<{ uri: string; title: string } | null>(null);
 
+  /* Правка карточки документа: те же поля, что в форме, — в вебе это
+     шторка «Настройки и доступ». Файл не меняется, меняется описание. */
+  const [editing, setEditing] = useState<number | null>(null);
+  async function saveEdit(l: Lab, patch: Record<string, unknown>) {
+    try {
+      await api(`/client/health/labs/${l.id}`, { method: 'PATCH', body: patch });
+      setEditing(null); haptic.success(); onAdd();
+    } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
+  }
+
   async function open(l: Lab) {
     if (!l.file_url) return;
     haptic.tap();
+    /* Отмечаем, что клиент документ открыл: специалист по этой отметке
+       видит, дошёл ли до него комментарий. Ответа не ждём — открытие
+       файла из-за статистики задерживаться не должно. */
+    if (!spec) api(`/client/health/labs/${l.id}/seen`, { method: 'POST', body: {} }).catch(() => {});
     try {
       /* Снимок анализа показываем тут же: уходить в системный
          просмотрщик и возвращаться кнопкой «назад» ради одной картинки
@@ -570,9 +623,12 @@ function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
           : 'Анализы пока не добавлены.'} />
       ) : list.map((l, i) => (
         <Animated.View key={l.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
-          <Pressable onPress={() => open(l)} disabled={!l.file_url}
-            style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
-            <Card style={{ marginBottom: S.sm, flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <Card style={{ marginBottom: S.sm }}>
+            <Pressable onPress={() => open(l)} disabled={!l.file_url}
+              style={({ pressed }) => ({
+                flexDirection: 'row', alignItems: 'center', gap: S.md,
+                opacity: pressed ? 0.7 : 1,
+              })}>
               <View style={{
                 width: 42, height: 42, borderRadius: R.md, backgroundColor: p.inset,
                 alignItems: 'center', justifyContent: 'center',
@@ -589,10 +645,27 @@ function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
                     .filter(Boolean).join(' · ')}
                 </Muted>
                 {l.note ? <Muted style={{ marginTop: 2 }} numberOfLines={2}>{l.note}</Muted> : null}
+                {l.specialist_comment ? (
+                  <Muted style={{ marginTop: 4 }}>
+                    Комментарий специалиста: {l.specialist_comment}
+                  </Muted>
+                ) : null}
               </View>
               {edit ? <Del onConfirm={() => onRemove(l.id)} what={l.title} /> : null}
-            </Card>
-          </Pressable>
+            </Pressable>
+
+            {/* «Настройки и доступ» — вид, название, дата, лаборатория,
+                комментарий и кому документ открыт. Файл не меняется. */}
+            {edit ? (
+              <Pressable onPress={() => { haptic.tap(); setEditing(v => (v === l.id ? null : l.id)); }}
+                style={({ pressed }) => ({ marginTop: S.sm, opacity: pressed ? 0.5 : 1 })}>
+                <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>
+                  {editing === l.id ? 'Свернуть' : 'Настройки и доступ'}
+                </Text>
+              </Pressable>
+            ) : null}
+            {editing === l.id ? <LabEdit l={l} onSave={patch => saveEdit(l, patch)} /> : null}
+          </Card>
         </Animated.View>
       ))}
     </View>
@@ -1081,5 +1154,48 @@ function ShareOut({ d, name }: { d: Health; name: string }) {
         </View>
       ) : null}
     </Card>
+  );
+}
+
+/** Правка карточки документа — поля те же, что в форме загрузки. */
+function LabEdit({ l, onSave }: { l: Lab; onSave: (patch: Record<string, unknown>) => void }) {
+  const { p } = useApp();
+  const [kind, setKind] = useState(l.doc_type ?? 'analysis');
+  const [title, setTitle] = useState(l.title);
+  const [taken, setTaken] = useState(() =>
+    l.taken_on ? new Date(l.taken_on + 'T00:00:00') : new Date());
+  const [lab, setLab] = useState(l.lab_name ?? '');
+  const [note, setNote] = useState(l.note ?? '');
+  const [toNut, setToNut] = useState(!!l.share_nutritionist);
+  const [toEnd, setToEnd] = useState(!!l.share_endocrinologist);
+  const field = {
+    backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+    paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15,
+  } as const;
+
+  return (
+    <View style={{ marginTop: S.sm, gap: S.sm }}>
+      <Pills items={Object.entries(HEALTH_DOC_KINDS) as [string, string][]}
+        value={kind} onChange={setKind} />
+      <TextInput value={title} onChangeText={setTitle} style={field}
+        placeholder="Название" placeholderTextColor={p.text3} />
+      <Muted>Дата исследования</Muted>
+      <SysDate value={taken} onChange={setTaken} max={new Date()} />
+      <TextInput value={lab} onChangeText={setLab} style={field}
+        placeholder="Лаборатория" placeholderTextColor={p.text3} />
+      <TextInput value={note} onChangeText={setNote} multiline
+        placeholder="Комментарий" placeholderTextColor={p.text3}
+        style={{ ...field, minHeight: 64, textAlignVertical: 'top' }} />
+      <Muted>Кому открыт документ</Muted>
+      <Share_ label="Нутрициологу" on={toNut} onToggle={() => setToNut(v => !v)} />
+      <Share_ label="Эндокринологу" on={toEnd} onToggle={() => setToEnd(v => !v)} />
+      <Muted>EQUA AI не получает файл и его содержание.</Muted>
+      <SysButton label="Сохранить" variant="prominent" height={44}
+        onPress={() => onSave({
+          doc_type: kind, title: title.trim(), taken_on: ymd(taken),
+          lab_name: lab.trim(), note: note.trim(),
+          share_nutritionist: toNut, share_endocrinologist: toEnd,
+        })} />
+    </View>
   );
 }
