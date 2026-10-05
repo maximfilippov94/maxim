@@ -14,7 +14,7 @@ import React, { useState } from 'react';
 import { View, Text, Platform, Pressable, Alert, LayoutChangeEvent } from 'react-native';
 import { useApp } from '../store';
 import { S, R, FONT } from '../theme';
-import { hasExpoUI } from '../native';
+import { hasExpoUI, hasSymbols } from '../native';
 import { Icon } from './Icon';
 import { LineChart } from './Chart';
 import { haptic } from '../haptics';
@@ -41,12 +41,20 @@ export function SysButton({ label, onPress, variant = 'plainGlass', icon, width,
   disabled?: boolean;
 }) {
   const { p } = useApp();
-  if (!sysNative) {
-    return <SysButtonPlain label={label} onPress={onPress} variant={variant} disabled={disabled} />;
+  /* Главное действие рисуем сами. Системная `glassProminent` подбирает
+     цвет подписи под тему и в тёмной ставит белый — на лаймовой заливке
+     он не читается, а задать его извне SwiftUI не даёт: модификатор на
+     подписи он перекрывает своим. В вебе это и так плоская лаймовая
+     капсула с тёмным текстом (`.primary.green`), поэтому своя отрисовка
+     ещё и ближе к сайту. Остальным вариантам стекло остаётся. */
+  if (!sysNative || variant === 'prominent') {
+    return <SysButtonPlain label={label} onPress={onPress} variant={variant}
+      disabled={disabled} icon={icon} height={height} />;
   }
   const { Host, Button, HStack, Text: SText, Image: SImage } = require('@expo/ui/swift-ui');
   const m = require('@expo/ui/swift-ui/modifiers');
-  const style = variant === 'prominent' ? 'glassProminent' : variant === 'quiet' ? 'plain' : 'glass';
+
+  const style = variant === 'quiet' ? 'plain' : 'glass';
   const mods = [m.buttonStyle(style), m.buttonBorderShape('capsule')];
   if (disabled) mods.push(m.disabled(true));
   return (
@@ -57,39 +65,43 @@ export function SysButton({ label, onPress, variant = 'plainGlass', icon, width,
       <Button onPress={onPress}
         role={variant === 'destructive' ? 'destructive' : undefined}
         modifiers={mods}>
-        {/* Цвет подписи задаём сами. Без него SwiftUI подбирает его под
-            тёмную тему и ставит белый — на лаймовой заливке он не
-            читается. На сайте текст поверх акцента всегда тёмный
-            (`var(--on-primary)`). */}
         <HStack spacing={7} modifiers={[m.frame({ maxWidth: width ? undefined : 9999 })]}>
-          {icon ? <SImage systemName={icon} size={16}
-            modifiers={variant === 'prominent' ? [m.foregroundStyle(p.onPrimary)] : []} /> : <></>}
-          <SText modifiers={variant === 'prominent'
-            ? [m.font({ size: 16, weight: 'semibold' }), m.foregroundStyle(p.onPrimary)]
-            : [m.font({ size: 16, weight: 'semibold' })]}>{label}</SText>
+          {icon ? <SImage systemName={icon} size={16} /> : <></>}
+          <SText modifiers={[m.font({ size: 16, weight: 'semibold' })]}>{label}</SText>
         </HStack>
       </Button>
     </Host>
   );
 }
 
-function SysButtonPlain({ label, onPress, variant, disabled }: {
+function SysButtonPlain({ label, onPress, variant, disabled, icon, height }: {
   label: string; onPress?: () => void; variant: SysVariant; disabled?: boolean;
+  /** Системный символ слева от подписи — тот же, что у стеклянной кнопки */
+  icon?: string; height?: number;
 }) {
   const { p } = useApp();
   const filled = variant === 'prominent';
-  const tint = variant === 'destructive' ? p.danger : p.primary;
+  const tint = variant === 'destructive' ? p.danger : p.accent;
+  const ink = filled ? p.onPrimary : tint;
   return (
     <Pressable onPress={onPress} disabled={disabled}
       style={({ pressed }) => ({
-        paddingVertical: 14, paddingHorizontal: S.xl, borderRadius: R.pill,
-        alignItems: 'center', justifyContent: 'center',
+        height: height ?? 52, paddingHorizontal: S.xl, borderRadius: R.pill,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
         backgroundColor: filled ? p.primary : variant === 'quiet' ? 'transparent' : p.ov2,
         opacity: disabled ? 0.45 : pressed ? 0.75 : 1,
       })}>
-      <Text style={{ ...FONT.h3, color: filled ? p.onPrimary : tint }}>{label}</Text>
+      {icon ? <SfIcon name={icon} size={16} color={ink} /> : null}
+      <Text style={{ ...FONT.h3, color: ink }}>{label}</Text>
     </Pressable>
   );
+}
+
+/** Системный символ картинкой — чтобы у своей кнопки был тот же значок. */
+function SfIcon({ name, size, color }: { name: string; size: number; color: string }) {
+  if (!hasSymbols) return null;
+  const { SymbolView } = require('expo-symbols');
+  return <SymbolView name={name as any} size={size} tintColor={color} type="monochrome" />;
 }
 
 /* --------------------------------------------------------- пустое состояние */

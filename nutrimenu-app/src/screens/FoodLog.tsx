@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -275,12 +275,26 @@ export default function FoodLog() {
               <Text style={{ fontSize: 18, fontWeight: '800', color: p.text }}>{round(total)} ккал</Text>
             </View>
             {err ? <Text style={{ ...FONT.small, color: p.danger, marginTop: S.sm }}>{err}</Text> : null}
-            <View style={{ marginTop: S.md }}>
-              <SysButton label="Сохранить" variant="prominent" disabled={busy} onPress={save} />
-            </View>
           </View>
         ) : null}
       </ScrollView>
+
+      {/* Кнопка записи закреплена внизу, а не стоит под корзиной: список
+          найденного бывает длинным, и человек, набравший продукты, просто
+          не доходил до неё — еда оставалась неотправленной, а он считал,
+          что уже записал её. */}
+      {cart.length ? (
+        <View style={{
+          paddingHorizontal: S.lg, paddingTop: S.md,
+          paddingBottom: insets.bottom + S.md,
+          borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: p.border,
+          backgroundColor: p.surface,
+        }}>
+          <SysButton
+            label={`Записать ${cart.length} ${plural(cart.length, ['продукт', 'продукта', 'продуктов'])} · ${round(total)} ккал`}
+            variant="prominent" disabled={busy} onPress={save} />
+        </View>
+      ) : null}
     </View>
   );
 }
