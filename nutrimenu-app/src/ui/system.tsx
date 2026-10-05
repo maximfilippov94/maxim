@@ -58,8 +58,10 @@ export function SysButton({ label, onPress, variant = 'plainGlass', icon, width,
   const mods = [m.buttonStyle(style), m.buttonBorderShape('capsule')];
   if (disabled) mods.push(m.disabled(true));
   return (
+    /* Подпись стеклянной кнопке SwiftUI красит seedColor-ом. Отдаём
+       `accent`: заливочный лайм на светлой теме в надписи пропадает. */
     <Host style={{ height, width }} colorScheme={p.name === 'light' ? 'light' : 'dark'}
-      seedColor={variant === 'destructive' ? p.danger : p.primary}>
+      seedColor={variant === 'destructive' ? p.danger : p.accent}>
       {/* Ширину задаёт подпись изнутри: рамка снаружи кнопку не растянет —
           SwiftUI отдаст ей ровно её собственный размер и поставит по центру. */}
       <Button onPress={onPress}

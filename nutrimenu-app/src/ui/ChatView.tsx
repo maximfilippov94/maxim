@@ -54,6 +54,12 @@ export interface ChatViewProps {
   /** Строка возврата вместо плавающей шапки — на экранах со стеком */
   back?: React.ReactNode;
   /** Отступ снизу под панель вкладок */
+  /**
+   * Что лежит под строкой ввода, кроме безопасной зоны. Все экраны
+   * переписки открываются поверх вкладок, и панели под ними нет —
+   * поэтому по умолчанию ноль. Было 96: под строкой ввода зияла
+   * ладонь пустоты.
+   */
   bottomInset?: number;
   emptyNote?: string;
   /** Куда сообщать, что человек набирает текст. Без адреса не сообщаем. */
@@ -72,7 +78,7 @@ export interface ChatViewProps {
 
 export function ChatView({
   endpoint, attachEndpoint, extra, mineType,
-  title, subtitle, avatarUrl, back, bottomInset = 96, emptyNote,
+  title, subtitle, avatarUrl, back, bottomInset = 0, emptyNote,
   typingEndpoint, typingLabel, markdown, onReact,
 }: ChatViewProps) {
   const { p } = useApp();
