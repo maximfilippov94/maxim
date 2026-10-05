@@ -68,7 +68,24 @@ const MONTHS = ['январь', 'февраль', 'март', 'апрель', '�
   'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
 const DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
-export default function Cycle() {
+/**
+ * `embedded` — цикл показан вкладкой внутри «Здоровья», как в вебе:
+ * без своей шапки и без нижнего отступа под док, их даёт тот экран.
+ */
+/** Шапка своего экрана цикла: заголовок, «назад» и вход в настройки. */
+function CycleBar() {
+  const { p } = useApp();
+  return (
+    <NavBar title="Цикл" back right={
+      <Pressable hitSlop={10}
+        onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
+        <Icon name="device" size={19} color={p.primary} width={1.8} />
+      </Pressable>
+    } />
+  );
+}
+
+export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -147,12 +164,7 @@ export default function Cycle() {
   if (!c && !err) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
-        <NavBar title="Цикл" back right={
-          <Pressable hitSlop={10}
-            onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
-            <Icon name="device" size={19} color={p.primary} width={1.8} />
-          </Pressable>
-        } />
+        {embedded ? null : <CycleBar />}
         <ActivityIndicator color={p.primary} style={{ marginTop: S.xxl }} />
       </View>
     );
@@ -162,12 +174,7 @@ export default function Cycle() {
   if (!c?.enabled) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
-        <NavBar title="Цикл" back right={
-          <Pressable hitSlop={10}
-            onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
-            <Icon name="device" size={19} color={p.primary} width={1.8} />
-          </Pressable>
-        } />
+        {embedded ? null : <CycleBar />}
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <Empty icon="heart" title="Календарь цикла выключен"
             note="Включите его в разделе «Здоровье» — EQUA будет учитывать фазу в питании и тренировках." />
@@ -188,16 +195,12 @@ export default function Cycle() {
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title="Цикл" back right={
-          <Pressable hitSlop={10}
-            onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
-            <Icon name="device" size={19} color={p.primary} width={1.8} />
-          </Pressable>
-        } />
+      {embedded ? null : <CycleBar />}
       <ScrollView
+        scrollEnabled={!embedded}
         contentContainerStyle={{
-          paddingHorizontal: LAYOUT.screenPad,
-          paddingBottom: insets.bottom + LAYOUT.dockHeight + S.xl,
+          paddingHorizontal: embedded ? 0 : LAYOUT.screenPad,
+          paddingBottom: embedded ? 0 : insets.bottom + LAYOUT.dockHeight + S.xl,
         }}
         showsVerticalScrollIndicator={false}>
 

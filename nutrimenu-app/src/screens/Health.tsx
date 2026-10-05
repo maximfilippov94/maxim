@@ -33,12 +33,13 @@ import { Icon } from '../ui/Icon';
 import { SysConfirm } from '../ui/system';
 import { haptic } from '../haptics';
 import { Loading, Fail } from './Shopping';
+import Cycle from './Cycle';
 
-type Tab = 'allergies' | 'meds' | 'labs' | 'recommendations';
-const TABS: [Tab, string][] = [
-  ['allergies', 'Аллергии'], ['meds', 'Препараты'],
-  ['labs', 'Анализы'], ['recommendations', 'Рекомендации'],
-];
+/* Разделы те же, что в вебе: обзор, цикл, данные, документы. Четыре
+   прежние вкладки — аллергии, препараты, анализы, рекомендации — были
+   своим делением: на сайте это секции внутри «Данных», а первым экраном
+   человек видит сводку, а не список аллергий. */
+type Tab = 'overview' | 'cycle' | 'data' | 'docs';
 
 /** «1 сентября 2026» — даты здесь всегда важны, время неважно никогда. */
 function day(v?: string | null) {
@@ -53,7 +54,7 @@ export default function HealthScreen({ clientId, title }: {
   clientId?: number;
   title?: string;
 }) {
-  const { p } = useApp();
+  const { p, me } = useApp();
   const insets = useSafeAreaInsets();
   const spec = clientId != null;
   const base = spec ? `/specialist/clients/${clientId}/health` : '/client/health';
@@ -73,7 +74,9 @@ export default function HealthScreen({ clientId, title }: {
 
   const [d, setD] = useState<Health | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('allergies');
+  const [tab, setTab] = useState<Tab>('overview');
+  /* Какую секцию «Данных» открыть, если пришли с плитки обзора. */
+  const [focus, setFocus] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try { setD(await api<Health>(base)); setErr(null); }
@@ -91,6 +94,25 @@ export default function HealthScreen({ clientId, title }: {
   if (err && !d) return <Fail title="Здоровье" text={err} />;
   if (!d) return <Loading title="Здоровье" />;
 
+  /* Цикл показываем женщинам и всем, у кого раздел уже включён — то же
+     правило, что в вебе (`showCycle`). Специалисту вкладка не нужна:
+     цикл он смотрит в карточке клиента, если клиент открыл доступ. */
+  const showCycle = !spec && (!me?.user?.sex
+    || String(me.user.sex).toLowerCase().startsWith('f')
+    || !!d.cycle?.enabled);
+
+  const tabs: [Tab, string][] = [
+    ['overview', 'Обзор'],
+    ...(showCycle ? [['cycle', 'Цикл'] as [Tab, string]] : []),
+    ['data', 'Данные'],
+    ['docs', 'Документы'],
+  ];
+
+  /* «Обновлено» — самая свежая из всех записей раздела. */
+  const updated = [...d.allergies, ...d.meds, ...d.labs, ...d.recommendations]
+    .map((x: any) => x.taken_on || x.created_at)
+    .filter(Boolean).sort().reverse()[0] ?? null;
+
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <NavBar title={title ?? 'Здоровье'} back />
@@ -101,7 +123,7 @@ export default function HealthScreen({ clientId, title }: {
           paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
         }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          <Pills items={TABS} value={tab} onChange={setTab} scroll
+          <Pills items={tabs} value={tab} onChange={setTab} scroll
             style={{ marginTop: S.md, marginBottom: S.md,
               marginHorizontal: -S.lg, paddingHorizontal: S.lg }} />
 
@@ -111,22 +133,56 @@ export default function HealthScreen({ clientId, title }: {
             </Card>
           ) : null}
 
-          {tab === 'allergies' ? (
-            <Allergies list={d.allergies} edit={edit} postTo={write.allergies}
-              onAdd={load} onRemove={id => remove('allergies', id)} onError={setErr} />
+          {/* Обзор: сколько чего записано и когда обновляли. На сайте с
+              него начинается раздел — и это правильно: человек заходит
+              посмотреть, а не сразу вводить. */}
+          {tab === 'overview' ? (
+            <Overview d={d} updated={updated} spec={spec}
+              onGo={(t: Tab, k?: string) => { setTab(t); if (k) setFocus(k); }} />
           ) : null}
-          {tab === 'meds' ? (
-            <Meds list={d.meds} edit={edit} postTo={write.meds} spec={spec}
-              finishTo={(id: number) => spec ? `/specialist/meds/${id}` : `/client/health/meds/${id}/finish`}
-              onAdd={load} onRemove={id => remove('meds', id)} onError={setErr} />
+
+          {tab === 'cycle' ? <Cycle embedded /> : null}
+
+          {tab === 'data' ? (
+            <>
+              <Vitals d={d} />
+              <Section key={`a-${focus}`} title="Аллергии и ограничения" open={focus === 'allergies'}>
+                <Allergies list={d.allergies} edit={edit} postTo={write.allergies}
+                  onAdd={load} onRemove={id => remove('allergies', id)} onError={setErr} />
+              </Section>
+              <Section key={`m-${focus}`} title="Препараты и БАДы" open={focus === 'meds'}>
+                <Meds list={d.meds} edit={edit} postTo={write.meds} spec={spec}
+                  finishTo={(id: number) => spec ? `/specialist/meds/${id}` : `/client/health/meds/${id}/finish`}
+                  onAdd={load} onRemove={id => remove('meds', id)} onError={setErr} />
+              </Section>
+              <Section key={`r-${focus}`} title="Рекомендации" open={focus === 'recs'}>
+                <Recs list={d.recommendations} edit={spec} clientId={clientId} spec={spec}
+                  onAdd={load} onRemove={id => remove('recommendations', id)} onError={setErr} />
+              </Section>
+              {/* Кто и что менял в разделе — отдельной секцией, как в вебе. */}
+              {(d.history ?? []).length ? (
+                <Section title="Журнал изменений">
+                  <Card style={{ padding: 0 }}>
+                    {(d.history ?? []).slice(0, 20).map((x: any, i: number) => (
+                      <View key={x.id ?? i} style={{
+                        paddingVertical: 10, paddingHorizontal: S.lg,
+                        borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+                      }}>
+                        <Text style={{ fontSize: 14, color: p.text }}>
+                          {x.summary ?? x.action ?? '—'}
+                        </Text>
+                        <Muted style={{ marginTop: 2 }}>{day(x.created_at)}</Muted>
+                      </View>
+                    ))}
+                  </Card>
+                </Section>
+              ) : null}
+            </>
           ) : null}
-          {tab === 'labs' ? (
+
+          {tab === 'docs' ? (
             <Labs list={d.labs} edit={edit} postTo={write.labs}
               onAdd={load} onRemove={id => remove('labs', id)} onError={setErr} />
-          ) : null}
-          {tab === 'recommendations' ? (
-            <Recs list={d.recommendations} edit={spec} clientId={clientId} spec={spec}
-              onAdd={load} onRemove={id => remove('recommendations', id)} onError={setErr} />
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -558,6 +614,181 @@ function Recs({ list, edit, clientId, spec, onAdd, onRemove, onError }: {
         </Animated.View>
         );
       })}
+    </View>
+  );
+}
+
+/* --------------------------------------------------------------- обзор */
+
+/**
+ * Первый экран раздела — как `health-hero` в вебе: когда обновляли,
+ * метка приватности и четыре плитки с числами. Нажатие на плитку
+ * открывает нужную секцию, а не просто меняет вкладку.
+ */
+function Overview({ d, updated, spec, onGo }: {
+  d: Health; updated: string | null; spec: boolean;
+  onGo: (tab: Tab, focus?: string) => void;
+}) {
+  const { p } = useApp();
+  const active = d.meds.filter(m => !m.ended_on).length;
+  /* Те же три источника и тот же порядок, что в вебе. */
+  const timeline = [
+    ...d.labs.map((x: any) => ({ at: x.taken_on || x.created_at, ic: 'doc',
+      title: x.title as string, sub: 'Документ' })),
+    ...d.recommendations.map((x: any) => ({ at: x.created_at, ic: 'heart',
+      title: 'Рекомендация специалиста', sub: x.body as string })),
+    ...d.meds.map((x: any) => ({ at: x.started_on || x.created_at, ic: 'plus',
+      title: x.title as string, sub: x.ended_on ? 'Курс завершён' : 'Начало приёма' })),
+  ].filter(x => x.at)
+   .sort((a, b) => String(b.at).localeCompare(String(a.at)))
+   .slice(0, 6);
+
+  const tiles: [string, number, string, Tab, string][] = [
+    ['warn', d.allergies.length, 'аллергии', 'data', 'allergies'],
+    ['plus', active, 'принимаю', 'data', 'meds'],
+    ['doc', d.labs.length, 'документы', 'docs', ''],
+    ['heart', d.recommendations.length, 'рекомендации', 'data', 'recs'],
+  ];
+  return (
+    <View>
+      <Card style={{ marginBottom: S.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <View style={{
+            width: 42, height: 42, borderRadius: 21, alignItems: 'center',
+            justifyContent: 'center', backgroundColor: p.primarySoft,
+          }}>
+            <Icon name="heart" size={20} color={p.accent} width={1.8} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ ...FONT.h3, color: p.text }}>Профиль здоровья</Text>
+            <Muted style={{ marginTop: 2 }}>
+              Обновлено · {updated ? day(updated) : 'ещё нет записей'}
+            </Muted>
+          </View>
+          {/* Записи видит только тот, кому клиент открыл раздел — об этом
+              стоит сказать прямо, иначе их просто не заводят. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+            <Icon name="lock" size={13} color={p.text3} width={1.8} />
+            <Text style={{ fontSize: 11, color: p.text3 }}>Приватно</Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.lg }}>
+          {tiles.map(([ic, n, label, tab, key]) => (
+            <Pressable key={label} onPress={() => { haptic.tap(); onGo(tab, key || undefined); }}
+              style={({ pressed }) => ({
+                flexBasis: '47%', flexGrow: 1,
+                paddingVertical: 12, paddingHorizontal: 12, borderRadius: R.md,
+                backgroundColor: p.inset, opacity: pressed ? 0.7 : 1,
+              })}>
+              <Icon name={ic} size={16} color={p.text3} width={1.8} />
+              <Text style={{ fontSize: 22, fontWeight: '700', color: p.text, marginTop: 6 }}>{n}</Text>
+              <Text style={{ fontSize: 12, color: p.text3 }} numberOfLines={1}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
+      {/* История здоровья — шесть последних событий из документов,
+          рекомендаций и препаратов, как `timeline` в вебе. Журнал
+          изменений (кто и что правил) живёт на вкладке «Данные». */}
+      {timeline.length ? (
+        <>
+          <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+            История здоровья
+          </Text>
+          <Card style={{ padding: 0, marginBottom: S.md }}>
+            {timeline.map((x, i) => (
+              <View key={`${x.at}-${i}`} style={{
+                flexDirection: 'row', alignItems: 'flex-start', gap: S.md,
+                paddingVertical: 11, paddingHorizontal: S.lg,
+                borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+              }}>
+                <Icon name={x.ic} size={16} color={p.text3} width={1.8} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ fontSize: 14, color: p.text }} numberOfLines={2}>{x.title}</Text>
+                  <Muted numberOfLines={1}>{x.sub} · {day(x.at)}</Muted>
+                </View>
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : spec ? null : (
+        <Blank text="Записи появятся здесь, как только вы что-нибудь добавите." />
+      )}
+    </View>
+  );
+}
+
+/** Показатели тела — вес и замеры, как секция «Показатели тела» в вебе. */
+function Vitals({ d }: { d: Health }) {
+  const { p } = useApp();
+  const w = d.metrics?.weights ?? [];
+  const last = w[0] ?? null;
+  const prev = w[1] ?? null;
+  const delta = last && prev ? Number(last.weight_kg) - Number(prev.weight_kg) : null;
+  const waist = d.metrics?.measurement?.waist_cm ?? null;
+  if (!last && !waist) return null;
+  return (
+    <Card style={{ marginBottom: S.md }}>
+      <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.md }}>Показатели тела</Text>
+      <View style={{ flexDirection: 'row', gap: S.md }}>
+        <View style={{ flex: 1 }}>
+          <Muted>Вес</Muted>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
+            <Text style={{ fontSize: 21, fontWeight: '700', color: p.text }}>
+              {last ? last.weight_kg : '—'}
+            </Text>
+            {last ? <Muted style={{ marginLeft: 3 }}>кг</Muted> : null}
+          </View>
+          {delta !== null && Math.abs(delta) >= 0.05 ? (
+            <Text style={{ fontSize: 12, marginTop: 2,
+              color: delta > 0 ? p.warn : p.good }}>
+              {delta > 0 ? '+' : '−'}{Math.abs(delta).toFixed(1)} кг
+            </Text>
+          ) : <Muted style={{ marginTop: 2 }}>{last ? day(last.measured_on) : 'нет данных'}</Muted>}
+        </View>
+        {waist != null ? (
+          <View style={{ flex: 1 }}>
+            <Muted>Талия</Muted>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 4 }}>
+              <Text style={{ fontSize: 21, fontWeight: '700', color: p.text }}>{waist}</Text>
+              <Muted style={{ marginLeft: 3 }}>см</Muted>
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </Card>
+  );
+}
+
+/**
+ * Сворачиваемая секция «Данных» — как `health-fold` в вебе: на одном
+ * экране четыре списка, и без сворачивания до рекомендаций надо
+ * прокручивать весь список препаратов.
+ */
+function Section({ title, open, children }: {
+  title: string; open?: boolean; children: React.ReactNode;
+}) {
+  const { p } = useApp();
+  /* Пришли с плитки обзора — секция открывается сама. Состояние задаётся
+     начальным значением, а родитель меняет `key` при смене выбранной
+     секции: так она пересоздаётся открытой, без правки состояния из
+     эффекта. */
+  const [on, setOn] = useState(!!open);
+  return (
+    <View style={{ marginBottom: S.md }}>
+      <Pressable onPress={() => { haptic.tap(); setOn(v => !v); }}
+        style={({ pressed }) => ({
+          flexDirection: 'row', alignItems: 'center', gap: S.sm,
+          paddingVertical: 10, opacity: pressed ? 0.7 : 1,
+        })}>
+        <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{title}</Text>
+        <View style={{ transform: [{ rotate: on ? '90deg' : '0deg' }] }}>
+          <Icon name="chevr" size={15} color={p.text3} width={2} />
+        </View>
+      </Pressable>
+      {on ? children : null}
     </View>
   );
 }

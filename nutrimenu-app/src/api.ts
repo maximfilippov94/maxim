@@ -875,6 +875,19 @@ export interface Health {
   meds: Med[];
   labs: Lab[];
   recommendations: Recommendation[];
+  /* Вес и замеры из «Прогресса» — раздел здоровья показывает их рядом
+     с остальным, не заставляя ходить на другой экран. */
+  metrics?: {
+    weights?: { weight_kg: number; measured_on: string }[];
+    measurement?: Record<string, number | null> | null;
+  } | null;
+  /** Блок цикла: он же питает отдельный экран календаря */
+  cycle?: { enabled?: boolean } | null;
+  /** Журнал изменений: кто и что менял в разделе (health_audit_log) */
+  history?: {
+    id?: number; created_at?: string; summary?: string | null;
+    action?: string | null; entity_type?: string | null;
+  }[];
 }
 
 /* ---------- Лента ---------- */
