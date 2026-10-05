@@ -5,9 +5,11 @@
  * настройками, периодами, отметками по дням и сводкой. Ничего нового не
  * придумано — экран собран из этих полей.
  *
- * Про цвет. Раздел намеренно не розовый: тёплый беж и шалфей, а лаймовый
- * акцент EQUA остаётся цветом действия. Розово-красная палитра выдаёт
- * вставку из чужого приложения и делает тему громче, чем нужно.
+ * Про цвет. Раздел красится тем же `#C28D7F`, что и в вебе
+ * (`.cycle-day.period`, `.cycle-overview-ring`), и теми же долями
+ * смешения с панелью. Раньше здесь были беж и шалфей — выбор «как
+ * лучше», из-за которого один и тот же раздел на сайте и в приложении
+ * выглядел из разных продуктов.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
@@ -15,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api } from '../api';
-import { S, R, FONT, LAYOUT } from '../theme';
+import { S, R, FONT, LAYOUT, CYCLE, mix, alpha } from '../theme';
 import { Card, Muted } from '../ui/base';
 import { router } from 'expo-router';
 import { Icon } from '../ui/Icon';
@@ -274,16 +276,20 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
                   <View style={{
                     width: 34, height: 34, borderRadius: 17,
                     alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: period ? CYCLE_TINT[p.name].period
+                    /* Значения из веба: день менструации — 30 % цвета
+                       цикла поверх панели с рамкой в 55 %, прогноз —
+                       7 % поверх панели и пунктир в 72 %. */
+                    backgroundColor: period ? mix(CYCLE, 30, p.surface)
+                      : predicted ? mix(CYCLE, 7, p.surface)
                       : picked === date ? p.primarySoft : 'transparent',
                     borderWidth: predicted || isToday ? 1.5 : 0,
-                    borderColor: predicted ? CYCLE_TINT[p.name].art : p.primary,
+                    borderColor: predicted ? alpha(CYCLE, 72) : p.primary,
                     borderStyle: predicted ? 'dashed' : 'solid',
                     opacity: future ? 0.35 : 1,
                   }}>
                     <Text style={{
                       ...FONT.callout,
-                      color: period ? CYCLE_TINT[p.name].onPeriod : p.text,
+                      color: p.text,
                       fontWeight: isToday ? '700' : '400',
                     }}>{Number(date.slice(8))}</Text>
                   </View>
@@ -346,8 +352,3 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
   );
 }
 
-/* Беж и шалфей вместо розового — см. комментарий в начале файла. */
-const CYCLE_TINT = {
-  dark: { period: 'rgba(197,208,178,0.26)', onPeriod: '#F7F7F4', art: '#C5D0B2' },
-  light: { period: '#E3E8D8', onPeriod: '#121820', art: '#9FB08A' },
-} as const;

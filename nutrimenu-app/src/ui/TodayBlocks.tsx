@@ -11,7 +11,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useApp } from '../store';
-import { S, R, FONT, LAYOUT } from '../theme';
+import { S, R, FONT, LAYOUT, CYCLE, mix } from '../theme';
 import { Icon } from './Icon';
 import { mediaUrl } from '../api';
 import { haptic } from '../haptics';
@@ -122,14 +122,11 @@ export function TodayWorkout({ data }: { data: WorkoutToday | null }) {
 /* ---------- Женское здоровье ---------- */
 
 /**
- * Палитра блока намеренно не розовая: тёплый беж и шалфей вместо привычного
- * «женского» розового, лайм остаётся цветом действия. Так раздел читается
- * как часть EQUA, а не как вставка из другого приложения.
+ * Цвет — тот же `#C28D7F`, что в вебе (`.health-cycle-card`), и те же
+ * доли смешения: 11 % поверх панели в заливке, 38 % в рамке. Раньше блок
+ * был в шалфее — выбор «как лучше», из-за которого одна и та же карточка
+ * на сайте и в приложении выглядела по-разному.
  */
-const CYCLE_TINT = {
-  dark: { fill: 'rgba(197,208,178,0.12)', art: '#C5D0B2' },
-  light: { fill: '#EFEFE6', art: '#9FB08A' },
-} as const;
 
 export function TodayCycle({ health }: { health: HealthResponse | null }) {
   const { p } = useApp();
@@ -137,7 +134,6 @@ export function TodayCycle({ health }: { health: HealthResponse | null }) {
   const s = c?.summary;
   if (!c?.enabled || !s) return null;
 
-  const tint = CYCLE_TINT[p.name];
   const note = s.period_active
     ? 'Идёт менструация'
     : s.cycle_day
@@ -149,11 +145,15 @@ export function TodayCycle({ health }: { health: HealthResponse | null }) {
       onPress={() => { haptic.select(); router.push('/cycle'); }}
       style={({ pressed }) => [
         styles.row,
-        { backgroundColor: tint.fill, borderColor: p.border, opacity: pressed ? 0.9 : 1 },
+        {
+          backgroundColor: mix(CYCLE, 11, p.surface),
+          borderColor: mix(CYCLE, 38, p.surface),
+          opacity: pressed ? 0.9 : 1,
+        },
       ]}
     >
       <View style={[styles.icon, { backgroundColor: p.surface }]}>
-        <Icon name="heart" size={19} color={tint.art} />
+        <Icon name="heart" size={19} color={CYCLE} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[FONT.caption, { color: p.text3 }]}>{s.phase_label || 'Женское здоровье'}</Text>

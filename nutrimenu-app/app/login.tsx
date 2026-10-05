@@ -52,9 +52,9 @@ export default function Login() {
         } />
 
       {err ? (
-        <View style={{ backgroundColor: 'rgba(226,86,77,0.18)', borderRadius: R.md,
+        <View style={{ backgroundColor: 'rgba(255,147,147,0.16)', borderRadius: R.md,
           padding: S.lg, marginBottom: S.md }}>
-          <Text style={{ ...FONT.small, color: '#FFB8B3' }}>{err}</Text>
+          <Text style={{ ...FONT.small, color: '#FF9393' }}>{err}</Text>
         </View>
       ) : null}
 

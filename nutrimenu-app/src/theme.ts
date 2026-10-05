@@ -201,3 +201,37 @@ export const MOTION = {
 export function macroColor(p: Palette, cur: number, target: number): string {
   return target && cur / target > 1.05 ? p.warn : p.mp;
 }
+
+/**
+ * Цвет раздела цикла — тот же, что в вебе: `#C28D7F` в `screens.css`
+ * (`.cycle-day.period`, `.cycle-overview-ring`, `.health-cycle-card`).
+ * Раньше приложение красило цикл в шалфей — это было решение «как лучше»,
+ * а не перенос, и разделы выглядели из разных продуктов.
+ */
+export const CYCLE = '#C28D7F';
+
+/**
+ * Смешение цвета с подложкой — то же, что `color-mix(in srgb, a p%, b)`
+ * в CSS веба: доля цвета поверх фона панели, в sRGB, без гаммы.
+ */
+export function mix(color: string, pct: number, over: string): string {
+  const rgb = (h: string): [number, number, number] => {
+    const s = h.replace('#', '');
+    const f = s.length === 3 ? s.split('').map(c => c + c).join('') : s;
+    return [parseInt(f.slice(0, 2), 16), parseInt(f.slice(2, 4), 16), parseInt(f.slice(4, 6), 16)];
+  };
+  const [r1, g1, b1] = rgb(color);
+  const [r2, g2, b2] = rgb(over);
+  const k = Math.max(0, Math.min(1, pct / 100));
+  const to = (a: number, b: number) => Math.round(a * k + b * (1 - k));
+  return `#${[to(r1, r2), to(g1, g2), to(b1, b2)]
+    .map(v => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Тот же цвет с прозрачностью — как `color-mix(… , transparent)`. */
+export function alpha(color: string, pct: number): string {
+  const s = color.replace('#', '');
+  const f = s.length === 3 ? s.split('').map(c => c + c).join('') : s;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(f.slice(i, i + 2), 16));
+  return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, pct / 100))})`;
+}

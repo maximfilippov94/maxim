@@ -18,7 +18,13 @@ import { Icon } from './Icon';
 import { Logo } from './Logo';
 import { haptic } from '../haptics';
 
-/** Цвета листа с формой: обычная палитра здесь не работает. */
+/**
+ * Цвета листа с формой. Лист всегда тёмный — он лежит на фотографии, —
+ * поэтому текст и поля свои. А кнопка и акцент те же, что в вебе:
+ * `.auth2-btn` красится `var(--accent)` с текстом `var(--on-primary)`,
+ * то есть лайм на тёмном. Раньше здесь был зелёный `#2E7D63`, и вход
+ * выглядел из другого продукта.
+ */
 export const ON_PHOTO = {
   sheet: '#1A222C',
   text: '#FFFFFF',
@@ -27,9 +33,9 @@ export const ON_PHOTO = {
   field: 'rgba(255,255,255,0.06)',
   fieldBorder: 'rgba(255,255,255,0.14)',
   card: 'rgba(255,255,255,0.08)',
-  primary: '#2E7D63',
-  accent: '#4CA585',
-  onPrimary: '#FFFFFF',
+  primary: '#DFFF3A',
+  accent: '#DFFF3A',
+  onPrimary: '#121820',
 };
 
 export function AuthShell({ children, back }: {

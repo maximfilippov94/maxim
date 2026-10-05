@@ -225,7 +225,7 @@ export default function Register() {
       )}
 
       {err ? (
-        <View style={{ backgroundColor: 'rgba(226,86,77,0.22)', borderRadius: R.md,
+        <View style={{ backgroundColor: 'rgba(255,147,147,0.16)', borderRadius: R.md,
           padding: S.lg, marginTop: S.lg }}>
           <Text style={{ ...FONT.small, color: '#FFD9D6' }}>{err}</Text>
         </View>

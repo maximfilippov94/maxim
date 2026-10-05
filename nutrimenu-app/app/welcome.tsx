@@ -15,7 +15,10 @@ import { SocialAuth } from '../src/ui/SocialAuth';
 import { LegalNote } from '../src/ui/LegalNote';
 import { haptic } from '../src/haptics';
 
-const GREEN = '#2E7D63';
+/* Основная кнопка — лайм с тёмным текстом, как `.primary.green` в вебе.
+   Была зелёной, и первый экран приложения не совпадал с сайтом. */
+const LIME = '#DFFF3A';
+const ON_LIME = '#121820';
 
 export default function Welcome() {
   const insets = useSafeAreaInsets();
@@ -51,7 +54,7 @@ export default function Welcome() {
         <BigButton title="Зарегистрироваться"
           onPress={() => { haptic.tap(); router.push('/register'); }} />
         {err ? (
-          <Text style={{ ...FONT.small, color: '#FFB8B3', textAlign: 'center' }}>{err}</Text>
+          <Text style={{ ...FONT.small, color: '#FF9393', textAlign: 'center' }}>{err}</Text>
         ) : null}
         <SocialAuth onError={setErr} />
         <LegalNote />
@@ -67,12 +70,14 @@ function BigButton({ title, filled, onPress }: {
     <Pressable onPress={onPress}
       style={({ pressed }) => ({
         height: 54, borderRadius: R.pill, alignItems: 'center', justifyContent: 'center',
-        backgroundColor: filled ? GREEN : 'rgba(18,24,32,0.72)',
+        backgroundColor: filled ? LIME : 'rgba(18,24,32,0.72)',
         borderWidth: filled ? 0 : 1, borderColor: 'rgba(255,255,255,0.18)',
         opacity: pressed ? 0.88 : 1,
         transform: [{ scale: pressed ? 0.99 : 1 }],
       })}>
-      <Text style={{ ...FONT.h3, fontSize: 16, color: '#FFFFFF' }}>{title}</Text>
+      <Text style={{ ...FONT.h3, fontSize: 16, color: filled ? ON_LIME : '#FFFFFF' }}>
+        {title}
+      </Text>
     </Pressable>
   );
 }
