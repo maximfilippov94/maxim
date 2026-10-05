@@ -166,11 +166,15 @@ export function ChatView({
       /* Сервер возвращает созданную строку: подменяем ею свою временную,
          чтобы у сообщения появился настоящий номер и оно не пришло
          второй раз опросом. */
-      const r = await api<{ message?: ChatMessage }>(endpoint, {
+      const r = await api<{ message?: ChatMessage; reply?: ChatMessage }>(endpoint, {
         method: 'POST', body: { ...extra, body }, signal: ctl?.signal,
       });
       if (r?.message) setMsgs(m => (m ?? []).map(x => (x.id === local.id ? r.message! : x)));
       else await load();
+      /* EQUA AI отвечает тем же запросом: ответ лежит в `reply` и в ленту
+         сам не приедет — опроса у этого экрана нет. Без этой строки
+         человек видел только свой вопрос и считал, что AI молчит. */
+      if (r?.reply) setMsgs(m => [...(m ?? []), r.reply!]);
     } catch (e: any) {
       haptic.error();
       /* Прервали сами — это не ошибка: вопрос остаётся в ленте, ругаться

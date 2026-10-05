@@ -33,4 +33,8 @@ sleep 2
 BASE="$BASE" php "$HERE/api-test.php"
 
 echo
+echo "== Чат EQUA AI =="
+WEB="$WEB" BASE="$BASE" php "$HERE/ai-chat-test.php"
+
+echo
 echo "Проверки пройдены."
