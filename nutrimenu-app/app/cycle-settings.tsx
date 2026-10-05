@@ -12,7 +12,7 @@
  * отказом иначе — показываем это словами, а не молчащим переключателем.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Switch, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Switch, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useApp } from '../src/store';
@@ -91,6 +91,31 @@ export default function CycleSettings() {
     toast('Раздел выключен', { sub: 'отметки сохранены' });
   }, [put, toast]);
 
+  /* Полное удаление истории. Отдельно от выключения и с двумя вопросами —
+     как в вебе (`clCycleDelete`): вернуть эти записи неоткуда. */
+  const wipe = useCallback(() => {
+    Alert.alert('Удалить весь календарь цикла?',
+      'Вместе с ним уйдут все наблюдения и отмеченные периоды.', [
+        { text: 'Отмена', style: 'cancel' },
+        { text: 'Удалить', style: 'destructive', onPress: () => {
+          Alert.alert('Это необратимо', 'Точно удалить всю историю цикла?', [
+            { text: 'Отмена', style: 'cancel' },
+            { text: 'Удалить навсегда', style: 'destructive', onPress: async () => {
+              try {
+                await api('/client/health/cycle', { method: 'DELETE' });
+                haptic.success();
+                toast('История цикла удалена');
+                router.back();
+              } catch (e: any) {
+                haptic.error();
+                toast(e?.message ?? 'Не удалилось', { kind: 'err' });
+              }
+            } },
+          ]);
+        } },
+      ]);
+  }, [toast]);
+
   if (!s) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
@@ -162,6 +187,10 @@ export default function CycleSettings() {
           ) : (
             <SysButton label="Включить раздел" onPress={() => put({ enabled: 1 })} />
           )}
+          <SysButton label="Удалить историю цикла" variant="destructive" onPress={wipe} />
+          <Muted style={{ textAlign: 'center' }}>
+            Выключение сохраняет отметки, удаление стирает их насовсем.
+          </Muted>
         </View>
       </ScrollView>
     </View>
