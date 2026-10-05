@@ -40,6 +40,10 @@ const DOT: Record<string, string> = {
 
 const foldKey = (mt: string) => `equa_meal_fold_${mt}`;
 
+/** Кадр снимка блюда: 4:3 — пропорция, в которой еду и снимают. */
+const PHOTO_W = 120;
+const PHOTO_H = 90;
+
 export function MealSection({ meal, items, own, onToggle, onChanged }: {
   meal: string;
   /** Блюда этого приёма, вместе со скрытыми: их показываем отдельной строкой */
@@ -213,21 +217,29 @@ function MealRow({ x, first, busy, onToggle, onReplace, onHide }: {
     <Pressable
       onPress={() => { haptic.tap(); router.push(`/dish/${x.id}`); }}
       style={({ pressed }) => ({
-        flexDirection: 'row', alignItems: 'stretch', gap: S.md,
-        paddingRight: 10, minHeight: 104,
+        flexDirection: 'row', alignItems: 'center', gap: S.md,
+        paddingLeft: 10, paddingRight: 10, paddingVertical: 10, minHeight: 104,
         borderTopWidth: first ? 0 : 1, borderTopColor: p.borderSoft,
         backgroundColor: pressed ? p.ov1 : 'transparent',
         opacity: skip ? 0.55 : 1,
       })}>
+      {/* Кадр 4:3 — в той пропорции, в какой блюдо и снимают. Раньше
+          снимок стоял колонкой во всю высоту строки (94 на ~115), и у
+          горизонтального кадра срезало по краям почти сорок процентов
+          ширины: от тарелки оставалась середина. */}
       {thumb
-        ? <Image source={{ uri: thumb }} style={{ width: 94, backgroundColor: p.inset }}
+        ? <Image source={{ uri: thumb }}
+            style={{ width: PHOTO_W, height: PHOTO_H, borderRadius: R.control, backgroundColor: p.inset }}
             contentFit="cover" transition={220} cachePolicy="memory-disk"
             placeholder={{ blurhash: 'L6C~2Xxu00WB00WB~qof00WB~qof' }} />
-        : <View style={{ width: 94, backgroundColor: p.inset, alignItems: 'center', justifyContent: 'center' }}>
+        : <View style={{
+            width: PHOTO_W, height: PHOTO_H, borderRadius: R.control, backgroundColor: p.inset,
+            alignItems: 'center', justifyContent: 'center',
+          }}>
             <Icon name="bowl" size={20} color={p.text3} />
           </View>}
 
-      <View style={{ flex: 1, minWidth: 0, paddingVertical: 12 }}>
+      <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={2} style={{
           fontSize: 15, fontWeight: '600', lineHeight: 20, letterSpacing: -0.3, color: p.text,
         }}>{x.dish_name}</Text>
@@ -252,7 +264,7 @@ function MealRow({ x, first, busy, onToggle, onReplace, onHide }: {
       {/* Действия столбиком: отметка, под ней — замена и «скрыть», как в
           вебе. У съеденного и пропущенного блюда менять нечего: там
           остаётся одна галочка. */}
-      <View style={{ alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 12 }}>
+      <View style={{ alignItems: 'center', justifyContent: 'center', gap: 10 }}>
         <Pressable onPress={() => onToggle(x)} hitSlop={8}
           accessibilityLabel={done ? 'Отменить отметку' : 'Отметить съеденным'}
           style={({ pressed }) => ({

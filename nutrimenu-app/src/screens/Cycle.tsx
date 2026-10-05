@@ -107,6 +107,9 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
   const [err, setErr] = useState<string | null>(null);
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [picked, setPicked] = useState<string | null>(null);
+  /* Окончание отмечают и задним числом: вспомнили через день-другой.
+     В вебе для этого есть «Указать дату», здесь — тот же выбор. */
+  const [endPick, setEndPick] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -148,17 +151,21 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
   const startPeriod = useCallback(async () => {
     setBusy(true);
     try {
-      await api('/client/health/cycle/period/start', { method: 'POST', body: { started_on: today10() } });
+      /* Поле даты — `date`: под именем `started_on` сервер его не видел
+         и всегда брал сегодняшнее число. */
+      await api('/client/health/cycle/period/start', { method: 'POST', body: { date: today10() } });
       haptic.success(); await load();
     } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не сохранилось', { kind: 'err' }); }
     finally { setBusy(false); }
   }, [load, toast]);
 
-  const endPeriod = useCallback(async () => {
+  const endPeriod = useCallback(async (on?: string) => {
     setBusy(true);
     try {
-      await api('/client/health/cycle/period/end', { method: 'PATCH', body: { ended_on: today10() } });
-      haptic.success(); await load();
+      /* Тоже `date`, а не `ended_on`: иначе «указать другую дату» не
+         работала бы — сервер закрывал бы период сегодняшним числом. */
+      await api('/client/health/cycle/period/end', { method: 'PATCH', body: { date: on ?? today10() } });
+      haptic.success(); setEndPick(null); await load();
     } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не сохранилось', { kind: 'err' }); }
     finally { setBusy(false); }
   }, [load, toast]);
@@ -224,7 +231,14 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
     const prev = byLog[date]?.[key];
     const next = prev === value ? null : value;
     try {
-      await api('/client/health/cycle/day', { method: 'POST', body: { logged_on: date, [key]: next } });
+      /* Поле даты называется `date`, а не `logged_on`: под прежним именем
+         сервер его не видел и писал отметку в сегодняшний день — какое
+         бы число ни выбрали. И `partial`: без него маршрут переписывает
+         день целиком, то есть одна отметка стирала все остальные за этот
+         день. В вебе оба поля всегда передавались. */
+      await api('/client/health/cycle/day', {
+        method: 'POST', body: { date, partial: true, [key]: next },
+      });
       haptic.select(); await load();
     } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не сохранилось', { kind: 'err' }); }
   }, [byLog, load, toast]);
@@ -303,8 +317,31 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
                 label={s.period_active ? 'Менструация закончилась' : 'Началась менструация'}
                 variant={s.period_active ? undefined : 'prominent'}
                 disabled={busy}
-                onPress={s.period_active ? endPeriod : startPeriod} />
+                onPress={() => (s.period_active ? endPeriod() : startPeriod())} />
             </View>
+            {s.period_active ? (
+              endPick ? (
+                <View style={{ marginTop: S.sm, gap: S.sm }}>
+                  <Muted>Последний день</Muted>
+                  <SysDate value={endPick} onChange={setEndPick} max={new Date()} />
+                  <View style={{ flexDirection: 'row', gap: S.sm }}>
+                    <View style={{ flex: 1 }}>
+                      <SysButton label="Сохранить" variant="prominent" height={44} disabled={busy}
+                        onPress={() => endPeriod(ymd(endPick))} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <SysButton label="Отмена" variant="quiet" height={44}
+                        onPress={() => setEndPick(null)} />
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <View style={{ marginTop: S.sm }}>
+                  <SysButton label="Указать другую дату" variant="quiet" height={44}
+                    onPress={() => { haptic.tap(); setEndPick(new Date()); }} />
+                </View>
+              )
+            ) : null}
           </Card>
         </Animated.View>
 

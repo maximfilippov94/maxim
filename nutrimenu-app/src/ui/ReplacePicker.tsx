@@ -81,6 +81,11 @@ export function ReplacePicker({ itemId, open, onClose, onDone }: {
     }
   }, [itemId]);
 
+  /* Список тянем при открытии. Правило React Compiler не любит смену
+     состояния прямо в эффекте; здесь это осознанно и так же, как на
+     остальных экранах — другого места для первого запроса нет
+     (общий переход на иной способ загрузки вынесен в MIGRATION.md). */
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (open) load(); }, [open, load]);
 
   const apply = useCallback(async () => {
@@ -149,17 +154,22 @@ export function ReplacePicker({ itemId, open, onClose, onDone }: {
                     accessibilityRole="button"
                     accessibilityState={{ selected: on }}
                     style={({ pressed }) => ({
-                      flexDirection: 'row', alignItems: 'stretch', gap: S.md,
-                      borderRadius: R.md, overflow: 'hidden',
+                      flexDirection: 'row', alignItems: 'center', gap: S.md,
+                      padding: 10, borderRadius: R.md, overflow: 'hidden',
                       borderWidth: 1.5, borderColor: on ? p.primary : p.border,
                       backgroundColor: pressed ? p.ov1 : on ? p.primarySofter : 'transparent',
                     })}>
+                    {/* Кадр 4:3, как и в строке дня: снимок во всю высоту
+                        карточки срезал бы бока у горизонтального фото. */}
                     {photo ? (
-                      <Image source={{ uri: photo }} style={{ width: 86, backgroundColor: p.inset }}
+                      <Image source={{ uri: photo }}
+                        style={{ width: 112, height: 84, borderRadius: R.control, backgroundColor: p.inset }}
                         contentFit="cover" transition={200} cachePolicy="memory-disk" />
                     ) : (
-                      <View style={{ width: 86, backgroundColor: p.inset,
-                        alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{
+                        width: 112, height: 84, borderRadius: R.control, backgroundColor: p.inset,
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
                         <Icon name="bowl" size={20} color={p.text3} />
                       </View>
                     )}
