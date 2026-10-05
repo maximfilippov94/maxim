@@ -11,10 +11,16 @@ import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { SysButton, Empty } from '../ui/system';
-import { round } from '../format';
+import { round, plural } from '../format';
 import { haptic } from '../haptics';
 
 const REASONS = ['Не было времени', 'Не было продуктов', 'Не хотелось', 'Ел(а) другое', 'Другое'];
+
+/* Звезда оценки янтарная в обеих темах — значение из веба
+   (`.dish-rate-stars button.on`). Это не акцент продукта: лайм здесь
+   спорил бы с отметкой «съедено», которая им же и красится. */
+const STAR = '#F5AE32';
+const STAR_SOFT = 'rgba(245,174,50,0.13)';
 
 export default function Dish() {
   const { p } = useApp();
@@ -28,11 +34,20 @@ export default function Dish() {
   const [repl, setRepl] = useState<Replacement[] | null>(null);
   const [replSrc, setReplSrc] = useState<ReplacementSource>('auto');
   const [busy, setBusy] = useState(false);
+  /* Своя оценка живёт отдельно от блюда: сервер возвращает новую
+     среднюю сразу, и перечитывать весь экран ради одной звезды незачем. */
+  const [myRating, setMyRating] = useState<number | null>(null);
+  const [avg, setAvg] = useState<number | null>(null);
+  const [avgCount, setAvgCount] = useState(0);
+  const [rateBusy, setRateBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const r = await api<{ item: DishItem }>(`/client/menu-items/${iid}`);
       setX(r.item); setGram(round(r.item.portion_g)); setErr(null);
+      setMyRating(r.item.my_rating ?? null);
+      setAvg(r.item.dish_rating ?? null);
+      setAvgCount(Number(r.item.dish_rating_count ?? 0));
     } catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); }
   }, [iid]);
 
@@ -70,6 +85,27 @@ export default function Dish() {
       haptic.error(); setErr(e?.message ?? 'Эта замена недоступна');
     } finally { setBusy(false); }
   }, [iid, load]);
+
+  /* Оценка уходит сразу по нажатию и рисуется до ответа: ждать сервер,
+     глядя на неподсвеченную звезду, человек читает как «не нажалось».
+     Не сохранилось — возвращаем прежнюю. */
+  const rate = useCallback(async (value: number) => {
+    if (rateBusy || !x) return;
+    const before = myRating;
+    haptic.select();
+    setMyRating(value);
+    setRateBusy(true);
+    try {
+      const r = await api<{ rating?: number; rating_count?: number }>(
+        `/client/dishes/${x.dish_id}/rating`, { method: 'POST', body: { rating: value } });
+      if (r.rating != null) setAvg(r.rating);
+      if (r.rating_count != null) setAvgCount(r.rating_count);
+    } catch (e: any) {
+      haptic.error();
+      setMyRating(before);
+      setErr(e?.message ?? 'Оценка не сохранилась');
+    } finally { setRateBusy(false); }
+  }, [rateBusy, x, myRating]);
 
   if (err && !x) {
     return (
@@ -141,6 +177,52 @@ export default function Dish() {
             </View>
           </Card>
         </Animated.View>
+
+        {/* Оценка блюда — пятью звёздами, как в вебе: клавиши 52×52 с
+            подложкой, выбранные янтарные (#f5ae32 — значение из
+            `.dish-rate-stars`, не акцент продукта).
+
+            Звёзды показываем только после отметки «съедено»: сервер
+            отклоняет оценку неотмеченного блюда, и нажатие кончалось бы
+            отказом. Средняя оценка видна всегда — как `dishRatingLine`. */}
+        {(done || avg) ? (
+          <Animated.View entering={FadeInDown.delay(60).duration(240)}>
+            <Card style={{ marginBottom: S.md }}>
+              {done ? (
+                <>
+                  <Label>Ваше мнение</Label>
+                  <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.md }}>
+                    {[1, 2, 3, 4, 5].map(n => {
+                      const on = n <= (myRating ?? 0);
+                      return (
+                        <Pressable key={n} disabled={rateBusy} onPress={() => rate(n)}
+                          style={({ pressed }) => ({
+                            width: 52, height: 52, borderRadius: 17,
+                            alignItems: 'center', justifyContent: 'center',
+                            backgroundColor: on ? STAR_SOFT : p.inset,
+                            opacity: pressed || rateBusy ? 0.6 : 1,
+                          })}>
+                          <Icon name="star" size={28} color={on ? STAR : p.text3} width={1.8} />
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6,
+                alignSelf: 'flex-start', marginTop: done ? S.md : 0,
+                paddingVertical: 7, paddingHorizontal: 10,
+                borderRadius: 12, backgroundColor: p.inset }}>
+                <Icon name="star" size={15} color={STAR} width={1.8} />
+                <Text style={{ fontSize: 12, color: p.text2 }}>
+                  {avg
+                    ? `${avg} из 5 · ${avgCount} ${plural(avgCount, ['оценка', 'оценки', 'оценок'])}`
+                    : 'Оценок пока нет — ваша будет первой'}
+                </Text>
+              </View>
+            </Card>
+          </Animated.View>
+        ) : null}
 
         {x.ingredients?.length ? (
           <Animated.View entering={FadeInDown.delay(80).duration(240)}>

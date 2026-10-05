@@ -105,9 +105,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const r = await api<{ token: string }>('/auth/login', {
+    const r = await api<{ token?: string; need_code?: boolean }>('/auth/login', {
       method: 'POST', body: { email: email.trim(), password },
     });
+    /* Второй фактор есть только у панели владельца, а её в приложении
+       нет. Без этой проверки пароль принимался, токен приходил пустым,
+       и человек видел «Не удалось войти» — будто ошибся паролем. */
+    if (!r.token) {
+      throw new Error(r.need_code
+        ? 'Эта учётная запись входит с кодом на почту — через сайт.'
+        : 'Не удалось войти');
+    }
     await setToken(r.token);
     const m = await api<Me>('/me');
     setMe(m);

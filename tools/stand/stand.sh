@@ -46,4 +46,8 @@ echo "== Список переписок клиента =="
 WEB="$WEB" BASE="$BASE" php "$HERE/chats-test.php"
 
 echo
+echo "== Оценка блюда =="
+WEB="$WEB" BASE="$BASE" php "$HERE/dish-rating-test.php"
+
+echo
 echo "Проверки пройдены."

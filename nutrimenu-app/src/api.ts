@@ -452,6 +452,11 @@ export interface DishItem extends MealItem {
   /** Порция блюда по умолчанию: от неё сервер считает границы своей граммовки */
   base_portion_g?: number | null;
   ingredients: DishIngredient[];
+  /** Своя оценка блюда, 1…5; её сервер отдаёт только владельцу меню */
+  my_rating?: number | null;
+  /** Средняя оценка по всем клиентам и число оценивших */
+  dish_rating?: number | null;
+  dish_rating_count?: number | null;
 }
 /* Подбор замен считает порцию сам — так, чтобы калории сошлись с тем
    блюдом, которое заменяют, — и возвращает уже готовые числа вместе с
