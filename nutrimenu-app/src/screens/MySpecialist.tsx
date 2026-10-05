@@ -47,6 +47,11 @@ export default function MySpecialist() {
   const [prof, setProf] = useState<Prof>('');
   const [q, setQ] = useState('');
   const [onlyFav, setOnlyFav] = useState(false);
+  /* Фильтры каталога из веба: город, рейтинг не ниже, проверенный паспорт. */
+  const [city, setCity] = useState('');
+  const [minRate, setMinRate] = useState(0);
+  const [passport, setPassport] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   /* Избранное живёт в телефоне, а не на сервере: это закладка
      «вернуться и подумать», и специалисту незачем знать, кто его
      рассматривал. */
@@ -139,16 +144,33 @@ export default function MySpecialist() {
     finally { setBusy(false); }
   }, [code, refreshMe, load, toServices]);
 
+  /* Отбор тот же, что в вебе (`clCatalogPaint`): роль, избранные, поиск,
+     плюс город, нижняя граница рейтинга и проверенный паспорт. */
   const rows = useMemo(() => list.filter(s => {
     if (prof && (s.profession ?? 'nutritionist') !== prof) return false;
     if (onlyFav && !fav.includes(s.id)) return false;
+    if (passport && !s.identity_verified) return false;
+    if (minRate && (Number(s.rating) || 0) < minRate) return false;
+    if (city && (s.city ?? '') !== city) return false;
     if (q.trim()) {
       const hay = [s.name, s.city, s.bio, s.specializations]
         .concat((s.services ?? []).map(v => v.title)).join(' ').toLowerCase();
       if (!hay.includes(q.trim().toLowerCase())) return false;
     }
     return true;
-  }), [list, prof, onlyFav, fav, q]);
+  }), [list, prof, onlyFav, fav, q, passport, minRate, city]);
+
+  /* Сколько фильтров включено — число на кнопке, чтобы спрятанный
+     отбор не был незаметным. */
+  const picks = (city ? 1 : 0) + (minRate ? 1 : 0) + (passport ? 1 : 0);
+
+  /* Города берём из самого каталога: справочника городов нет, и
+     показывать пустые варианты незачем — в вебе так же (`catCities`). */
+  const cities = useMemo(() => {
+    const set = new Set<string>();
+    list.forEach(s => { if (s.city) set.add(s.city); });
+    return [...set].sort((a, b) => a.localeCompare(b, 'ru'));
+  }, [list]);
 
   if (spec === undefined) return <Loading title="Мои специалисты" />;
 
@@ -285,18 +307,85 @@ export default function MySpecialist() {
               items={[['', 'Все'], ['nutritionist', 'Нутрициологи'], ['trainer', 'Тренеры'],
                 ['endocrinologist', 'Эндокринологи'], ['coach', 'Коучи']] as [Prof, string][]} />
 
-            <Pressable onPress={() => { haptic.select(); setOnlyFav(v => !v); }}
-              style={({ pressed }) => ({
-                flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
-                paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
-                transform: [{ scale: pressed ? 0.95 : 1 }],
-                backgroundColor: onlyFav ? p.primary : p.surface,
-                borderWidth: onlyFav ? 0 : 1, borderColor: p.border, marginBottom: S.md,
-              })}>
-              <Icon name="heart" size={14} color={onlyFav ? p.onPrimary : p.text2} />
-              <Text style={{ fontSize: 14, fontWeight: onlyFav ? '600' : '400',
-                color: onlyFav ? p.onPrimary : p.text2 }}>Избранные</Text>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.md, flexWrap: 'wrap' }}>
+              <Pressable onPress={() => { haptic.select(); setOnlyFav(v => !v); }}
+                style={({ pressed }) => ({
+                  flexDirection: 'row', alignItems: 'center', gap: 6,
+                  paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  backgroundColor: onlyFav ? p.primary : p.surface,
+                  borderWidth: onlyFav ? 0 : 1, borderColor: p.border,
+                })}>
+                <Icon name="heart" size={14} color={onlyFav ? p.onPrimary : p.text2} />
+                <Text style={{ fontSize: 14, fontWeight: onlyFav ? '600' : '400',
+                  color: onlyFav ? p.onPrimary : p.text2 }}>Избранные</Text>
+              </Pressable>
+
+              {/* Остальные фильтры прячем за одной кнопкой, как в вебе:
+                  город, рейтинг и паспорт нужны не каждому входу. */}
+              <Pressable onPress={() => { haptic.tap(); setFiltersOpen(v => !v); }}
+                style={({ pressed }) => ({
+                  flexDirection: 'row', alignItems: 'center', gap: 6,
+                  paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                  backgroundColor: picks ? p.primary : p.surface,
+                  borderWidth: picks ? 0 : 1, borderColor: p.border,
+                })}>
+                <Icon name="search" size={14} color={picks ? p.onPrimary : p.text2} />
+                <Text style={{ fontSize: 14, fontWeight: picks ? '600' : '400',
+                  color: picks ? p.onPrimary : p.text2 }}>
+                  {picks ? `Фильтры · ${picks}` : 'Фильтры'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {filtersOpen ? (
+              <Card style={{ marginBottom: S.md, gap: S.sm }}>
+                {cities.length ? (
+                  <>
+                    <Muted>Где нужна</Muted>
+                    <Muted style={{ marginTop: -2 }}>
+                      Все работают дистанционно. Город — если хотите земляка и один часовой пояс.
+                    </Muted>
+                    <Pills scroll value={city} onChange={setCity}
+                      items={[['', 'Любой город'] as [string, string],
+                        ...cities.map(c => [c, c] as [string, string])]} />
+                  </>
+                ) : null}
+
+                <Muted>Рейтинг не ниже</Muted>
+                <Pills value={String(minRate)} onChange={v => setMinRate(Number(v))}
+                  items={[['0', 'Любой'], ['4', '4,0'], ['4.5', '4,5'], ['4.8', '4,8']]} />
+
+                <Pressable onPress={() => { haptic.select(); setPassport(v => !v); }}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row', alignItems: 'center', gap: S.sm,
+                    opacity: pressed ? 0.7 : 1, marginTop: S.xs,
+                  })}>
+                  <View style={{
+                    width: 22, height: 22, borderRadius: 7,
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: passport ? p.primary : 'transparent',
+                    borderWidth: passport ? 0 : 1.5, borderColor: p.btnLine,
+                  }}>
+                    {passport ? <Icon name="check" size={13} color={p.onPrimary} width={2.6} /> : null}
+                  </View>
+                  <Text style={{ ...FONT.callout, color: p.text }}>
+                    Только с проверенным паспортом
+                  </Text>
+                </Pressable>
+
+                {picks ? (
+                  <Pressable onPress={() => {
+                    haptic.tap(); setCity(''); setMinRate(0); setPassport(false);
+                  }} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, marginTop: S.xs })}>
+                    <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>
+                      Сбросить фильтры
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </Card>
+            ) : null}
 
             {/* Ввод кода — строка сразу под фильтрами. Раньше она стояла
                 в самом низу: человек с кодом пролистывал ради неё весь

@@ -860,6 +860,11 @@ export const ALLERGY_KINDS: Record<string, string> = {
 export const MED_KINDS: Record<string, string> = {
   medicine: 'Препарат', supplement: 'БАД', vitamin: 'Витамин',
 };
+/** Вид документа — тот же словарь, что `HEALTH_DOC_KINDS` в вебе. */
+export const HEALTH_DOC_KINDS: Record<string, string> = {
+  analysis: 'Анализ', conclusion: 'Заключение',
+  prescription: 'Назначение', other: 'Документ',
+};
 
 export interface Allergy {
   id: number; title: string; kind: string; note?: string | null; created_at: string;
@@ -873,10 +878,17 @@ export interface Med {
      день целиком, и без текущего значения кнопка сбрасывала бы его. */
   frequency_per_day?: number;
   taken_today?: number;
+  /** Напоминание об окончании курса */
+  reminder_enabled?: number | boolean;
+  reminder_on?: string | null;
 }
 export interface Lab {
   id: number; title: string; taken_on?: string | null;
   file_url?: string | null; note?: string | null; created_at: string;
+  /** Вид документа, лаборатория и кому он открыт — поля формы веба */
+  doc_type?: string | null; lab_name?: string | null;
+  share_nutritionist?: number | boolean;
+  share_endocrinologist?: number | boolean;
 }
 export interface Recommendation {
   id: number; body: string; created_at: string;

@@ -11,7 +11,7 @@
  */
 import React, { useCallback, useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Alert,
+  View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Share,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,17 +20,17 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import {
   api, Health, Allergy, Med, Lab, Recommendation,
-  ALLERGY_KINDS, MED_KINDS, REC_KINDS,
+  ALLERGY_KINDS, MED_KINDS, REC_KINDS, HEALTH_DOC_KINDS,
 } from '../api';
 import { openPrivateFile, fetchPrivateFile, looksLikeImage } from '../openPrivateFile';
 import { ImageViewer } from '../ui/ImageViewer';
 import { uploadForm } from '../upload';
-import { pickPhoto } from '../photo';
+import { pickDocument } from '../photo';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Muted, Pills } from '../ui/base';
 import { Icon } from '../ui/Icon';
-import { SysConfirm } from '../ui/system';
+import { SysConfirm, SysDate, SysButton } from '../ui/system';
 import { haptic } from '../haptics';
 import { Loading, Fail } from './Shopping';
 import Cycle from './Cycle';
@@ -137,8 +137,11 @@ export default function HealthScreen({ clientId, title }: {
               него начинается раздел — и это правильно: человек заходит
               посмотреть, а не сразу вводить. */}
           {tab === 'overview' ? (
-            <Overview d={d} updated={updated} spec={spec}
-              onGo={(t: Tab, k?: string) => { setTab(t); if (k) setFocus(k); }} />
+            <>
+              <Overview d={d} updated={updated} spec={spec}
+                onGo={(t: Tab, k?: string) => { setTab(t); if (k) setFocus(k); }} />
+              {!spec ? <ShareOut d={d} name={me?.user?.name ?? 'Клиент EQUA'} /> : null}
+            </>
           ) : null}
 
           {tab === 'cycle' ? <Cycle embedded /> : null}
@@ -199,6 +202,8 @@ function Allergies({ list, edit, postTo, onAdd, onRemove, onError }: {
   const { p } = useApp();
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState('allergy');
+  /* Комментарий — как в форме веба: «как проявляется или что учесть». */
+  const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
   async function add() {
@@ -206,9 +211,9 @@ function Allergies({ list, edit, postTo, onAdd, onRemove, onError }: {
     setBusy(true);
     try {
       await api(postTo, {
-        method: 'POST', body: { title: title.trim(), kind },
+        method: 'POST', body: { title: title.trim(), kind, note: note.trim() },
       });
-      setTitle(''); haptic.success(); onAdd();
+      setTitle(''); setNote(''); haptic.success(); onAdd();
     } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не добавилось'); }
     finally { setBusy(false); }
   }
@@ -229,6 +234,12 @@ function Allergies({ list, edit, postTo, onAdd, onRemove, onError }: {
               }} />
             <AddBtn busy={busy} onPress={add} />
           </View>
+          <TextInput value={note} onChangeText={setNote}
+            placeholder="Как проявляется — необязательно" placeholderTextColor={p.text3}
+            style={{
+              backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+              paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15,
+            }} />
         </Card>
       ) : null}
 
@@ -316,6 +327,19 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
     } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не отметилось'); }
   }
 
+  /* Напоминание об окончании курса. Только у клиента: маршрут меняет
+     его собственную настройку уведомления, у специалиста такого нет. */
+  const [remind, setRemind] = useState<number | null>(null);
+  const [remindDay, setRemindDay] = useState(() => new Date());
+  async function saveReminder(m: Med, enabled: boolean) {
+    try {
+      await api(`/client/health/meds/${m.id}/reminder`, {
+        method: 'PATCH', body: { enabled, reminder_on: enabled ? ymd(remindDay) : '' },
+      });
+      setRemind(null); haptic.success(); onAdd();
+    } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
+  }
+
   return (
     <View>
       {edit ? (
@@ -385,6 +409,41 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
                       Курс закончен
                     </Text>
                   </Pressable>
+                  {!spec ? (
+                    <Pressable hitSlop={8}
+                      onPress={() => {
+                        haptic.tap();
+                        setRemindDay(m.reminder_on ? new Date(m.reminder_on + 'T00:00:00') : new Date());
+                        setRemind(v => (v === m.id ? null : m.id));
+                      }}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                      <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
+                        {m.reminder_enabled ? `Напомнит ${day(m.reminder_on)}` : 'Напомнить об окончании'}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {/* Дата напоминания — тем же системным календарём, что и
+                  везде. В вебе это отдельная шторка, здесь строка
+                  раскрывается прямо в карточке курса. */}
+              {remind === m.id ? (
+                <View style={{ gap: S.sm, marginTop: S.xs }}>
+                  <Muted>Дата напоминания</Muted>
+                  <SysDate value={remindDay} onChange={setRemindDay} min={new Date()} />
+                  <View style={{ flexDirection: 'row', gap: S.sm }}>
+                    <View style={{ flex: 1 }}>
+                      <SysButton label="Сохранить" variant="prominent" height={44}
+                        onPress={() => saveReminder(m, true)} />
+                    </View>
+                    {m.reminder_enabled ? (
+                      <View style={{ flex: 1 }}>
+                        <SysButton label="Отключить" height={44}
+                          onPress={() => saveReminder(m, false)} />
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               ) : null}
             </Card>
@@ -403,21 +462,35 @@ function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
 }) {
   const { p } = useApp();
   const [title, setTitle] = useState('');
+  const [kind, setKind] = useState('analysis');
+  const [taken, setTaken] = useState(() => new Date());
+  const [lab, setLab] = useState('');
+  const [note, setNote] = useState('');
+  /* Кому документ виден. По умолчанию обоим — как в вебе; EQUA AI
+     документы не получает ни при каких настройках. */
+  const [toNut, setToNut] = useState(true);
+  const [toEnd, setToEnd] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  /* Файл выбирают вместе с названием: анализ без подписи через месяц
-     не отличить от другого такого же. */
+  /* Поля те же, что в форме веба: вид, название, дата исследования,
+     лаборатория, комментарий и доступ ролям. Файл берём системным
+     выбором, а не галереей: PDF из почты в галерее не лежит. */
   async function add() {
-    if (!title.trim()) { haptic.error(); onError('Как называется анализ?'); return; }
+    if (!title.trim()) { haptic.error(); onError('Как называется документ?'); return; }
     setBusy(true);
     try {
-      const file = await pickPhoto();
+      const file = await pickDocument();
       if (!file) { setBusy(false); return; }
       await uploadForm(postTo, file, 'file', {
         title: title.trim(),
-        taken_on: new Date().toISOString().slice(0, 10),
+        doc_type: kind,
+        taken_on: ymd(taken),
+        lab_name: lab.trim(),
+        note: note.trim(),
+        share_nutritionist: toNut ? '1' : '0',
+        share_endocrinologist: toEnd ? '1' : '0',
       });
-      setTitle(''); haptic.success(); onAdd();
+      setTitle(''); setLab(''); setNote(''); haptic.success(); onAdd();
     } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не загрузилось'); }
     finally { setBusy(false); }
   }
@@ -448,12 +521,33 @@ function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
         onClose={() => setViewer(null)} />
       {edit ? (
         <Card style={{ marginBottom: S.md, gap: S.sm }}>
+          <Pills items={Object.entries(HEALTH_DOC_KINDS) as [string, string][]}
+            value={kind} onChange={setKind} />
           <TextInput value={title} onChangeText={setTitle}
             placeholder="Например, общий анализ крови" placeholderTextColor={p.text3}
             style={{
               backgroundColor: p.inset, color: p.text, borderRadius: R.md,
               paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15,
             }} />
+          <Muted>Дата исследования</Muted>
+          <SysDate value={taken} onChange={setTaken} max={new Date()} />
+          <TextInput value={lab} onChangeText={setLab}
+            placeholder="Лаборатория — необязательно" placeholderTextColor={p.text3}
+            style={{
+              backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+              paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15,
+            }} />
+          <TextInput value={note} onChangeText={setNote} multiline
+            placeholder="Что важно запомнить" placeholderTextColor={p.text3}
+            style={{
+              backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+              paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15, minHeight: 64,
+              textAlignVertical: 'top',
+            }} />
+          <Muted>Кому открыть документ</Muted>
+          <Share_ label="Нутрициологу" on={toNut} onToggle={() => setToNut(v => !v)} />
+          <Share_ label="Эндокринологу" on={toEnd} onToggle={() => setToEnd(v => !v)} />
+          <Muted>EQUA AI этот документ не получает.</Muted>
           <Pressable onPress={add} disabled={busy}
             style={({ pressed }) => ({
               flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -488,9 +582,13 @@ function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>{l.title}</Text>
                 <Muted style={{ marginTop: 2 }}>
-                  {[day(l.taken_on) || day(l.created_at), l.file_url ? 'открыть' : 'без файла']
+                  {[HEALTH_DOC_KINDS[l.doc_type ?? ''] ?? null,
+                    day(l.taken_on) || day(l.created_at),
+                    l.lab_name || null,
+                    l.file_url ? 'открыть' : 'без файла']
                     .filter(Boolean).join(' · ')}
                 </Muted>
+                {l.note ? <Muted style={{ marginTop: 2 }} numberOfLines={2}>{l.note}</Muted> : null}
               </View>
               {edit ? <Del onConfirm={() => onRemove(l.id)} what={l.title} /> : null}
             </Card>
@@ -864,6 +962,124 @@ function Blank({ text }: { text: string }) {
   return (
     <Card style={{ paddingVertical: 18 }}>
       <Muted style={{ lineHeight: 20 }}>{text}</Muted>
+    </Card>
+  );
+}
+
+/** Переключатель доступа роли к документу — та же строка, что в вебе. */
+function Share_({ label, on, onToggle }: { label: string; on: boolean; onToggle: () => void }) {
+  const { p } = useApp();
+  return (
+    <Pressable onPress={() => { haptic.select(); onToggle(); }}
+      style={({ pressed }) => ({
+        flexDirection: 'row', alignItems: 'center', gap: S.sm,
+        opacity: pressed ? 0.7 : 1,
+      })}>
+      <View style={{
+        width: 22, height: 22, borderRadius: 7,
+        alignItems: 'center', justifyContent: 'center',
+        backgroundColor: on ? p.primary : 'transparent',
+        borderWidth: on ? 0 : 1.5, borderColor: p.btnLine,
+      }}>
+        {on ? <Icon name="check" size={13} color={p.onPrimary} width={2.6} /> : null}
+      </View>
+      <Text style={{ ...FONT.callout, color: p.text }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+/** Дата в виде, который принимает сервер. */
+function ymd(d: Date) {
+  const z = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
+}
+
+/**
+ * Выгрузка профиля и сводка перед консультацией.
+ *
+ * В вебе обе собирают печатную страницу и зовут `window.print()`
+ * (`clHealthExport` и `clHealthConsult`). На телефоне печатать нечего —
+ * отдаём тот же текст системному «Поделиться»: оттуда он уходит в
+ * заметки, почту или на печать, если принтер есть.
+ */
+function ShareOut({ d, name }: { d: Health; name: string }) {
+  const { p } = useApp();
+  const [open, setOpen] = useState(false);
+  const [questions, setQuestions] = useState('');
+  const [picked, setPicked] = useState<number[]>([]);
+
+  const stamp = 'Документ сформирован в EQUA. Он хранит внесённые данные и не является '
+    + 'медицинским заключением или заменой консультации врача.';
+
+  const block = (title: string, rows: string[]) =>
+    rows.length ? `\n${title}\n${rows.map(x => `• ${x}`).join('\n')}\n` : '';
+
+  async function exportAll() {
+    haptic.tap();
+    const text = `Профиль здоровья\n${name} · ${new Date().toLocaleDateString('ru-RU')}\n`
+      + block('Аллергии и ограничения', (d.allergies ?? []).map(x =>
+          [x.title, ALLERGY_KINDS[x.kind] ?? x.kind, x.note].filter(Boolean).join(' — ')))
+      + block('Препараты и БАДы', (d.meds ?? []).map(x =>
+          [x.title, MED_KINDS[x.kind] ?? x.kind, x.dosage, x.schedule,
+            x.ended_on ? `курс завершён ${day(x.ended_on)}` : 'принимает сейчас']
+            .filter(Boolean).join(' — ')))
+      + block('Документы', (d.labs ?? []).map(x =>
+          [x.title, HEALTH_DOC_KINDS[x.doc_type ?? ''] ?? 'Документ',
+            day(x.taken_on) || day(x.created_at)].filter(Boolean).join(' — ')))
+      + block('Рекомендации', (d.recommendations ?? []).map(x =>
+          `${x.status === 'done' ? 'Выполнено' : x.status === 'cancelled' ? 'Отменено' : 'Актуально'}: ${x.body}`))
+      + `\n${stamp}`;
+    try { await Share.share({ message: text }); } catch { /* закрыли лист — это не ошибка */ }
+  }
+
+  async function consult() {
+    haptic.tap();
+    const docs = (d.labs ?? []).filter(x => picked.includes(x.id));
+    const meds = (d.meds ?? []).filter(x => !x.ended_on);
+    const recs = (d.recommendations ?? []).filter(x => x.status !== 'done' && x.status !== 'cancelled');
+    const text = `Подготовка к консультации\n${name} · ${new Date().toLocaleDateString('ru-RU')}\n`
+      + block('Активные курсы', meds.map(x =>
+          [x.title, x.dosage, x.schedule].filter(Boolean).join(', ')))
+      + block('Актуальные рекомендации', recs.map(x => x.title || x.body))
+      + block('Выбранные документы', docs.map(x =>
+          `${x.title} — ${day(x.taken_on) || day(x.created_at)}`))
+      + (questions.trim() ? `\nВопросы\n${questions.trim()}\n` : '')
+      + `\n${stamp}`;
+    try { await Share.share({ message: text }); } catch { /* закрыли лист */ }
+  }
+
+  return (
+    <Card style={{ marginTop: S.md, gap: S.sm }}>
+      <Text style={{ ...FONT.h3, color: p.text }}>Собрать для врача</Text>
+      <Muted>
+        Ничего никуда не отправляется само: текст уходит туда, куда вы его отправите.
+      </Muted>
+      <SysButton label="Выгрузить профиль" height={44} onPress={exportAll} />
+      <SysButton label={open ? 'Свернуть сводку' : 'Сводка перед консультацией'} height={44}
+        onPress={() => { haptic.tap(); setOpen(v => !v); }} />
+
+      {open ? (
+        <View style={{ gap: S.sm }}>
+          <Muted>Приложить к списку</Muted>
+          {(d.labs ?? []).length === 0 ? <Muted>Документов пока нет.</Muted> : null}
+          {(d.labs ?? []).slice(0, 12).map(x => (
+            <Share_
+              key={x.id}
+              label={`${x.title} · ${day(x.taken_on) || day(x.created_at)}`}
+              on={picked.includes(x.id)}
+              onToggle={() => setPicked(v =>
+                v.includes(x.id) ? v.filter(i => i !== x.id) : [...v, x.id])} />
+          ))}
+          <TextInput value={questions} onChangeText={setQuestions} multiline
+            placeholder="Что хотите обсудить" placeholderTextColor={p.text3}
+            style={{
+              backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+              paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15,
+              minHeight: 96, textAlignVertical: 'top',
+            }} />
+          <SysButton label="Поделиться сводкой" variant="prominent" height={44} onPress={consult} />
+        </View>
+      ) : null}
     </Card>
   );
 }

@@ -12,7 +12,7 @@
  * выглядел из разных продуктов.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
@@ -22,9 +22,10 @@ import { Card, Muted } from '../ui/base';
 import { router } from 'expo-router';
 import { Icon } from '../ui/Icon';
 import { NavBar } from '../ui/NavBar';
-import { SysButton, Empty } from '../ui/system';
+import { SysButton, SysDate, Empty } from '../ui/system';
 import { useToast } from '../ui/Toast';
 import { haptic } from '../haptics';
+import { plural } from '../format';
 
 /* Те же слова, что в вебе: словарь отметок один на оба клиента. */
 export const CYCLE_WORDS: Record<string, Record<string, string>> = {
@@ -48,18 +49,29 @@ const FIELDS: { key: string; label: string }[] = [
 
 interface CycleLog { logged_on: string; [k: string]: string | null | undefined }
 interface CyclePeriod { id: number; started_on: string; ended_on?: string | null }
+interface CycleInsight { title: string; text: string }
 interface CycleData {
   enabled?: boolean;
   settings?: { avg_period_days?: number; avg_cycle_days?: number } | null;
   periods?: CyclePeriod[];
   logs?: CycleLog[];
+  /** «Что повторяется у вас» — сервер считает по последним циклам */
+  insights?: CycleInsight[];
   summary?: {
     cycle_day?: number | null;
     phase_label?: string | null;
     period_active?: boolean;
     predicted_next?: string | null;
+    predicted_next_from?: string | null;
+    predicted_next_to?: string | null;
     days_to_next?: number | null;
     regular?: boolean | null;
+    /** Сегодня предполагаемое начало — сервер ждёт ответа */
+    prediction_due?: boolean;
+    /** Начало оказалось позже прогноза: ежедневные вопросы остановлены */
+    prediction_paused?: boolean;
+    /** Период идёт дольше обычного — сервер ждёт подтверждения окончания */
+    end_due?: boolean;
   } | null;
 }
 
@@ -151,6 +163,48 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
     finally { setBusy(false); }
   }, [load, toast]);
 
+  /* Ответ на прогноз. «started» заводит период, «later» и
+     «remind_tomorrow» только двигают сам прогноз — сервер решает это
+     сам, клиент лишь передаёт ответ (`clCyclePrediction` в вебе). */
+  const answerPrediction = useCallback(async (action: 'started' | 'later' | 'remind_tomorrow') => {
+    setBusy(true);
+    try {
+      await api('/client/health/cycle/prediction-response', { method: 'POST', body: { action } });
+      haptic.success(); await load();
+    } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не сохранилось', { kind: 'err' }); }
+    finally { setBusy(false); }
+  }, [load, toast]);
+
+  /* Период не закрывается сам: сервер спрашивает, закончилась ли
+     менструация, и ждёт подтверждения («ended») или «ещё идёт». */
+  const answerEnd = useCallback(async (action: 'ended' | 'still') => {
+    setBusy(true);
+    try {
+      await api('/client/health/cycle/period/end-response', { method: 'POST', body: { action } });
+      haptic.success(); await load();
+    } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не сохранилось', { kind: 'err' }); }
+    finally { setBusy(false); }
+  }, [load, toast]);
+
+  /* Правка и удаление отмеченного цикла — те же маршруты, что у веба. */
+  const savePeriod = useCallback(async (id: number, started_on: string, ended_on: string | null) => {
+    setBusy(true);
+    try {
+      await api(`/client/health/cycle/period/${id}`, { method: 'PATCH', body: { started_on, ended_on } });
+      haptic.success(); await load();
+    } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не сохранилось', { kind: 'err' }); }
+    finally { setBusy(false); }
+  }, [load, toast]);
+
+  const dropPeriod = useCallback(async (id: number) => {
+    setBusy(true);
+    try {
+      await api(`/client/health/cycle/period/${id}`, { method: 'DELETE' });
+      haptic.success(); await load();
+    } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не удалилось', { kind: 'err' }); }
+    finally { setBusy(false); }
+  }, [load, toast]);
+
   const saveDay = useCallback(async (date: string, key: string, value: string) => {
     /* Повторное нажатие по той же отметке снимает её: выбрать «боли нет»
        и передумать — обычное дело, а отдельной кнопки «очистить» в
@@ -219,11 +273,19 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
                 ? 'Идёт менструация'
                 : s.cycle_day ? `${s.cycle_day}-й день цикла` : 'Календарь включён'}
             </Text>
-            {typeof s.days_to_next === 'number' && !s.period_active ? (
-              <Muted style={{ marginTop: S.xs }}>
-                Следующая примерно через {s.days_to_next} дн.
-              </Muted>
-            ) : null}
+            {/* Пояснение под заголовком — слово в слово как в вебе: у
+                нерегулярного цикла там окно дат, а не одна дата. */}
+            <Muted style={{ marginTop: S.xs }}>
+              {s.period_active
+                ? 'Отметьте окончание, когда она завершится.'
+                : s.regular === false
+                  ? (s.predicted_next_from
+                      ? `Ориентировочное окно: ${dlong(s.predicted_next_from)} — ${dlong(s.predicted_next_to ?? s.predicted_next_from)}.`
+                      : 'Для нерегулярного цикла прогноз появится после новых отметок.')
+                  : typeof s.days_to_next === 'number' && s.days_to_next >= 0
+                    ? `Следующее начало ориентировочно через ${s.days_to_next} ${plural(s.days_to_next, ['день', 'дня', 'дней'])}.`
+                    : 'Прогноз появится после новой отметки.'}
+            </Muted>
             <View style={{ marginTop: S.md }}>
               <SysButton
                 label={s.period_active ? 'Менструация закончилась' : 'Началась менструация'}
@@ -233,6 +295,81 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
             </View>
           </Card>
         </Animated.View>
+
+        {/* Прогноз ждёт ответа. В вебе это первая секция под сводкой:
+            сервер не отмечает начало сам, пока человек не подтвердит. */}
+        {s.prediction_due ? (
+          <Animated.View entering={FadeInDown.duration(220)}>
+            <Card style={{ marginBottom: S.md, borderWidth: 1, borderColor: alpha(CYCLE, 40) }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+                <View style={{
+                  width: 34, height: 34, borderRadius: 17, alignItems: 'center',
+                  justifyContent: 'center', backgroundColor: mix(CYCLE, 18, p.surface),
+                }}>
+                  <Icon name="drop" size={17} color={CYCLE} />
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ ...FONT.caption, color: p.text3 }}>Прогноз EQUA</Text>
+                  <Text style={{ ...FONT.h3, color: p.text }}>Месячные уже начались?</Text>
+                </View>
+              </View>
+              <Muted style={{ marginTop: S.sm }}>
+                Сегодня — предполагаемое начало. Подтвердите дату или уточните прогноз.
+              </Muted>
+              <View style={{ marginTop: S.md }}>
+                <SysButton label="Да, отметить начало" variant="prominent" disabled={busy}
+                  onPress={() => answerPrediction('started')} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
+                <View style={{ flex: 1 }}>
+                  <SysButton label="Пока нет" disabled={busy}
+                    onPress={() => answerPrediction('later')} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <SysButton label="Напомнить завтра" disabled={busy}
+                    onPress={() => answerPrediction('remind_tomorrow')} />
+                </View>
+              </View>
+            </Card>
+          </Animated.View>
+        ) : null}
+
+        {/* Прогноз приостановлен: объясняем почему, иначе исчезнувшие
+            ежедневные вопросы читаются как поломка. */}
+        {s.prediction_paused ? (
+          <Card style={{ marginBottom: S.md, flexDirection: 'row', gap: S.sm }}>
+            <Icon name="info" size={18} color={p.text3} />
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ ...FONT.h3, color: p.text }}>Прогноз скорректирован</Text>
+              <Muted style={{ marginTop: 2 }}>
+                Начало оказалось позже ожидаемого, поэтому ежедневные вопросы приостановлены.
+                Отметьте дату, когда месячные начнутся.
+              </Muted>
+            </View>
+          </Card>
+        ) : null}
+
+        {/* Окончание тоже подтверждает человек: автоматически период не
+            закрывается — в вебе так же. */}
+        {s.end_due ? (
+          <Animated.View entering={FadeInDown.duration(220)}>
+            <Card style={{ marginBottom: S.md, borderWidth: 1, borderColor: alpha(CYCLE, 40) }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>Уточним календарь</Text>
+              <Text style={{ ...FONT.h3, color: p.text }}>Месячные завершились?</Text>
+              <Muted style={{ marginTop: S.xs }}>
+                Мы не закрываем период сами — подтвердите последний день.
+              </Muted>
+              <View style={{ marginTop: S.md }}>
+                <SysButton label="Да, сегодня" variant="prominent" disabled={busy}
+                  onPress={() => answerEnd('ended')} />
+              </View>
+              <View style={{ marginTop: S.sm }}>
+                <SysButton label="Пока продолжаются" disabled={busy}
+                  onPress={() => answerEnd('still')} />
+              </View>
+            </Card>
+          </Animated.View>
+        ) : null}
 
         {/* Календарь месяца. Залитый кружок — отмеченный период, контур —
             прогноз, точка снизу — есть отметка самочувствия. */}
@@ -352,8 +489,146 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
             Нажмите на день, чтобы отметить самочувствие.
           </Muted>
         )}
+
+        {/* «Что повторяется у вас» — сервер считает закономерности по
+            последним циклам и отдаёт готовыми строками. */}
+        {(c.insights ?? []).length ? (
+          <View style={{ marginTop: S.lg }}>
+            <Text style={{ ...FONT.caption, color: p.text3 }}>Личные наблюдения</Text>
+            <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>
+              Что повторяется у вас
+            </Text>
+            {(c.insights ?? []).map(x => (
+              <Card key={x.title} style={{ marginBottom: S.sm, flexDirection: 'row', gap: S.sm }}>
+                <Icon name="trend" size={18} color={CYCLE} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ ...FONT.h3, color: p.text }}>{x.title}</Text>
+                  <Muted style={{ marginTop: 2 }}>{x.text}</Muted>
+                </View>
+              </Card>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Последние записи самочувствия: нажатие открывает тот день. */}
+        {(c.logs ?? []).length ? (
+          <View style={{ marginTop: S.lg }}>
+            <Text style={{ ...FONT.caption, color: p.text3 }}>Наблюдения</Text>
+            <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Последние записи</Text>
+            <Card style={{ padding: 0, overflow: 'hidden' }}>
+              {(c.logs ?? []).slice(0, 5).map((x, i) => (
+                <Pressable key={x.logged_on}
+                  onPress={() => { haptic.select(); setPicked(x.logged_on); }}
+                  style={({ pressed }) => ({
+                    flexDirection: 'row', alignItems: 'center', gap: S.sm,
+                    paddingVertical: 12, paddingHorizontal: S.lg,
+                    borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+                    backgroundColor: pressed ? p.ov1 : 'transparent',
+                  })}>
+                  <Text style={{ ...FONT.callout, color: p.text2, width: 92 }}>
+                    {dlong(x.logged_on)}
+                  </Text>
+                  <Text numberOfLines={1} style={{ ...FONT.small, color: p.text3, flex: 1 }}>
+                    {signals(x).slice(0, 3).join(' · ') || 'Есть комментарий'}
+                  </Text>
+                  <Icon name="chevr" size={14} color={p.text3} />
+                </Pressable>
+              ))}
+            </Card>
+          </View>
+        ) : null}
+
+        {/* Отмеченные циклы: даты можно поправить или убрать запись. */}
+        {(c.periods ?? []).length ? (
+          <View style={{ marginTop: S.lg }}>
+            <Text style={{ ...FONT.caption, color: p.text3 }}>История</Text>
+            <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Отмеченные циклы</Text>
+            {(c.periods ?? []).slice(0, 6).map(x => (
+              <PeriodRow key={x.id} x={x} busy={busy}
+                onSave={savePeriod} onDrop={dropPeriod} />
+            ))}
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
+/** «5 октября» — дата записи в журнале и в истории. */
+function dlong(v: string) {
+  return new Date(v + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+}
+
+/** Отметки дня словами — тот же `signal` из веба: три первых заполненных. */
+function signals(x: CycleLog): string[] {
+  return Object.entries(CYCLE_WORDS).flatMap(([k, words]) => {
+    const v = x[k];
+    return v && words[v] ? [words[v]] : [];
+  });
+}
+
+/**
+ * Строка отмеченного цикла. Нажатие раскрывает правку дат: в вебе это
+ * шторка с двумя полями, здесь — те же два поля прямо в строке, чтобы
+ * не городить ещё один экран ради двух дат.
+ */
+function PeriodRow({ x, busy, onSave, onDrop }: {
+  x: CyclePeriod; busy: boolean;
+  onSave: (id: number, started: string, ended: string | null) => void;
+  onDrop: (id: number) => void;
+}) {
+  const { p } = useApp();
+  const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState(() => new Date(x.started_on + 'T00:00:00'));
+  const [to, setTo] = useState(() =>
+    x.ended_on ? new Date(x.ended_on + 'T00:00:00') : null);
+
+  return (
+    <Card style={{ marginBottom: S.sm }}>
+      <Pressable onPress={() => { haptic.tap(); setOpen(v => !v); }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+        <View style={{
+          width: 10, height: 10, borderRadius: 5, backgroundColor: mix(CYCLE, 70, p.surface),
+        }} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={{ ...FONT.h3, color: p.text }}>{dlong(x.started_on)}</Text>
+          <Muted style={{ marginTop: 2 }}>
+            {x.ended_on ? `по ${dlong(x.ended_on)}` : 'идёт сейчас'} · изменить
+          </Muted>
+        </View>
+        <View style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}>
+          <Icon name="chevr" size={14} color={p.text3} />
+        </View>
+      </Pressable>
+
+      {open ? (
+        <View style={{ marginTop: S.md, gap: S.sm }}>
+          <Muted>Начало</Muted>
+          <SysDate value={from} onChange={setFrom} max={new Date()} />
+          <Muted>Окончание</Muted>
+          {to ? (
+            <SysDate value={to} onChange={setTo} min={from} max={new Date()} />
+          ) : (
+            <SysButton label="Указать окончание" height={44}
+              onPress={() => { haptic.tap(); setTo(new Date()); }} />
+          )}
+          <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.xs }}>
+            <View style={{ flex: 1 }}>
+              <SysButton label="Сохранить" variant="prominent" height={44} disabled={busy}
+                onPress={() => { setOpen(false); onSave(x.id, ymd(from), to ? ymd(to) : null); }} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <SysButton label="Удалить" variant="destructive" height={44} disabled={busy}
+                onPress={() => {
+                  Alert.alert('Удалить запись?', `${dlong(x.started_on)} — запись о цикле`, [
+                    { text: 'Отмена', style: 'cancel' },
+                    { text: 'Удалить', style: 'destructive', onPress: () => onDrop(x.id) },
+                  ]);
+                }} />
+            </View>
+          </View>
+        </View>
+      ) : null}
+    </Card>
+  );
+}
