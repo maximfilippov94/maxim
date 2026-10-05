@@ -397,13 +397,15 @@ function RestOverlay({ sec, next, onDone }: {
               width: '100%', backgroundColor: p.inset, borderRadius: R.md,
               padding: S.md, marginBottom: S.lg, alignItems: 'center',
             }}>
-              <Muted>Следующее</Muted>
+              <Muted>Следующее упражнение</Muted>
               <Text style={{ fontSize: 15, fontWeight: '700', color: p.text, marginVertical: 2 }}>
                 {next.name}
               </Text>
+              {/* Вес тоже называем: в вебе он стоит здесь же, и без него
+                  к снаряду подходят, не зная, что ставить. */}
               <Muted>
                 {next.duration_sec != null ? `${next.duration_sec} сек`
-                  : `${next.sets} × ${next.reps}`}
+                  : `${next.sets} × ${next.reps}${next.target_weight_kg ? ` · ${next.target_weight_kg} кг` : ''}`}
               </Muted>
             </View>
           ) : null}
@@ -411,7 +413,7 @@ function RestOverlay({ sec, next, onDone }: {
           <View style={{ flexDirection: 'row', gap: S.md, width: '100%' }}>
             <View style={{ flex: 1 }}><SysButton label="+15 сек" onPress={plus} /></View>
             <View style={{ flex: 1 }}>
-              <SysButton label="Пропустить" variant="prominent" onPress={onDone} />
+              <SysButton label="Пропустить отдых" variant="prominent" onPress={onDone} />
             </View>
           </View>
         </Animated.View>
