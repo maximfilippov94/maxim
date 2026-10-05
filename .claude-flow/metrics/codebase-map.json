@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-10-05T04:33:41.915Z",
+  "projectRoot": "/home/user/maxim",
+  "structure": {
+    "hasPackageJson": false,
+    "hasTsConfig": false,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1791174821915
+}
