@@ -25,16 +25,25 @@ php "$HERE/plan-test.php"
 
 echo
 echo "== API по HTTP =="
-cp "$HERE/_router.php" "$WEB/_router.php"
+# Роутер мог уже лежать в каталоге сайта (его кладут и для ручной
+# отладки) — тогда за собой его не убираем, иначе чужой сервер
+# останется без точки входа и начнёт отвечать пятисотыми.
+KEEP_ROUTER=0
+[ -f "$WEB/_router.php" ] && KEEP_ROUTER=1
+[ $KEEP_ROUTER -eq 1 ] || cp "$HERE/_router.php" "$WEB/_router.php"
 php -S "127.0.0.1:$PORT" -t "$WEB" "$WEB/_router.php" >/dev/null 2>&1 &
 SRV=$!
-trap 'kill $SRV 2>/dev/null || true; rm -f "$WEB/_router.php"' EXIT INT TERM
+trap 'kill $SRV 2>/dev/null || true; [ $KEEP_ROUTER -eq 1 ] || rm -f "$WEB/_router.php"' EXIT INT TERM
 sleep 2
 BASE="$BASE" php "$HERE/api-test.php"
 
 echo
 echo "== Чат EQUA AI =="
 WEB="$WEB" BASE="$BASE" php "$HERE/ai-chat-test.php"
+
+echo
+echo "== Список переписок клиента =="
+WEB="$WEB" BASE="$BASE" php "$HERE/chats-test.php"
 
 echo
 echo "Проверки пройдены."

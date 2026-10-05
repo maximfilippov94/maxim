@@ -140,6 +140,7 @@ function Root() {
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="specialist" />
         <Stack.Screen name="ai-chat" />
+        <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="ai" />
         <Stack.Screen name="ai-review" />
         <Stack.Screen name="ai-intake" />

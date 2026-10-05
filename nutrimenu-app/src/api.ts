@@ -929,6 +929,19 @@ export const TICKET_STATUS: Record<Ticket['status'], string> = {
    Программа собирается тренером один раз и назначается многим, поэтому
    у клиента приходит не «моя тренировка», а пункт плана: день, шаблон
    и что с ним стало. */
+/** Собеседник в списке переписок клиента — выдача `/client/chats`. */
+export interface ChatPeer {
+  id: number;
+  name: string;
+  avatar_url?: string | null;
+  role: string;
+  is_ai: number;
+  /** Последнее сообщение, обрезанное сервером до 90 знаков */
+  last?: string | null;
+  last_at?: string | null;
+  unread: number;
+}
+
 export interface WoPlanItem {
   date: string; dow: number;
   assignment_id: number; workout_id: number;
