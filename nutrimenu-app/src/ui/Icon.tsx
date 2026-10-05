@@ -69,6 +69,9 @@ export const PATHS: Record<string, string> = {
   grad: 'M12 3.9 3.4 8.1 12 12.3l8.6-4.2ZM6.8 10.1v4.4c0 1.7 2.3 3 5.2 3s5.2-1.3 5.2-3v-4.4M20.6 8.1v5.2',
   /* Лупа — поиск по каталогу. */
   search: 'M10.8 4.2a6.6 6.6 0 1 0 0 13.2 6.6 6.6 0 0 0 0-13.2ZM15.6 15.6 20 20',
+  /* Две встречные стрелки — замена блюда. Контур тот же, что в вебе
+     (`replace` в наборе значков app.js): кнопка одна и та же. */
+  replace: 'M4.2 9.3h11.4M12.6 6.3l3 3-3 3M19.8 15.4H8.4M11.4 12.4l-3 3 3 3',
   /* Фотоаппарат — сканер штрихкода. */
   camera: 'M3.6 8.4a2 2 0 0 1 2-2h1.9l1.3-2h6.4l1.3 2h1.9a2 2 0 0 1 2 2v8.2a2 2 0 0 1-2 2H5.6a2 2 0 0 1-2-2ZM12 15.6a3.4 3.4 0 1 0 0-6.8 3.4 3.4 0 0 0 0 6.8Z',
 };
@@ -108,6 +111,7 @@ export const SF: Record<string, SymbolViewProps['name']> = {
   trophy: 'trophy',
   trend: 'chart.line.uptrend.xyaxis',
   edit: 'square.and.pencil',
+  replace: 'arrow.triangle.2.circlepath',
   drop: 'drop',
   heart: 'heart',
   'heart-off': 'heart.slash',

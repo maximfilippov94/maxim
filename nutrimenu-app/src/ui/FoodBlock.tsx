@@ -84,8 +84,16 @@ export function MealAdd({ meal }: { meal: string }) {
         borderTopWidth: 1, borderTopColor: p.borderSoft,
         backgroundColor: pressed ? p.ov1 : 'transparent',
       })}>
-      <Icon name="plus" size={16} color={p.accent} />
-      <Text style={{ ...FONT.body, fontWeight: '600', color: p.accent }}>Добавить еду</Text>
+      {/* Знак — лаймовая капля с тёмным плюсом, как у кнопок: цветом
+          подписи лайм на светлой карточке не читается, а зелёная
+          надпись в продукте и не нужна. */}
+      <View style={{
+        width: 24, height: 24, borderRadius: 12, backgroundColor: p.primary,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Icon name="plus" size={14} color={p.onPrimary} width={2.4} />
+      </View>
+      <Text style={{ ...FONT.body, fontWeight: '600', color: p.text }}>Добавить еду</Text>
     </Pressable>
   );
 }

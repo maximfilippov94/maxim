@@ -64,7 +64,14 @@ export function ListRow({ icon, label, value, onPress, first, danger, tint, acti
         flex: 1, fontSize: 16, color,
         marginLeft: icon ? 0 : 0,
       }}>{label}</Text>
-      {value ? <Text style={{ fontSize: 15, color: p.text3, marginRight: onPress && !action ? 8 : 0 }}>{value}</Text> : null}
+      {/* Отступ слева обязателен: длинная подпись («Программа тренировок»)
+          съедала всё место, и значение начиналось вплотную к ней. */}
+      {value ? (
+        <Text numberOfLines={1} style={{
+          flexShrink: 1, marginLeft: 10, fontSize: 15, color: p.text3,
+          marginRight: onPress && !action ? 8 : 0,
+        }}>{value}</Text>
+      ) : null}
       {right ? <View style={{ marginLeft: 10, minWidth: 54, alignItems: 'flex-end' }}>{right}</View> : null}
       {onPress && !action ? <Icon name="chevr" size={14} color={p.text3} width={2} /> : null}
     </View>

@@ -8,11 +8,10 @@
  * они просто появляются готовыми.
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
-import { AccessibilityInfo } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, mediaUrl, WoSession, WoRecovery, WO_FEEL } from '../api';
@@ -91,7 +90,12 @@ export default function WorkoutDone() {
       </Animated.View>
 
       <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.lg }}>
-        {[[secs < 60 ? secs : Math.round(secs / 60), secs < 60 ? 'секунд' : 'минут'],
+        {/* Подпись склоняется по числу: «182 минут» — это не по-русски,
+            а плитка показывает ровно то число, что над ней. */}
+        {[[secs < 60 ? secs : Math.round(secs / 60),
+           secs < 60
+             ? plural(secs, ['секунда', 'секунды', 'секунд'])
+             : plural(Math.round(secs / 60), ['минута', 'минуты', 'минут'])],
           [s.kcal ?? 0, 'ккал'],
           [s.sets?.length ?? 0, plural(s.sets?.length ?? 0, ['подход', 'подхода', 'подходов'])]]
           .map(([v, l]) => (

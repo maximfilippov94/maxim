@@ -14,21 +14,22 @@ import { useApp } from '../../src/store';
  */
 export default function ClientTabs() {
   const { p } = useApp();
+  const sel = p.name === 'light' ? p.text : p.primary;
   return (
     /* Материал и цвета задаём явно. Панель системная, а переключатель
        темы наш: UIKit о нём не знает и берёт оформление у телефона —
        оттого на светлой теме панель выходила серой, если система была
        в тёмном режиме. */
-    /* Выделенная вкладка красится `accent`, а не заливочным лаймом: на
-       светлой теме лайм на светлом фоне не читается. Для этого `accent`
-       в палитре и есть — в светлой теме это оливковый. */
+    /* Выделенная вкладка: в тёмной теме лайм, в светлой — чернила.
+       Лайм на светлой панели в подписи пропадает, а затемнённый лайм —
+       это оливковый, который в меню и не понравился. */
     <NativeTabs
-      tintColor={p.accent}
+      tintColor={sel}
       blurEffect={p.name === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
-      iconColor={{ default: p.text2, selected: p.accent }}
+      iconColor={{ default: p.text3, selected: sel }}
       labelStyle={{
-        default: { color: p.text2 },
-        selected: { color: p.accent },
+        default: { color: p.text3 },
+        selected: { color: sel },
       }}>
 
       <NativeTabs.Trigger name="index">

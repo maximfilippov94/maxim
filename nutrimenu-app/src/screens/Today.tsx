@@ -1,17 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, RefreshControl, Pressable, ActivityIndicator } from 'react-native';
-import { Image } from 'expo-image';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
-import { api, thumbUrl, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from '../api';
+import { api, TodayResponse, MealItem, MEAL_ORDER } from '../api';
 import { S, R, FONT } from '../theme';
 import { Card, Muted, Bar, Tile } from '../ui/base';
-import { Icon } from '../ui/Icon';
 import { Counter } from '../ui/Counter';
 import { SysButton } from '../ui/system';
-import { FoodRows, MealAdd } from '../ui/FoodBlock';
+import { MealSection } from '../ui/MealSection';
 import { HomeHead } from '../ui/HomeHead';
 import { Ring } from '../ui/Ring';
 import { PushNudge } from '../ui/PushNudge';
@@ -310,88 +308,17 @@ export default function Today() {
           </View>
         </View>
       ) : null}
-      {MEAL_ORDER.map((mt, gi) => {
-        const group = items.filter(x => x.meal_type === mt);
-        const own = (data?.food ?? []).filter(e => e.meal === mt);
-        const planK = round(group.reduce((s, x) => s + (x.nutrition?.kcal ?? 0), 0));
-        const doneK = round(
-          group.filter(x => x.log_status === 'eaten').reduce((s, x) => s + (x.nutrition?.kcal ?? 0), 0)
-          + own.reduce((s, e) => s + e.totals.kcal, 0));
-        /* «Съедено из назначенного», когда есть план, и просто съеденное,
-           когда плана нет: «0 из 0 ккал» — не число, а шум. */
-        const kcal = planK ? `${doneK} из ${planK} ккал` : (doneK ? `${doneK} ккал` : '');
-        return (
-          <Animated.View key={mt}
-            entering={FadeInDown.delay(150 + gi * 60).duration(300)}
-            layout={LinearTransition.duration(220)}
-            style={{ marginBottom: S.md }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between',
-              alignItems: 'baseline', paddingHorizontal: 2, paddingBottom: 8 }}>
-              <Text style={{ ...FONT.h3, color: p.text }}>{MEAL_TITLES[mt]}</Text>
-              <Muted>{MEAL_TIME[mt]}{kcal ? ` · ${kcal}` : ''}</Muted>
-            </View>
-            <Card style={{ padding: 0, overflow: 'hidden' }}>
-              {group.map((x, i) => {
-                const done = x.log_status === 'eaten';
-                return (
-                  /* Строка открывает блюдо: состав, рецепт и граммовка —
-                     всё, чего не помещается в список. Галочка справа
-                     остаётся быстрым способом отметить, не заходя внутрь. */
-                  <Pressable key={x.id}
-                    onPress={() => { haptic.tap(); router.push(`/dish/${x.id}`); }}
-                    style={({ pressed }) => ({
-                    flexDirection: 'row', alignItems: 'center', gap: S.md,
-                    paddingVertical: 9, paddingHorizontal: 12,
-                    borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
-                    backgroundColor: pressed ? p.ov1 : 'transparent',
-                  })}>
-                    {thumbUrl(x)
-                      ? <Image
-                          source={{ uri: thumbUrl(x)! }}
-                          style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: p.inset }}
-                          contentFit="cover"
-                          transition={220}
-                          cachePolicy="memory-disk"
-                          placeholder={{ blurhash: 'L6C~2Xxu00WB00WB~qof00WB~qof' }}
-                        />
-                      : <View style={{ width: 46, height: 46, borderRadius: 12, backgroundColor: p.inset,
-                          alignItems: 'center', justifyContent: 'center' }}>
-                          <Icon name="bowl" size={18} color={p.text3} />
-                        </View>}
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      {/* Две строки вместо многоточия: длинные названия вроде
-                          «Боул с лососем, рисом и авокадо» обрывались на
-                          середине, и блюдо было не узнать. */}
-                      <Text numberOfLines={2} style={{
-                        fontSize: 15, fontWeight: '600', lineHeight: 19,
-                        color: done ? p.text3 : p.text,
-                        textDecorationLine: done ? 'line-through' : 'none',
-                      }}>{x.dish_name}</Text>
-                      <Muted style={{ marginTop: 3 }}>
-                        {round(x.portion_g)} г · {round(x.nutrition?.kcal)} ккал
-                      </Muted>
-                    </View>
-                    <Pressable
-                      onPress={() => toggle(x)}
-                      hitSlop={10}
-                      style={({ pressed }) => ({
-                        width: 26, height: 26, borderRadius: 13,
-                        alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: done ? p.primary : 'transparent',
-                        borderWidth: done ? 0 : 1.5, borderColor: p.border,
-                        transform: [{ scale: pressed ? 0.9 : 1 }],
-                      })}>
-                      {done && <Icon name="check" size={13} color={p.onPrimary} width={2.6} />}
-                    </Pressable>
-                  </Pressable>
-                );
-              })}
-              <FoodRows entries={own} onChanged={load} first={group.length === 0} />
-              <MealAdd meal={mt} />
-            </Card>
-          </Animated.View>
-        );
-      })}
+      {MEAL_ORDER.map((mt, gi) => (
+        <Animated.View key={mt} entering={FadeInDown.delay(150 + gi * 60).duration(300)}>
+          <MealSection
+            meal={mt}
+            items={items.filter(x => x.meal_type === mt)}
+            own={(data?.food ?? []).filter(e => e.meal === mt)}
+            onToggle={toggle}
+            onChanged={() => load(true)}
+          />
+        </Animated.View>
+      ))}
       <Muted style={{ textAlign: 'center', marginTop: S.md }}>
         {items.length > 0 && `${doneCount} ${plural(doneCount, ['приём', 'приёма', 'приёмов'])} из ${items.length} отмечено`}
       </Muted>

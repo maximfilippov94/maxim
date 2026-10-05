@@ -8,15 +8,15 @@ import { useApp } from '../../src/store';
  */
 export default function SpTabs() {
   const { p, unread } = useApp();
+  const sel = p.name === 'light' ? p.text : p.primary;
   return (
-    /* Выделенная вкладка красится `accent`, а не заливочным лаймом: на
-       светлой теме лайм на светлом фоне не читается. Для этого `accent`
-       в палитре и есть — в светлой теме это оливковый. */
+    /* Выделенная вкладка: в тёмной теме лайм, в светлой — чернила.
+       Те же цвета, что у клиента: панель одна и та же. */
     <NativeTabs
-      tintColor={p.accent}
+      tintColor={sel}
       blurEffect={p.name === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
-      iconColor={{ default: p.text2, selected: p.accent }}
-      labelStyle={{ default: { color: p.text2 }, selected: { color: p.accent } }}>
+      iconColor={{ default: p.text3, selected: sel }}
+      labelStyle={{ default: { color: p.text3 }, selected: { color: sel } }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="house" />
         <NativeTabs.Trigger.Label>Главная</NativeTabs.Trigger.Label>

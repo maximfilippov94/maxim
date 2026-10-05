@@ -50,8 +50,18 @@ function dayLabel(ds: string) {
   return new Date(ds + 'T00:00:00')
     .toLocaleDateString('ru-RU', { weekday: 'short', day: 'numeric', month: 'long' });
 }
+/**
+ * Длительность тренировки. До часа — минуты и секунды, как в вебе
+ * (`woMmSs`), дальше часами: «182:08» читается как время на часах, а не
+ * как три часа занятия, и в истории это видно было прямо на экране.
+ */
 function mmss(sec: number) {
   const s = Math.max(0, Math.round(sec));
+  if (s >= 3600) {
+    const h = Math.floor(s / 3600);
+    const m = Math.round((s % 3600) / 60);
+    return m ? `${h} ч ${m} мин` : `${h} ${plural(h, ['час', 'часа', 'часов'])}`;
+  }
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 function meta(p: { items: number; duration_min: number; level: number }) {

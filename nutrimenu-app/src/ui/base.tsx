@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View, Text, Pressable, ActivityIndicator, ScrollView,
   StyleSheet, ViewStyle, TextStyle,
@@ -107,10 +107,22 @@ export function Pills<T extends string>({ items, value, onChange, style, scroll 
   scroll?: boolean;
 }) {
   const { p } = useApp();
+  /* Где какая кнопка лежит в ряду — чтобы подвести выбранную под глаза.
+     Без этого выбранный «Эндокринологи» оставался за правым краем: ряд
+     листается, а сам он не листался, и человек видел обрезанную кнопку. */
+  const spots = useRef<Record<string, { x: number; w: number }>>({});
+  const strip = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (!scroll) return;
+    const s = spots.current[value];
+    if (s) strip.current?.scrollTo({ x: Math.max(0, s.x - 16), animated: true });
+  }, [value, scroll]);
+
   const row = items.map(([k, l]) => {
     const on = k === value;
     return (
       <Pressable key={k} onPress={() => { haptic.select(); onChange(k); }}
+        onLayout={e => { spots.current[k] = { x: e.nativeEvent.layout.x, w: e.nativeEvent.layout.width }; }}
         style={({ pressed }) => ({
           paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
           backgroundColor: on ? p.primary : p.surface,
@@ -130,9 +142,11 @@ export function Pills<T extends string>({ items, value, onChange, style, scroll 
        нечего, и ряд всегда стоит там, где стоит. */
     return (
       <View style={[{ height: PILL_H }, style]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+        <ScrollView ref={strip} horizontal showsHorizontalScrollIndicator={false}
           style={{ flexGrow: 0 }}
-          contentContainerStyle={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+          contentContainerStyle={{
+            flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingRight: S.lg,
+          }}>
           {row}
         </ScrollView>
       </View>

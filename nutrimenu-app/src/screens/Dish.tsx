@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,7 +23,7 @@ const STAR_SOFT = alpha(STAR, 13);
 export default function Dish() {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, repl: replParam } = useLocalSearchParams<{ id: string; repl?: string }>();
   const iid = Number(id);
 
   const [x, setX] = useState<DishItem | null>(null);
@@ -51,6 +51,7 @@ export default function Dish() {
 
   useEffect(() => { load(); }, [load]);
 
+
   const nut = x?.nutrition ?? null;
 
   const log = useCallback(async (status: 'eaten' | 'planned' | 'skipped', reason?: string) => {
@@ -73,6 +74,16 @@ export default function Dish() {
       setRepl(r.dishes ?? []);
     } catch (e: any) { setErr(e?.message ?? 'Замены недоступны'); }
   }, [iid]);
+
+  /* Пришли по кнопке «Заменить блюдо» из списка дня — сразу открываем
+     подбор, не заставляя искать ту же кнопку ещё раз. Один раз за вход:
+     закрытый список не должен открываться снова сам собой. */
+  const replAsked = useRef(false);
+  useEffect(() => {
+    if (replParam !== '1' || !x || replAsked.current) return;
+    replAsked.current = true;
+    openRepl();
+  }, [replParam, x, openRepl]);
 
   const doRepl = useCallback(async (dishId: number) => {
     setBusy(true);

@@ -13,11 +13,10 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Modal,
+  View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Modal, StyleSheet,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Image } from 'expo-image';
 import Svg, { Circle } from 'react-native-svg';
 import Animated, {
   FadeIn, SlideInDown, useAnimatedProps, useSharedValue, withTiming, Easing,
@@ -27,7 +26,7 @@ import { api, mediaUrl, WoSession, WoExercise, WO_LEVELS } from '../api';
 import { S, R, FONT } from '../theme';
 import { Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
-import { Pager } from '../ui/Pager';
+import { PhotoSwipe } from '../ui/PhotoSwipe';
 import { SysButton } from '../ui/system';
 import { plural } from '../format';
 import { haptic } from '../haptics';
@@ -133,7 +132,12 @@ export default function WorkoutRun() {
     );
   }
 
-  const shot = mediaUrl(x.image_start_url || x.image_end_url);
+  /* Кадра у упражнения два — начало и конец движения. Листаются пальцем,
+     как в вебе (`.wo-run-ph` со свайпом): раньше показывался только первый. */
+  const shots = [x.image_start_url, x.image_end_url]
+    .filter(Boolean)
+    .map(u => mediaUrl(u as string))
+    .filter(Boolean) as string[];
   const nextX = ex[i + 1];
 
   return (
@@ -142,13 +146,12 @@ export default function WorkoutRun() {
         contentContainerStyle={{ paddingBottom: insets.bottom + S.xl }}>
         {/* Снимок и служебная строка поверх него */}
         <View style={{
-          aspectRatio: shot ? 1 : 16 / 9, backgroundColor: p.inset,
+          aspectRatio: shots.length ? 1 : 16 / 9, backgroundColor: p.inset,
           alignItems: 'center', justifyContent: 'center',
         }}>
-          {shot ? (
-            <Image source={{ uri: shot }} style={{ width: '100%', height: '100%' }}
-              contentFit="cover" transition={220} />
-          ) : <Icon name="dumbbell" size={54} color={p.text3} />}
+          <View style={StyleSheet.absoluteFill}>
+            <PhotoSwipe shots={shots} />
+          </View>
 
           <View style={{
             position: 'absolute', top: insets.top + 8, left: S.lg, right: S.lg,
@@ -433,13 +436,10 @@ function ExerciseSheet({ x, open, onClose }: {
      вебе: кадры сменялись сами раз в полторы секунды, и чтобы задержаться
      на нужном положении, приходилось ловить момент. Под кадрами точки —
      иначе непонятно, что картинка не одна. */
-  const [frame, setFrame] = useState(0);
-  const pagerPos = useSharedValue(0);
   const shots = [x.image_start_url, x.image_end_url]
     .filter(Boolean)
     .map(u => mediaUrl(u as string))
     .filter(Boolean) as string[];
-  const url = shots[Math.min(frame, shots.length - 1)] ?? null;
 
   return (
     <Modal transparent visible={open} animationType="fade" onRequestClose={onClose}>
@@ -455,40 +455,10 @@ function ExerciseSheet({ x, open, onClose }: {
         }} />
         <ScrollView contentContainerStyle={{ padding: S.lg }}>
           <View style={{
-            aspectRatio: url ? 4 / 3 : 16 / 6, borderRadius: R.lg, overflow: 'hidden',
-            backgroundColor: p.inset, alignItems: 'center', justifyContent: 'center',
-            marginBottom: S.lg,
+            aspectRatio: shots.length ? 4 / 3 : 16 / 6, borderRadius: R.lg, overflow: 'hidden',
+            backgroundColor: p.inset, marginBottom: S.lg,
           }}>
-            {shots.length > 1 ? (
-              <Pager progress={pagerPos} onIndex={setFrame}>
-                {shots.map(u => (
-                  <View key={u} style={{ width: '100%', height: '100%' }}>
-                    <Image source={{ uri: u }} style={{ width: '100%', height: '100%' }}
-                      contentFit="cover" transition={200} />
-                  </View>
-                ))}
-              </Pager>
-            ) : url ? (
-              <Image source={{ uri: url }} style={{ width: '100%', height: '100%' }}
-                contentFit="cover" transition={260} />
-            ) : <Icon name="dumbbell" size={44} color={p.text3} />}
-
-            {/* Точки показывают, что кадра два и какой сейчас. Поверх
-                снимка, поэтому на тёмной подложке. */}
-            {shots.length > 1 ? (
-              <View style={{
-                position: 'absolute', bottom: 10, alignSelf: 'center',
-                flexDirection: 'row', gap: 7, paddingHorizontal: 10, paddingVertical: 6,
-                borderRadius: 999, backgroundColor: 'rgba(9,16,22,0.52)',
-              }} pointerEvents="none">
-                {shots.map((u, i) => (
-                  <View key={u} style={{
-                    width: 7, height: 7, borderRadius: 4,
-                    backgroundColor: i === frame ? '#fff' : 'rgba(255,255,255,0.42)',
-                  }} />
-                ))}
-              </View>
-            ) : null}
+            <PhotoSwipe shots={shots} />
           </View>
 
           <Text style={{ ...FONT.h2, color: p.text }}>{x.name}</Text>

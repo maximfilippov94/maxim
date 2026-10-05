@@ -225,6 +225,8 @@ export interface MealItem {
   photo_url?: string | null;
   photo_thumb_url?: string | null;
   log_status?: string | null;
+  /** Клиент убрал блюдо из плана дня — строка остаётся, но вне списка */
+  hidden?: boolean;
   nutrition: Totals;
 }
 export interface TodayResponse {
