@@ -982,6 +982,37 @@ export const WO_FEEL: [number, string, string][] = [
   [4, 'Тяжело', '😤'], [5, 'На пределе', '🥵'],
 ];
 
+/* ---------- Настройки уведомлений ----------
+   Поля у клиента и специалиста разные: клиенту напоминают о еде, весе и
+   тренировках, специалисту сообщают о клиентах. Общее — тихие часы. */
+export interface PushPrefs {
+  /* клиент */
+  breakfast?: number; lunch?: number; dinner?: number;
+  weight?: number; menu_updates?: number; workouts?: number;
+  /* специалист */
+  meal_logs?: number; client_inactive?: number;
+  /* обе роли */
+  messages?: number;
+  quiet_start?: string | null;
+  quiet_end?: string | null;
+}
+/** Что показывать клиенту: поле и подпись — те же слова, что в вебе. */
+export const PUSH_CLIENT: [keyof PushPrefs, string, string][] = [
+  ['breakfast', 'Завтрак', 'напомнить отметить утренний приём'],
+  ['lunch', 'Обед', 'напомнить днём'],
+  ['dinner', 'Ужин', 'напомнить вечером'],
+  ['weight', 'Вес', 'напомнить встать на весы'],
+  ['messages', 'Сообщения', 'от специалиста и EQUA AI'],
+  ['menu_updates', 'Изменения меню', 'новое меню и правки'],
+  ['workouts', 'Тренировки', 'назначенная тренировка на сегодня'],
+];
+/** Что показывать специалисту. */
+export const PUSH_SPEC: [keyof PushPrefs, string, string][] = [
+  ['messages', 'Сообщения', 'клиенты пишут вам'],
+  ['meal_logs', 'Отметки питания', 'клиент отметил или пропустил блюдо'],
+  ['client_inactive', 'Неактивные клиенты', 'кто пропал из приложения'],
+];
+
 /* ---------- Тренировки глазами тренера ---------- */
 export interface WoClientRow {
   id: number; name: string; avatar_url?: string | null; goal?: string | null;

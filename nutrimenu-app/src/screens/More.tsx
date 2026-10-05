@@ -90,6 +90,11 @@ export default function More() {
           )}
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/notifications')} />
+          {/* Лента — что уже пришло, настройки — что присылать впредь.
+              Второго в приложении не было, и человек, которому приходит
+              всё подряд, выключал уведомления целиком. */}
+          <ListRow icon="device" label="Что присылать"
+            onPress={() => router.push('/push-prefs')} />
           <ListRow icon="edit" label="Отчёт за неделю"
             onPress={() => router.push('/checkin')} />
         </ListGroup>

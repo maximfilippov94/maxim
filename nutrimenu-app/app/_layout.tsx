@@ -91,6 +91,16 @@ function Root() {
         <Stack.Screen name="sp-workout-form" />
         <Stack.Screen name="sp-workout-build" />
         <Stack.Screen name="sp-workout-assign" />
+        <Stack.Screen
+          name="sp-invite"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.6, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
         <Stack.Screen name="register" />
         <Stack.Screen name="forgot" />
         <Stack.Screen name="progress" />
@@ -104,6 +114,7 @@ function Root() {
         <Stack.Screen name="review" />
         <Stack.Screen name="sp-health" />
         <Stack.Screen name="notifications" />
+        <Stack.Screen name="push-prefs" />
         <Stack.Screen name="specialist" />
         <Stack.Screen name="ai-chat" />
         <Stack.Screen name="cycle" />

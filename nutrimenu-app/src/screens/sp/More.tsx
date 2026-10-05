@@ -91,6 +91,14 @@ export default function SpMore() {
             onPress={() => router.push('/sp-reviews')} />
         </ListGroup>
 
+        <ListHead>Клиенты</ListHead>
+        <ListGroup>
+          {/* Позвать клиента можно двумя путями: заводить руками или дать
+              код. Второго в приложении не было вовсе. */}
+          <ListRow first icon="user" label="Код для клиентов"
+            onPress={() => router.push('/sp-invite')} />
+        </ListGroup>
+
         <ListHead>Работа</ListHead>
         <ListGroup>
           {/* Тренеру раздел нужен каждый день, остальным он не нужен
@@ -128,6 +136,8 @@ export default function SpMore() {
           )}
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/sp-notifications')} />
+          <ListRow icon="device" label="Что присылать"
+            onPress={() => router.push('/push-prefs')} />
           <ListRow icon="spark" label="EQUA info"
             onPress={() => router.push('/info')} />
           <ListRow icon="chat" label="Поддержка"
