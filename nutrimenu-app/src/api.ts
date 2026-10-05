@@ -249,6 +249,11 @@ export interface Me {
     target_kcal?: number; target_protein?: number; target_fat?: number; target_carbs?: number;
     weight_kg?: number; goal?: string; avatar_url?: string | null;
     sex?: string | null; water_goal_ml?: number | null;
+    /* Рост, год рождения и уровень активности сервер отдаёт в `/me`
+       вместе с остальным профилем — их показывает экран профиля. */
+    height_cm?: number | null;
+    birth_year?: number | null;
+    activity_level?: string | null;
   };
   user_type: 'client' | 'specialist' | 'admin';
 }

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, mediaUrl, Preferences, parseList, Specialist } from '../api';
+import { api, mediaUrl, Preferences, parseList } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -15,6 +15,12 @@ import { haptic } from '../haptics';
 import { pickPhoto } from '../photo';
 import { uploadForm } from '../upload';
 import { Loading } from './Shopping';
+
+/** Уровень активности словами — как на сайте. */
+const ACTIVITY: Record<string, string> = {
+  low: 'низкий', light: 'лёгкий', medium: 'средний',
+  high: 'высокий', athlete: 'спортсмен',
+};
 
 /** Список через запятую — так его вводят и в вебе. */
 const join = (a: string[]) => a.join(', ');
@@ -30,11 +36,11 @@ export default function Profile() {
   const [excluded, setExcluded] = useState('');
   const [swaps, setSwaps] = useState(true);
   const [notes, setNotes] = useState('');
-  const [spec, setSpec] = useState<Specialist | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const age = u?.birth_year ? new Date().getFullYear() - u.birth_year : null;
 
   /* Снимок профиля меняется отсюда: в вебе он кликабелен, в приложении
      его можно было только посмотреть. Сервер сам ужимает картинку до
@@ -52,6 +58,17 @@ export default function Profile() {
     } finally { setPhotoBusy(false); }
   }, [refreshMe]);
 
+  const dropPhoto = useCallback(async () => {
+    setPhotoBusy(true); setMsg(null);
+    try {
+      await api('/client/avatar', { method: 'DELETE' });
+      haptic.success();
+      await refreshMe();
+    } catch (e: any) {
+      haptic.error(); setMsg(e?.message ?? 'Не удалось убрать фото');
+    } finally { setPhotoBusy(false); }
+  }, [refreshMe]);
+
   useEffect(() => {
     api<{ preferences: Preferences }>('/client/preferences').then(r => {
       const pr = r.preferences ?? {};
@@ -62,8 +79,6 @@ export default function Profile() {
       setNotes(pr.notes ?? '');
       setLoaded(true);
     }).catch(() => setLoaded(true));
-    api<{ specialist: Specialist | null }>('/client/my-specialist')
-      .then(r => setSpec(r.specialist)).catch(() => {});
   }, []);
 
   const save = useCallback(async () => {
@@ -140,15 +155,29 @@ export default function Profile() {
             </Pressable>
             <Text style={{ ...FONT.h2, color: p.text, marginTop: S.md }}>{u?.name ?? '—'}</Text>
             {u?.email ? <Muted style={{ marginTop: 2 }}>{u.email}</Muted> : null}
+            {/* Снять фото тоже можно — в вебе кнопка стоит под аватаром.
+                Без неё неудачный снимок остаётся навсегда. */}
+            {u?.avatar_url ? (
+              <Pressable onPress={dropPhoto} disabled={photoBusy} hitSlop={8}
+                style={({ pressed }) => ({ marginTop: S.sm, opacity: pressed ? 0.5 : 1 })}>
+                <Text style={{ ...FONT.small, color: p.danger }}>Удалить фото</Text>
+              </Pressable>
+            ) : (
+              <Muted style={{ marginTop: S.sm }}>Добавьте фото профиля</Muted>
+            )}
           </Card>
         </Animated.View>
 
+        {/* Те же пять строк, что в вебе («Мои данные»): цель, вес, рост,
+            возраст, активность. Норма калорий и специалист отсюда ушли —
+            первая стоит на «Сегодня», второй в «Моих специалистах». */}
         <Card style={{ padding: 0, marginBottom: S.md }}>
           {([
             ['Цель', u?.goal || '—'],
-            ['Норма калорий', u?.target_kcal ? `${u.target_kcal} ккал` : '—'],
-            ['Вес', u?.weight_kg ? `${kg(u.weight_kg)} кг` : '—'],
-            ['Специалист', spec?.name ?? 'не назначен'],
+            ['Текущий вес', u?.weight_kg ? `${kg(u.weight_kg)} кг` : '—'],
+            ['Рост', u?.height_cm ? `${u.height_cm} см` : '—'],
+            ['Возраст', age ? String(age) : '—'],
+            ['Уровень активности', ACTIVITY[u?.activity_level ?? ''] ?? (u?.activity_level || '—')],
           ] as [string, string][]).map(([l, v], i) => (
             <View key={l} style={{
               flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

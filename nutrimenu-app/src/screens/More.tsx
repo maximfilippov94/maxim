@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -6,6 +6,9 @@ import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { hasExpoUI, hasSymbols, hasMeshGradient, isExpoGo } from '../native';
 import { hasLiquidGlass } from '../ui/Glass';
 import { useApp } from '../store';
+import { api } from '../api';
+import { AiAccess } from '../ui/TodayBlocks';
+import { plural } from '../format';
 import { ThemePref, S, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListRow, ListHead } from '../ui/List';
@@ -25,6 +28,23 @@ export default function More() {
   const insets = useSafeAreaInsets();
   const idx = Math.max(0, THEMES.findIndex(t => t.key === themePref));
 
+  /* Срок доступа к EQUA AI — тот же, что на «Сегодня»: приходит в
+     `ai_access` ответа `/client/today`. Нет доступа — подписи нет. */
+  const [aiLeft, setAiLeft] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api<{ ai_access?: AiAccess | null }>('/client/today')
+      .then(r => {
+        if (!alive) return;
+        const a = r.ai_access;
+        if (!a?.has_access) { setAiLeft(null); return; }
+        const d = a.days_left ?? 0;
+        setAiLeft(d > 0 ? `${d} ${plural(d, ['день', 'дня', 'дней'])}` : 'истекает');
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   const pick = useCallback((i: number) => {
     haptic.select();
     setThemePref(THEMES[i].key);
@@ -38,7 +58,9 @@ export default function More() {
         contentContainerStyle={{ paddingBottom: insets.bottom + 150 }}
         showsVerticalScrollIndicator={false}>
 
-        {/* Разделы — во всю ширину, без полей: список, а не набор карточек */}
+        {/* Разделы — во всю ширину, без полей: список, а не набор карточек.
+            Порядок и названия те же, что в вебе: человек, перешедший с
+            сайта, ищет пункт глазами там же и теми же словами. */}
         <ListGroup style={{ marginTop: 8 }}>
           <ListRow first icon="user" label="Профиль"
             onPress={() => router.push('/profile')} />
@@ -46,10 +68,10 @@ export default function More() {
             onPress={() => router.push('/progress')} />
           <ListRow icon="heart" label="Моё здоровье"
             onPress={() => router.push('/health')} />
+          <ListRow icon="drop" label="Вода"
+            onPress={() => router.push('/water')} />
           <ListRow icon="cart" label="Список покупок"
             onPress={() => router.push('/shopping')} />
-          <ListRow icon="drop" label="Питьевой режим"
-            onPress={() => router.push('/water')} />
         </ListGroup>
 
         {/* Пока специалист не выбран, половина пунктов ведёт в пустоту:
@@ -59,8 +81,16 @@ export default function More() {
         <ListGroup>
           {hasSpec ? (
             <>
-              <ListRow first icon="chat" label="Мой специалист"
+              <ListRow first icon="users" label="Мои специалисты"
                 onPress={() => router.push('/specialist')} />
+              {/* EQUA AI стоит здесь же, вторым — это такой же, кто ведёт
+                  план, а не «мотивация». Справа — сколько осталось дней,
+                  как в вебе: иначе о сроке узнают, когда он кончится. */}
+              <ListRow icon="spark" label="EQUA AI"
+                right={aiLeft ? (
+                  <Text style={{ ...FONT.small, color: p.text3 }}>{aiLeft}</Text>
+                ) : undefined}
+                onPress={() => router.push('/ai')} />
               {/* Покупка услуг выключается с сервера: если приём оплаты
                   встал, пункт не должен вести на форму, которая всё
                   равно откажет. */}
@@ -71,12 +101,17 @@ export default function More() {
               <ListRow icon="star" label="Отзыв о специалисте"
                 onPress={() => router.push('/review')} />
             </>
-          ) : feature('catalog') ? (
-            <ListRow first icon="users" label="Найти специалиста"
-              onPress={() => router.push('/specialist')} />
           ) : (
-            <ListRow first icon="users" label="Мой специалист"
-              onPress={() => router.push('/specialist')} />
+            <>
+              <ListRow first icon="users"
+                label={feature('catalog') ? 'Найти специалиста' : 'Мои специалисты'}
+                onPress={() => router.push('/specialist')} />
+              <ListRow icon="spark" label="EQUA AI"
+                right={aiLeft ? (
+                  <Text style={{ ...FONT.small, color: p.text3 }}>{aiLeft}</Text>
+                ) : undefined}
+                onPress={() => router.push('/ai')} />
+            </>
           )}
         </ListGroup>
 
@@ -88,8 +123,6 @@ export default function More() {
             <ListRow icon="heart" label="Лента"
               onPress={() => router.push('/feed')} />
           )}
-          <ListRow icon="spark" label="EQUA AI"
-            onPress={() => router.push('/ai')} />
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/notifications')} />
           {/* Лента — что уже пришло, настройки — что присылать впредь.
@@ -154,13 +187,13 @@ export default function More() {
           </View>
         </ListGroup>
 
-        <ListHead>Помощь</ListHead>
+        <ListHead>Поддержка</ListHead>
         <ListGroup>
           {/* Про сервис — сюда, про питание — специалисту в чат.
               Разные разговоры и разные читатели. */}
           <ListRow first icon="spark" label="EQUA info"
             onPress={() => router.push('/info')} />
-          <ListRow icon="chat" label="Поддержка"
+          <ListRow icon="chat" label="Написать в поддержку"
             onPress={() => router.push('/support')} />
         </ListGroup>
 
