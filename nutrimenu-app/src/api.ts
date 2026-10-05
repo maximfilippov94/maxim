@@ -32,9 +32,15 @@ export function setUnauthorizedHandler(fn: (() => void) | null) {
 
 export class ApiError extends Error {
   status: number;
-  constructor(message: string, status: number) {
+  /* Кроме текста ошибки прикладываем весь ответ. Сервер возвращает
+     вместе с отказом подробности — чем занято питание, что человек
+     потеряет при замене, сколько останется в зачёт, — и без них экран
+     может только показать сухую строку вместо разговора. */
+  data: any;
+  constructor(message: string, status: number, data?: any) {
     super(message);
     this.status = status;
+    this.data = data;
   }
 }
 
@@ -201,7 +207,7 @@ async function request<T = any>(
       const busy = RETRY_STATUS.includes(res.status)
         ? 'Сервер сейчас не отвечает. Попробуйте ещё раз через минуту.'
         : null;
-      throw new ApiError(json?.error ?? busy ?? 'Ошибка сервера', res.status);
+      throw new ApiError(json?.error ?? busy ?? 'Ошибка сервера', res.status, json);
     }
     return json as T;
   }
@@ -841,7 +847,24 @@ export interface Lab {
 }
 export interface Recommendation {
   id: number; body: string; created_at: string;
+  /** Заголовок и вид — их задаёт специалист; у старых записей их нет */
+  title?: string | null;
+  category?: 'general' | 'nutrition' | 'training' | 'medication' | 'document' | null;
+  /** До какой даты рекомендация в силе */
+  valid_until?: string | null;
+  /** Что с рекомендацией решил специалист */
+  status?: 'active' | 'done' | 'cancelled' | null;
+  /** Что ответил клиент: не открыл, выполняет, выполнил */
+  client_status?: 'new' | 'in_progress' | 'done' | null;
+  author_name?: string | null;
+  author_profession?: string | null;
 }
+
+/** Вид рекомендации словами — те же, что `HEALTH_REC_KINDS` в вебе. */
+export const REC_KINDS: Record<string, string> = {
+  general: 'Общее', nutrition: 'Питание', training: 'Тренировки',
+  medication: 'Препараты', document: 'По документу',
+};
 export interface Health {
   allergies: Allergy[];
   meds: Med[];

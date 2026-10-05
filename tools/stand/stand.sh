@@ -50,4 +50,12 @@ echo "== Оценка блюда =="
 WEB="$WEB" BASE="$BASE" php "$HERE/dish-rating-test.php"
 
 echo
+echo "== Промокод и переход с EQUA AI =="
+WEB="$WEB" BASE="$BASE" php "$HERE/promo-test.php"
+
+echo
+echo "== Рекомендации =="
+WEB="$WEB" BASE="$BASE" php "$HERE/recs-test.php"
+
+echo
 echo "Проверки пройдены."

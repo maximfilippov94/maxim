@@ -47,6 +47,10 @@ export default function Services() {
   const [busy, setBusy] = useState(false);
   const [disputing, setDisputing] = useState(false);
   const [note, setNote] = useState('');
+  /* Выбранная услуга, промокод и ответ проверки — лист подключения. */
+  const [pick, setPick] = useState<{ id: number; title: string } | null>(null);
+  const [promo, setPromo] = useState('');
+  const [promoRes, setPromoRes] = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
     try { setD(await api<ServicesResponse>('/client/services')); setErr(null); }
@@ -54,26 +58,71 @@ export default function Services() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const activate = useCallback((id: number, title: string) => {
-    /* Спрашиваем, хотя денег не берём: выбор видит специалист, и
-       случайное нажатие будет выглядеть странно для обоих. */
-    Alert.alert('Подключить услугу?', `«${title}»\n\nОплата пока не подключена — услуга включится сразу, а специалист увидит ваш выбор.`, [
-      { text: 'Отмена', style: 'cancel' },
-      { text: 'Подключить', onPress: async () => {
-        setBusy(true);
-        try {
-          const r = await api<{ confirmation_url?: string | null }>(
-            `/client/services/${id}/activate`, { method: 'POST', body: {} });
-          /* Когда приём платежей подключён, сервер отдаёт ссылку на
-             оплату: услуга включится не сейчас, а когда придёт
-             подтверждение от платёжного сервиса. */
-          if (r?.confirmation_url) { await Linking.openURL(r.confirmation_url); return; }
-          haptic.success(); await load();
-        } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось подключить'); }
-        finally { setBusy(false); }
-      } },
-    ]);
+  /* Отправка подключения: промокод и, если пришёл запрос подтверждения,
+     второй заход с `confirm`. Вынесено отдельно — вызывается дважды. */
+  const send = useCallback(async (id: number, promo: string, confirm: boolean) =>
+    api<{ confirmation_url?: string | null }>(`/client/services/${id}/activate`, {
+      method: 'POST',
+      body: { ...(promo ? { promo } : {}), ...(confirm ? { confirm: true } : {}) },
+    }), []);
+
+  const finish = useCallback(async (r: { confirmation_url?: string | null }) => {
+    /* Когда приём платежей подключён, сервер отдаёт ссылку на оплату:
+       услуга включится не сейчас, а когда придёт подтверждение от
+       платёжного сервиса. */
+    if (r?.confirmation_url) { await Linking.openURL(r.confirmation_url); return; }
+    haptic.success(); setPick(null); setPromo(''); setPromoRes(null); await load();
   }, [load]);
+
+  const activate = useCallback(async (id: number) => {
+    setBusy(true); setErr(null);
+    const code = promo.trim();
+    try {
+      await finish(await send(id, code, false));
+    } catch (e: any) {
+      /* У клиента действует EQUA AI: сервер не отказывает, а спрашивает —
+         AI завершится, остаток пойдёт в зачёт новой услуги. Без этой
+         ветки человек видел отказ и не узнавал ни про зачёт, ни про то,
+         что подключение вообще возможно. */
+      const sw = e?.data?.need_confirm ? (e.data.ai_switch ?? {}) : null;
+      if (!sw) {
+        haptic.error(); setErr(e?.message ?? 'Не удалось подключить'); setBusy(false); return;
+      }
+      const days = sw.days_left != null
+        ? ` — ещё ${sw.days_left} ${plural(Number(sw.days_left), ['день', 'дня', 'дней'])}`
+        : '';
+      Alert.alert('Сейчас действует EQUA AI',
+        `«${sw.title || sw.plan || ''}»${days}.\n\n`
+        + `После успешной оплаты AI завершится, а остаток ${rub(Number(sw.credit_kop) || 0)} `
+        + 'пойдёт в зачёт новой услуги. Продолжить?',
+        [
+          { text: 'Отмена', style: 'cancel', onPress: () => setBusy(false) },
+          { text: 'Продолжить', onPress: async () => {
+            try { await finish(await send(id, code, true)); }
+            catch (e2: any) { haptic.error(); setErr(e2?.message ?? 'Не удалось подключить'); }
+            finally { setBusy(false); }
+          } },
+        ]);
+      return;
+    }
+    setBusy(false);
+  }, [promo, send, finish]);
+
+  /* Скидку проверяем до оплаты: узнать, что код не подошёл, в момент
+     списания денег — худший момент для такой новости. */
+  const checkPromo = useCallback(async (serviceId: number) => {
+    const code = promo.trim();
+    if (!code) { setPromoRes(null); return; }
+    haptic.tap();
+    try {
+      const r = await api<{ percent: number; price_kop: number; total_kop: number }>(
+        '/client/promo/check', { method: 'POST', body: { code, service_id: serviceId } });
+      setPromoRes({ ok: true,
+        text: `Скидка ${r.percent} % — к оплате ${rub(r.total_kop)} вместо ${rub(r.price_kop)}` });
+    } catch (e: any) {
+      setPromoRes({ ok: false, text: e?.message ?? 'Код не подошёл' });
+    }
+  }, [promo]);
 
   /* Кнопка «подтвердить» без второй кнопки ничего не значит: рядом
      всегда есть возражение, и пока идёт спор, деньги заморожены. */
@@ -239,16 +288,68 @@ export default function Services() {
                       <Text style={{ ...FONT.small, fontWeight: '600', color: p.primary }}>подключена</Text>
                     </View>
                   ) : (
-                    <Pressable onPress={() => activate(s.id, s.title)} disabled={busy}>
+                    <Pressable disabled={busy}
+                      onPress={() => {
+                        haptic.tap();
+                        setPromo(''); setPromoRes(null); setErr(null);
+                        setPick(pick?.id === s.id ? null : { id: s.id, title: s.title });
+                      }}>
                       {({ pressed }) => (
                         <View style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 999,
                           backgroundColor: p.primary, opacity: pressed ? 0.85 : 1 }}>
-                          <Text style={{ ...FONT.small, fontWeight: '600', color: p.onPrimary }}>Подключить</Text>
+                          <Text style={{ ...FONT.small, fontWeight: '600', color: p.onPrimary }}>
+                            {pick?.id === s.id ? 'Свернуть' : 'Подключить'}
+                          </Text>
                         </View>
                       )}
                     </Pressable>
                   )}
                 </View>
+
+                {/* Промокод спрашиваем до оплаты, как в вебе: узнать, что
+                    код не подошёл, в момент списания денег — худший момент
+                    для такой новости. Поля не было вовсе, и скидку в
+                    приложении применить было нельзя. */}
+                {pick?.id === s.id ? (
+                  <Animated.View entering={FadeInDown.duration(200)} style={{ marginTop: S.md }}>
+                    <Label>Промокод, если есть</Label>
+                    <View style={{ flexDirection: 'row', gap: S.sm, marginTop: 6 }}>
+                      <TextInput value={promo} onChangeText={setPromo}
+                        placeholder="Например, START20" placeholderTextColor={p.text3}
+                        autoCapitalize="characters" maxLength={24}
+                        style={{ ...FONT.body, flex: 1, color: p.text, backgroundColor: p.inset,
+                          borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11 }} />
+                      <Pressable onPress={() => checkPromo(s.id)} disabled={!promo.trim()}
+                        style={({ pressed }) => ({
+                          paddingHorizontal: 16, justifyContent: 'center', borderRadius: 12,
+                          backgroundColor: p.inset,
+                          opacity: !promo.trim() ? 0.5 : pressed ? 0.7 : 1,
+                        })}>
+                        <Text style={{ ...FONT.small, fontWeight: '600', color: p.text }}>Проверить</Text>
+                      </Pressable>
+                    </View>
+
+                    {promoRes ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: S.sm }}>
+                        <Icon name={promoRes.ok ? 'check' : 'info'} size={15} width={2}
+                          color={promoRes.ok ? p.good : p.danger} />
+                        <Text style={{ ...FONT.small, flex: 1,
+                          color: promoRes.ok ? p.good : p.danger }}>
+                          {promoRes.text}
+                        </Text>
+                      </View>
+                    ) : null}
+
+                    <View style={{ marginTop: S.md }}>
+                      <SysButton label="Подключить" variant="prominent"
+                        disabled={busy} onPress={() => activate(s.id)} />
+                    </View>
+                    <Muted style={{ marginTop: S.sm, lineHeight: 18 }}>
+                      Специалист увидит ваш выбор. Если приём оплаты подключён,
+                      дальше откроется страница оплаты.
+                    </Muted>
+                  </Animated.View>
+                ) : null}
               </Card>
             </Animated.View>
           );

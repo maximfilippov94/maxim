@@ -20,7 +20,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import {
   api, Health, Allergy, Med, Lab, Recommendation,
-  ALLERGY_KINDS, MED_KINDS,
+  ALLERGY_KINDS, MED_KINDS, REC_KINDS,
 } from '../api';
 import { openPrivateFile, fetchPrivateFile, looksLikeImage } from '../openPrivateFile';
 import { ImageViewer } from '../ui/ImageViewer';
@@ -455,6 +455,28 @@ function Recs({ list, edit, clientId, spec, onAdd, onRemove, onError }: {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
 
+  /* Свой ответ на рекомендацию. Перечитываем раздел целиком: статус
+     видят обе стороны, и подменять его на месте значило бы показывать
+     клиенту то, чего специалист ещё не получил. */
+  async function setClientStatus(id: number, status: 'in_progress' | 'done') {
+    haptic.select();
+    try {
+      await api(`/client/health/recommendations/${id}/status`, {
+        method: 'PATCH', body: { status },
+      });
+      onAdd();
+    } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
+  }
+
+  /* Закрыть рекомендацию может только её автор — так проверяет сервер. */
+  async function setSpecStatus(id: number, status: 'done' | 'cancelled') {
+    haptic.select();
+    try {
+      await api(`/specialist/recommendations/${id}`, { method: 'PATCH', body: { status } });
+      onAdd();
+    } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
+  }
+
   async function add() {
     if (!body.trim()) { haptic.error(); onError('Пустая рекомендация'); return; }
     setBusy(true);
@@ -487,24 +509,100 @@ function Recs({ list, edit, clientId, spec, onAdd, onRemove, onError }: {
         <Blank text={edit
           ? 'Здесь копится история: что советовали и когда. Клиент это видит.'
           : 'Рекомендаций пока нет.'} />
-      ) : list.map((r, i) => (
+      ) : list.map((r, i) => {
+        const open = (r.status ?? 'active') === 'active';
+        /* Подпись под текстом собирается из того, что есть: у старых
+           записей нет ни заголовка, ни срока, ни автора. */
+        const foot = [
+          r.author_name,
+          day(r.created_at),
+          r.valid_until ? `до ${day(r.valid_until)}` : null,
+        ].filter(Boolean).join(' · ');
+        return (
         <Animated.View key={r.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
           <Card style={{ marginBottom: S.sm, gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
-              <Text style={{ ...FONT.body, color: p.text, flex: 1, lineHeight: 21 }}>
-                {r.body}
-              </Text>
+              <View style={{ flex: 1 }}>
+                {(r.title || r.category) ? (
+                  <Text style={{ ...FONT.h3, color: p.text, marginBottom: 4 }}>
+                    {r.title || REC_KINDS[r.category ?? 'general'] || 'Рекомендация'}
+                  </Text>
+                ) : null}
+                <Text style={{ ...FONT.body, color: p.text, lineHeight: 21 }}>{r.body}</Text>
+              </View>
+              {/* Чем кончилась рекомендация — меткой справа: у списка из
+                  десятка записей иначе не видно, что ещё в силе. */}
+              <RecMark status={r.status ?? 'active'} clientStatus={r.client_status ?? 'new'} spec={spec} />
               {edit ? <Del onConfirm={() => onRemove(r.id)} what="запись" /> : null}
             </View>
-            <Muted>{day(r.created_at)}</Muted>
+            {foot ? <Muted>{foot}</Muted> : null}
+
+            {/* Клиент отвечает на рекомендацию, специалист закрывает её.
+                Ни того ни другого в приложении не было: на сайте клиент
+                отмечает «выполняю» и «выполнено», и специалист это видит. */}
+            {open && !spec ? (
+              <View style={{ flexDirection: 'row', gap: S.sm, marginTop: 4 }}>
+                <RecBtn label="Выполняю" on={r.client_status === 'in_progress'}
+                  onPress={() => setClientStatus(r.id, 'in_progress')} />
+                <RecBtn label="Выполнено" on={r.client_status === 'done'}
+                  onPress={() => setClientStatus(r.id, 'done')} />
+              </View>
+            ) : null}
+            {open && spec ? (
+              <View style={{ flexDirection: 'row', gap: S.sm, marginTop: 4 }}>
+                <RecBtn label="Выполнена" onPress={() => setSpecStatus(r.id, 'done')} />
+                <RecBtn label="Отменить" onPress={() => setSpecStatus(r.id, 'cancelled')} />
+              </View>
+            ) : null}
           </Card>
         </Animated.View>
-      ))}
+        );
+      })}
     </View>
   );
 }
 
 /* ------------------------------------------------------------- мелочи */
+
+/** Метка состояния рекомендации: для клиента — свой ответ, для
+    специалиста — что он с ней решил. Слова те же, что в вебе. */
+function RecMark({ status, clientStatus, spec }: {
+  status: string; clientStatus: string; spec: boolean;
+}) {
+  const { p } = useApp();
+  const text = spec
+    ? (status === 'done' ? 'Выполнена' : status === 'cancelled' ? 'Отменена' : 'Актуальна')
+    : (clientStatus === 'done' ? 'Выполнено'
+      : clientStatus === 'in_progress' ? 'Выполняю' : 'Новая');
+  const done = spec ? status === 'done' : clientStatus === 'done';
+  const off = spec ? status === 'cancelled' : false;
+  return (
+    <View style={{ paddingHorizontal: 9, paddingVertical: 5, borderRadius: 999,
+      backgroundColor: done ? p.primarySoft : p.inset }}>
+      <Text style={{ fontSize: 11, fontWeight: '600',
+        color: done ? p.accent : off ? p.text3 : p.text2 }}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+/** Невысокая кнопка под рекомендацией; выбранная подсвечена. */
+function RecBtn({ label, on, onPress }: { label: string; on?: boolean; onPress: () => void }) {
+  const { p } = useApp();
+  return (
+    <Pressable onPress={onPress}
+      style={({ pressed }) => ({
+        paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999,
+        backgroundColor: on ? p.primarySoft : p.inset,
+        opacity: pressed ? 0.7 : 1,
+      })}>
+      <Text style={{ fontSize: 13, fontWeight: '600', color: on ? p.accent : p.text2 }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
 
 function AddBtn({ busy, onPress, label }: { busy: boolean; onPress: () => void; label?: string }) {
   const { p } = useApp();
