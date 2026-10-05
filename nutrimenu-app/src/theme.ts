@@ -189,3 +189,15 @@ export const MOTION = {
   spring: { damping: 22, stiffness: 240, mass: 1 },
   springSheet: { damping: 26, stiffness: 220, mass: 1 },
 } as const;
+
+/**
+ * Цвет полосы нутриента: сиреневый в норме, оранжевый при переборе
+ * больше чем на 5 %. Правило взято из веба (`macroCol` в `app.js`) —
+ * там же и порог, менять его нужно в обоих местах сразу.
+ *
+ * На «Сегодня» цвета другие: там у каждого нутриента свой (`mp`/`mf`/`mc`),
+ * потому что рядом нет плана, с которым можно сравнить.
+ */
+export function macroColor(p: Palette, cur: number, target: number): string {
+  return target && cur / target > 1.05 ? p.warn : p.mp;
+}

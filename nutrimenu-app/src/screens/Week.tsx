@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, thumbUrl, WeekResponse, MEAL_ORDER, MEAL_TITLES } from '../api';
 import { Image } from 'expo-image';
-import { S, R, FONT, LAYOUT } from '../theme';
-import { Card, Label, Muted, Bar } from '../ui/base';
+import { S, R, FONT, LAYOUT, macroColor } from '../theme';
+import { Card, Label, Muted, Bar, Tile } from '../ui/base';
+import { Ring } from '../ui/Ring';
 import { Icon } from '../ui/Icon';
 import { Empty } from '../ui/system';
 import { round, plural, menuDate, dayTitle, dowShort, isToday } from '../format';
@@ -44,6 +45,7 @@ export default function Week() {
   const items = (d.items ?? []).filter(i => i.day_number === day);
   const tot = d.days?.[String(day)];
   const target = me?.user?.target_kcal ?? 1800;
+  const macroCol = (cur: number, tg: number) => macroColor(p, cur, tg);
 
   return (
     <ScrollView
@@ -96,29 +98,74 @@ export default function Week() {
             </ScrollView>
           </Animated.View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm,
-            marginTop: S.xs, marginBottom: S.md }}>
-            <Text style={{ ...FONT.h3, color: p.text }}>
-              {dayTitle(menu.start_date, day, true)}
-            </Text>
-            {isToday(menuDate(menu.start_date, day)) ? <Muted>сегодня</Muted> : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center',
+            marginTop: S.sm, marginBottom: S.md }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 13, color: p.text3 }}>План на день</Text>
+              <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>
+                {dayTitle(menu.start_date, day, true)}
+              </Text>
+            </View>
+            {isToday(menuDate(menu.start_date, day)) ? (
+              <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill,
+                borderWidth: StyleSheet.hairlineWidth, borderColor: p.border }}>
+                <Text style={{ fontSize: 12, color: p.text2 }}>Сегодня</Text>
+              </View>
+            ) : null}
           </View>
 
           {tot ? (
-            <Animated.View entering={FadeInDown.delay(40).duration(240)}>
-              <Card style={{ marginBottom: S.md }}>
-                <Label>Калории</Label>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-                  <Text style={{ ...FONT.num, color: p.text }}>{round(tot.kcal)}</Text>
-                  {/* Шкала считается от личной нормы: полоса «на весь день»
-                      без числа, к которому её сравнить, ничего не значит. */}
-                  <Muted style={{ marginLeft: 6 }}>ккал / {target}</Muted>
+            <Animated.View entering={FadeInDown.delay(40).duration(240)}
+              style={{ marginBottom: S.xl, gap: S.md }}>
+              {/* Доля плана от личной нормы — кольцом, как в вебе: строка
+                  «1790 / 1770» одна ничего не говорит о том, много это
+                  или в меру. */}
+              <Card style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg,
+                borderRadius: R.xl, padding: 18 }}>
+                <Ring pct={target ? (tot.kcal / target) * 100 : 0} size={96}
+                  color={macroCol(tot.kcal, target)} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ fontSize: 13, color: p.text3 }}>Калории в плане</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 5 }}>
+                    <Text style={{ fontSize: 26, fontWeight: '600', letterSpacing: -0.9,
+                      color: p.text }}>
+                      {round(tot.kcal)}
+                    </Text>
+                    <Text style={{ fontSize: 13, color: p.text3, marginLeft: 6 }}>
+                      / цель {target}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: p.text3, marginTop: 6 }}>
+                    {items.length} {plural(items.length, ['блюдо', 'блюда', 'блюд'])} запланировано
+                  </Text>
                 </View>
-                <View style={{ marginTop: 10 }}><Bar value={target ? tot.kcal / target : 0} /></View>
-                <Muted style={{ marginTop: S.md }}>
-                  Б {round(tot.protein)} · Ж {round(tot.fat)} · У {round(tot.carbs)} г
-                </Muted>
               </Card>
+
+              {/* Нутриенты плитками: перебор виден цветом полосы, а не
+                  только числом в строке «Б · Ж · У». */}
+              <View style={{ flexDirection: 'row', gap: S.md }}>
+                {([
+                  ['Белки', tot.protein, me?.user?.target_protein ?? 110],
+                  ['Жиры', tot.fat, me?.user?.target_fat ?? 60],
+                  ['Углеводы', tot.carbs, me?.user?.target_carbs ?? 190],
+                ] as [string, number, number][]).map(([name, cur, tgt]) => (
+                  <Tile key={name}>
+                    <Text style={{ fontSize: 12, color: p.text3 }} numberOfLines={1}>{name}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 5 }}>
+                      <Text style={{ fontSize: 20, fontWeight: '600', letterSpacing: -0.6,
+                        color: p.text }}>
+                        {round(cur)}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: p.text3, marginLeft: 3 }}>
+                        / {round(tgt) || '—'} г
+                      </Text>
+                    </View>
+                    <View style={{ marginTop: 10 }}>
+                      <Bar value={tgt ? cur / tgt : 0} color={macroCol(cur, tgt)} height={5} />
+                    </View>
+                  </Tile>
+                ))}
+              </View>
             </Animated.View>
           ) : null}
 
