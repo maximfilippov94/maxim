@@ -982,6 +982,35 @@ export const WO_FEEL: [number, string, string][] = [
   [4, 'Тяжело', '😤'], [5, 'На пределе', '🥵'],
 ];
 
+/* ---------- Недельный отчёт по клиенту ----------
+   Приверженность считается от плана: planned — блюд в плане за семь
+   дней, eaten_of_plan — сколько из них отмечено съеденными, untracked —
+   сколько человек не трогал вовсе. own_* — его собственные записи в
+   дневнике: низкая приверженность при живом дневнике значит «ест своё»,
+   а не «бросил учёт». */
+export interface WeeklyReport {
+  client?: { id: number; name: string };
+  period: { from: string; to: string };
+  eaten: number;
+  logged: number;
+  adherence: number | null;
+  planned?: number;
+  eaten_of_plan?: number;
+  untracked?: number;
+  own_entries?: number;
+  own_days?: number;
+  own_kcal?: number;
+  weight_delta: number | null;
+  latest_weight: number | null;
+  avg_kcal: number | null;
+  checkin: {
+    week_start: string; ease_score: number | null;
+    wellbeing_score: number | null; comment: string | null;
+    difficulties?: string | null;
+  } | null;
+  skips: { status: string; comment: string | null; meal_type: string; dish_name: string }[];
+}
+
 /* ---------- Настройки уведомлений ----------
    Поля у клиента и специалиста разные: клиенту напоминают о еде, весе и
    тренировках, специалисту сообщают о клиентах. Общее — тихие часы. */

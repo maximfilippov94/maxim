@@ -10,7 +10,7 @@ import { useApp } from '../../store';
 import {
   api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
   ClientTask, Subscription, FoodDay, MEAL_ORDER, MEAL_TITLES,
-  thumbUrl, WoProgress, WO_FEEL, SpAssignment, WEEKDAYS, assignDays,
+  thumbUrl, WoProgress, WO_FEEL, SpAssignment, WEEKDAYS, assignDays, WeeklyReport,
 } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
@@ -304,6 +304,99 @@ function WorkoutsTab({ cid }: { cid: number }) {
   );
 }
 
+/**
+ * Как прошла неделя. Блоком в «Обзоре», а не шестой вкладкой: шесть
+ * вкладок не влезают в 393 пикселя, и отчёт — именно то, с чем специалист
+ * открывает карточку, а не отдельное занятие.
+ *
+ * Приверженность показываем от плана и рядом говорим, сколько блюд
+ * человек не трогал и сколько записал сам: «17%» без этого читается как
+ * «клиент не ест», хотя он может есть своё и всё записывать.
+ */
+function WeekReport({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [d, setD] = useState<WeeklyReport | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<WeeklyReport>(`/specialist/weekly-report?client_id=${cid}`)
+      .then(setD)
+      .catch(e => setErr(e?.message ?? 'Отчёт не открылся'));
+  }, [cid]);
+
+  /* Раздел закрыт этой роли или данных нет — молчим: пустая карточка с
+     прочерками говорит меньше, чем её отсутствие. */
+  if (err || !d) return null;
+
+  const tiles: [string, string, string][] = [
+    [d.adherence == null ? '—' : `${d.adherence}%`,
+     d.planned ? `съедено из ${d.planned}` : 'плана нет',
+     'plan'],
+    [d.weight_delta == null ? '—' : `${d.weight_delta > 0 ? '+' : '−'}${kg(Math.abs(d.weight_delta))}`,
+     'кг за неделю', 'weight'],
+    [String(d.own_entries ?? 0), 'своих записей', 'own'],
+    [d.avg_kcal == null ? '—' : String(d.avg_kcal), 'ср. ккал меню', 'kcal'],
+  ];
+
+  return (
+    <Card style={{ marginBottom: S.md }}>
+      <Label>Как прошла неделя</Label>
+      <View style={{ flexDirection: 'row', gap: S.xs, marginTop: S.sm }}>
+        {tiles.map(([v, note, key]) => (
+          <View key={key} style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ fontSize: 19, fontWeight: '700', color: p.text }}>{v}</Text>
+            <Text numberOfLines={2} style={{
+              fontSize: 10.5, color: p.text3, textAlign: 'center', marginTop: 2,
+            }}>{note}</Text>
+          </View>
+        ))}
+      </View>
+
+      {d.untracked ? (
+        <Muted style={{ marginTop: S.md, lineHeight: 18 }}>
+          {d.untracked} {plural(d.untracked, ['блюдо', 'блюда', 'блюд'])} человек не отмечал
+          {d.own_entries ? ` — зато записал ${d.own_entries} ${plural(d.own_entries, ['свою позицию', 'свои позиции', 'своих позиций'])} в дневнике` : ''}.
+        </Muted>
+      ) : null}
+
+      {/* Слова самого клиента — единственное, чего не видно по цифрам. */}
+      {d.checkin ? (
+        <View style={{
+          marginTop: S.md, padding: S.md, borderRadius: R.md, backgroundColor: p.ov2,
+        }}>
+          <Text style={{ ...FONT.small, color: p.text2 }}>
+            Отчёт клиента{d.checkin.ease_score ? ` · соблюдать ${EASE_WORDS[d.checkin.ease_score] ?? '—'}` : ''}
+            {d.checkin.wellbeing_score ? ` · самочувствие ${d.checkin.wellbeing_score}/10` : ''}
+          </Text>
+          {d.checkin.comment ? (
+            <Text style={{ ...FONT.body, color: p.text, marginTop: 4, lineHeight: 20 }}>
+              «{d.checkin.comment}»
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {d.skips?.length ? (
+        <View style={{ marginTop: S.md }}>
+          <Text style={{ ...FONT.small, color: p.text3, marginBottom: 4 }}>
+            Пропущено: {d.skips.length}
+          </Text>
+          {d.skips.slice(0, 3).map((x, i) => (
+            <Text key={i} numberOfLines={1} style={{ ...FONT.small, color: p.text2 }}>
+              • {x.dish_name}{x.comment ? ` — ${x.comment}` : ''}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+/** Слова шкалы «легко ли соблюдать» — те же, что видит клиент. */
+const EASE_WORDS: Record<number, string> = {
+  1: 'очень сложно', 2: 'сложно', 3: 'нормально', 4: 'легко', 5: 'очень легко',
+};
+
 function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
   const { p } = useApp();
   const rows: [string, string][] = [
@@ -320,6 +413,7 @@ function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
     : sub.days_left <= 3 ? p.danger : sub.days_left <= 7 ? p.warn : p.primary;
   return (
     <Animated.View entering={FadeInDown.duration(220)}>
+      <WeekReport cid={c.id} />
       {/* Какую услугу клиент подключил и до какого числа: специалист
           должен видеть это, не спрашивая человека. */}
       {sub ? (
