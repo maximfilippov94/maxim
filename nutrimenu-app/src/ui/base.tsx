@@ -23,6 +23,29 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
   );
 }
 
+/**
+ * Плитка-метрика: подпись, крупное число, подстрочник и тонкая полоса.
+ * В вебе это `.wtile` — без заливки, с обводкой в волосок: три такие
+ * плитки в ряд читаются как один блок, а не как три отдельные карточки.
+ */
+export function Tile({ children, onPress, style }: {
+  children: React.ReactNode; onPress?: () => void; style?: ViewStyle;
+}) {
+  const { p } = useApp();
+  const box: ViewStyle = {
+    flex: 1, minWidth: 0, paddingVertical: 15, paddingHorizontal: 12,
+    borderRadius: R.md, borderWidth: StyleSheet.hairlineWidth,
+    borderColor: p.border, backgroundColor: 'transparent',
+  };
+  if (!onPress) return <View style={[box, style]}>{children}</View>;
+  return (
+    <Pressable onPress={() => { haptic.tap(); onPress(); }}
+      style={({ pressed }) => [box, { opacity: pressed ? 0.7 : 1 }, style]}>
+      {children}
+    </Pressable>
+  );
+}
+
 export function Label({ children }: { children: React.ReactNode }) {
   const { p } = useApp();
   return <Text style={{ ...FONT.label, color: p.text3, textTransform: 'uppercase' }}>{children}</Text>;

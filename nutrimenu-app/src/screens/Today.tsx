@@ -5,17 +5,18 @@ import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
-import { api, mediaUrl, thumbUrl, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from '../api';
+import { api, thumbUrl, TodayResponse, MealItem, MEAL_ORDER, MEAL_TITLES, MEAL_TIME } from '../api';
 import { S, R, FONT } from '../theme';
-import { Card, Label, Muted, Bar } from '../ui/base';
+import { Card, Muted, Bar, Tile } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { Counter } from '../ui/Counter';
 import { SysButton } from '../ui/system';
 import { FoodRows, MealAdd } from '../ui/FoodBlock';
-import { ScreenHead } from '../ui/ScreenHead';
+import { HomeHead } from '../ui/HomeHead';
+import { Ring } from '../ui/Ring';
 import { PushNudge } from '../ui/PushNudge';
 import { Announce } from '../ui/Announce';
-import { round, kg, todayLabel, plural } from '../format';
+import { round, kg, plural } from '../format';
 import { haptic } from '../haptics';
 import { useToast } from '../ui/Toast';
 import { TodayWorkout, TodayCycle, TodayPlanSource } from '../ui/TodayBlocks';
@@ -130,19 +131,16 @@ export default function Today() {
   const doneCount = items.filter(x => x.log_status === 'eaten').length;
   const plan = round(data?.plan_totals?.kcal);
 
-  /* Полосы Б/Ж/У показывают одно и то же — долю от цели, поэтому и цвет
-     у них один. Три разных были украшением: жёлтый и синий спорили с
-     теми же цветами, которыми в интерфейсе помечены «внимание» и
-     «тревога». Теперь цвет значит ровно одно: норма или перебор. */
-  const macroCol = (cur: number, tg: number) => (tg && cur / tg > 1.05 ? p.warn : p.mp);
+  /* Цвета те же, что в вебе: белки сиреневые, жиры лаймовые, углеводы
+     голубые (`--mp` / `--mf` / `--mc`). Нутриент узнаётся по цвету
+     одинаково в обоих продуктах — иначе человек, перешедший с сайта,
+     каждый раз перечитывает подписи. */
   const macros: [string, number, number, string][] = [
-    ['Белки', data?.totals?.protein ?? 0, targets.protein,
-      macroCol(data?.totals?.protein ?? 0, targets.protein)],
-    ['Жиры', data?.totals?.fat ?? 0, targets.fat,
-      macroCol(data?.totals?.fat ?? 0, targets.fat)],
-    ['Углеводы', data?.totals?.carbs ?? 0, targets.carbs,
-      macroCol(data?.totals?.carbs ?? 0, targets.carbs)],
+    ['Белки', data?.totals?.protein ?? 0, targets.protein, p.mp],
+    ['Жиры', data?.totals?.fat ?? 0, targets.fat, p.mf],
+    ['Углеводы', data?.totals?.carbs ?? 0, targets.carbs, p.mc],
   ];
+  const pctEaten = target ? Math.round((eaten / target) * 100) : 0;
 
   return (
     <ScrollView
@@ -154,7 +152,7 @@ export default function Today() {
       }}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={onRefresh} tintColor={p.text3} />}>
 
-      <ScreenHead eyebrow={todayLabel()} title="Сегодня" role="client" />
+      <HomeHead name={u?.name} avatarUrl={u?.avatar_url} />
 
       {/* Пока уведомления не включены — напоминание здесь: этот экран
           человек открывает каждый день, остальные далеко не всегда. */}
@@ -169,124 +167,111 @@ export default function Today() {
         </Card>
       )}
 
-      {/* Калории */}
+      {/* Питание за сегодня — одна карточка, как `.eq-daily` в вебе:
+          съеденное, кольцо доли и три нутриента под ними. Раньше это
+          были две карточки подряд, и доля цели нигде не называлась. */}
       <Animated.View entering={FadeInDown.duration(280)}>
-      <Card style={{ marginBottom: S.md }}>
-        <Label>Калории</Label>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-end',
-          justifyContent: 'space-between', marginTop: S.sm }}>
-          <View>
-            <Counter value={eaten} step={1} style={{ ...FONT.num, color: p.text }} />
-            <Muted style={{ marginTop: 2 }}>ккал / {target}</Muted>
+      <Card style={{ marginBottom: S.lg, borderRadius: R.xl, padding: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ fontSize: 13, color: p.text2 }}>Съедено сегодня</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8,
+              marginTop: S.sm, marginBottom: 4 }}>
+              <Counter value={eaten} step={1}
+                style={{ fontSize: 38, fontWeight: '600', letterSpacing: -1.5, color: p.text }} />
+              <Text style={{ fontSize: 14, color: p.text3 }}>/ {target} ккал</Text>
+            </View>
+            <Text style={{ fontSize: 12, color: p.text3 }}>
+              {left >= 0 ? `Осталось ${round(left)} ккал` : `На ${round(-left)} ккал выше цели`}
+            </Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Counter value={Math.abs(left)} step={1}
-              style={{ fontSize: 21, fontWeight: '700', letterSpacing: -0.5,
-                color: left >= 0 ? p.primary : p.premium }} />
-            <Muted style={{ marginTop: 2 }}>{left >= 0 ? 'осталось' : 'перебор'}</Muted>
-          </View>
+          <Ring pct={pctEaten} size={84} color={left >= 0 ? p.primary : p.premium} />
         </View>
-        <View style={{ marginTop: S.lg }}>
-          <Bar value={target ? eaten / target : 0} />
+
+        <View style={{ flexDirection: 'row', gap: 18, marginTop: 22 }}>
+          {macros.map(([name, cur, tgt, color]) => (
+            <View key={name} style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 13, fontWeight: '500', color: p.text2 }} numberOfLines={1}>
+                {name}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline',
+                marginTop: 6, marginBottom: 10 }}>
+                <Counter value={round(cur)} step={1}
+                  style={{ fontSize: 16, fontWeight: '500', color: p.text }} />
+                <Text style={{ fontSize: 12, color: p.text3, marginLeft: 4 }}>
+                  / {round(tgt)} г
+                </Text>
+              </View>
+              <Bar value={tgt ? cur / tgt : 0} color={color} height={4} />
+            </View>
+          ))}
         </View>
-        {/* Наверху — съеденное, иначе «осталось» не о чем говорит. План
-            дня рядом: видно, сколько ещё предстоит по меню. */}
+
+        {/* План дня рядом со съеденным: видно, сколько ещё предстоит. */}
         {plan ? (
-          <Muted style={{ marginTop: S.md }}>
+          <Text style={{ fontSize: 12, color: p.text3, marginTop: 18 }}>
             По плану на день {round(plan)} ккал
             {eaten < plan ? ` · осталось съесть ${round(plan - eaten)}` : ''}
-          </Muted>
+          </Text>
         ) : null}
       </Card>
       </Animated.View>
 
-      {/* Макросы */}
-      <Animated.View entering={FadeInDown.delay(50).duration(280)}>
-      <Card style={{ marginBottom: S.md }}>
-        <View style={{ flexDirection: 'row', gap: S.lg }}>
-          {macros.map(([name, cur, tgt, color]) => (
-            <View key={name} style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
-                <Text style={{ ...FONT.small, color: p.text2 }} numberOfLines={1}>{name}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 5 }}>
-                <Counter value={round(cur)} step={1}
-                  style={{ fontSize: 17, fontWeight: '700', color: p.text }} />
-                <Muted style={{ marginLeft: 3 }}>г / {round(tgt)}</Muted>
-              </View>
-              <View style={{ marginTop: 7 }}>
-                <Bar value={tgt ? cur / tgt : 0} color={color} height={3} />
-              </View>
-            </View>
-          ))}
-        </View>
-      </Card>
-      </Animated.View>
-
-      {/* Вес и отмечено */}
+      {/* Вес, отмеченное и вода — три плитки в ряд, как `.eq-metrics`
+          в вебе: обводка вместо заливки, чтобы они читались одним
+          блоком под карточкой питания, а не тремя карточками подряд.
+          Вода раньше занимала отдельную строку во всю ширину. */}
       <Animated.View entering={FadeInDown.delay(100).duration(280)}
-        style={{ flexDirection: 'row', gap: S.md, marginBottom: S.md }}>
-        {/* Вес записывают отсюда: карточка и показывает последний, и
-            открывает запись — отдельная кнопка для этого не нужна. */}
-        <Pressable onPress={() => { haptic.tap(); router.push('/weight'); }}
-          style={({ pressed }) => ({ flex: 1, opacity: pressed ? 0.75 : 1 })}>
-          <Card>
-            <Label>Вес</Label>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-              <Text style={{ fontSize: 22, fontWeight: '700', color: p.text }}>
-                {data?.weight ? kg(data.weight.last) : '—'}
-              </Text>
-              {!!data?.weight && <Muted style={{ marginLeft: 3 }}>кг</Muted>}
-            </View>
-            <Muted style={{ marginTop: 2 }}>
-              {data?.weight?.delta
-                ? `${data.weight.delta > 0 ? '+' : '−'}${kg(Math.abs(data.weight.delta))} кг за период`
-                : 'Записать вес'}
-            </Muted>
-          </Card>
-        </Pressable>
-        <Card style={{ flex: 1 }}>
-          <Label>Отмечено</Label>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-            <Text style={{ fontSize: 22, fontWeight: '700', color: p.text }}>{doneCount}</Text>
-            <Muted style={{ marginLeft: 3 }}>/ {items.length}</Muted>
-          </View>
-          <View style={{ marginTop: 9 }}>
-            <Bar value={items.length ? doneCount / items.length : 0} height={4} />
-          </View>
-        </Card>
-      </Animated.View>
+        style={{ flexDirection: 'row', gap: S.md, marginBottom: S.xl }}>
 
-      {/* Вода — коротко: сколько выпито из нормы. Подробности и силуэт
-          на отдельном экране, здесь важен только сам факт. */}
-      <Animated.View entering={FadeInDown.delay(140).duration(280)}>
-        <Pressable onPress={() => { haptic.tap(); router.push('/water'); }}
-          style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1, marginBottom: S.md })}>
-          <Card>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
-              <View style={{ flex: 1 }}>
-                <Label>Вода</Label>
-                <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-                  <Text style={{ fontSize: 22, fontWeight: '700', color: p.text }}>
-                    {data?.water?.ml ?? 0}
-                  </Text>
-                  <Muted style={{ marginLeft: 4 }}>
-                    из {data?.water?.goal_ml ?? 2000} мл
-                  </Muted>
-                </View>
-              </View>
-              <Icon name="chevr" size={15} color={p.text3} width={2} />
-            </View>
-            <View style={{ marginTop: 9 }}>
-              <Bar
-                value={data?.water?.goal_ml ? (data.water.ml / data.water.goal_ml) : 0}
-                color={p.mc}
-                height={4}
-              />
-            </View>
-          </Card>
-        </Pressable>
+        {/* Вес записывают отсюда: плитка и показывает последний, и
+            открывает запись — отдельная кнопка для этого не нужна. */}
+        <Tile onPress={() => router.push('/weight')}>
+          <Text style={{ fontSize: 12, color: p.text3 }}>Вес</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 5 }}>
+            <Text style={{ fontSize: 20, fontWeight: '600', letterSpacing: -0.6, color: p.text }}>
+              {data?.weight ? kg(data.weight.last) : '—'}
+            </Text>
+            {!!data?.weight && (
+              <Text style={{ fontSize: 12, color: p.text3, marginLeft: 3 }}>кг</Text>
+            )}
+          </View>
+          <Text style={{ fontSize: 11, color: p.text3, marginTop: 6 }} numberOfLines={2}>
+            {data?.weight?.delta
+              ? `${data.weight.delta > 0 ? '+' : '−'}${kg(Math.abs(data.weight.delta))} кг за период`
+              : 'Записать вес'}
+          </Text>
+        </Tile>
+
+        <Tile>
+          <Text style={{ fontSize: 12, color: p.text3 }}>Отмечено</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 5 }}>
+            <Text style={{ fontSize: 20, fontWeight: '600', letterSpacing: -0.6, color: p.text }}>
+              {doneCount}
+            </Text>
+            <Text style={{ fontSize: 12, color: p.text3, marginLeft: 3 }}>/ {items.length}</Text>
+          </View>
+          <View style={{ marginTop: 10 }}>
+            <Bar value={items.length ? doneCount / items.length : 0} height={5} color={p.mp} />
+          </View>
+        </Tile>
+
+        <Tile onPress={() => router.push('/water')}>
+          <Text style={{ fontSize: 12, color: p.text3 }}>Вода</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 5 }}>
+            <Text style={{ fontSize: 20, fontWeight: '600', letterSpacing: -0.6, color: p.text }}>
+              {((data?.water?.ml ?? 0) / 1000).toLocaleString('ru-RU')}
+            </Text>
+            <Text style={{ fontSize: 12, color: p.text3, marginLeft: 3 }}>л</Text>
+          </View>
+          <Text style={{ fontSize: 11, color: p.text3, marginTop: 6 }}>
+            из {((data?.water?.goal_ml ?? 2000) / 1000).toLocaleString('ru-RU')} л
+          </Text>
+          <View style={{ marginTop: 10 }}>
+            <Bar value={data?.water?.goal_ml ? (data.water.ml / data.water.goal_ml) : 0}
+              color={p.mc} height={5} />
+          </View>
+        </Tile>
       </Animated.View>
 
       {/* Кто ведёт план, движение на сегодня и женское здоровье — три
