@@ -824,6 +824,11 @@ export interface Med {
   id: number; kind: string; title: string;
   dosage?: string | null; schedule?: string | null;
   started_on?: string | null; ended_on?: string | null; note?: string | null;
+  /* Сколько раз в день нужно принимать и сколько уже принято сегодня.
+     Второе число обязательно: маршрут отметки перезаписывает счётчик за
+     день целиком, и без текущего значения кнопка сбрасывала бы его. */
+  frequency_per_day?: number;
+  taken_today?: number;
 }
 export interface Lab {
   id: number; title: string; taken_on?: string | null;

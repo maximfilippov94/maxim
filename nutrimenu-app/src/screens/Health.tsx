@@ -245,13 +245,20 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
     } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
   }
 
-  /* Отметки приёма здесь нет сознательно. Маршрут /client/health/meds/{id}/intake
-     перезаписывает число приёмов за день целиком (taken_count), а GET
-     /client/health текущее значение не отдаёт: таблица health_med_logs
-     пишется, но нигде не читается. Кнопка «принял» без этого числа
-     сбрасывала бы счётчик в единицу при каждом входе на экран — лучше не
-     отмечать совсем, чем терять уже отмеченное. Доделывать надо на
-     сервере: вернуть taken_count в выдаче здоровья. */
+  /* Отметка приёма. Маршрут перезаписывает счётчик за день целиком,
+     поэтому считаем от того, что уже отмечено: сервер отдаёт taken_today
+     вместе с препаратом. Отмечает только сам человек — специалист не
+     может знать, выпил он таблетку или нет. */
+  async function intake(m: Med) {
+    const target = Math.max(1, m.frequency_per_day ?? 1);
+    const next = Math.min(target, (m.taken_today ?? 0) + 1);
+    try {
+      await api(`/client/health/meds/${m.id}/intake`, {
+        method: 'POST', body: { taken_count: next },
+      });
+      haptic.success(); onAdd();
+    } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не отметилось'); }
+  }
 
   return (
     <View>
@@ -298,12 +305,31 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
                 {edit ? <Del onConfirm={() => onRemove(m.id)} what={m.title} /> : null}
               </View>
               {active ? (
-                <Pressable onPress={() => { haptic.tap(); finish(m); }} hitSlop={8}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, alignSelf: 'flex-start' })}>
-                  <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
-                    Курс закончен
-                  </Text>
-                </Pressable>
+                <View style={{ flexDirection: 'row', gap: S.lg, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {!spec ? (() => {
+                    const target = Math.max(1, m.frequency_per_day ?? 1);
+                    const taken = Math.min(target, m.taken_today ?? 0);
+                    const left = target - taken;
+                    return left ? (
+                      <Pressable onPress={() => { haptic.tap(); intake(m); }} hitSlop={8}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                        <Text style={{ ...FONT.small, color: p.primary, fontWeight: '600' }}>
+                          Принял{target > 1 ? ` · ${taken} из ${target}` : ''}
+                        </Text>
+                      </Pressable>
+                    ) : (
+                      <Text style={{ ...FONT.small, color: p.text3 }}>
+                        сегодня принято{target > 1 ? ` ${taken} из ${target}` : ''}
+                      </Text>
+                    );
+                  })() : null}
+                  <Pressable onPress={() => { haptic.tap(); finish(m); }} hitSlop={8}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+                    <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
+                      Курс закончен
+                    </Text>
+                  </Pressable>
+                </View>
               ) : null}
             </Card>
           </Animated.View>
