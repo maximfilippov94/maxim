@@ -311,7 +311,12 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
           <Animated.View entering={FadeInDown.duration(200)}>
             <Card>
               <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>
-                {Number(picked.slice(8))} {MONTHS[Number(picked.slice(5, 7)) - 1]}
+                {/* «5 октября», а не «5 октябрь»: месяц рядом с числом
+                    стоит в родительном падеже. Массив MONTHS именительный
+                    — он для заголовка календаря, где это верно. В вебе
+                    дата выводится через toLocaleDateString, так же и тут. */}
+                {new Date(picked + 'T00:00:00').toLocaleDateString('ru-RU',
+                  { day: 'numeric', month: 'long' })}
               </Text>
               {FIELDS.map(f => (
                 <View key={f.key} style={{ marginBottom: S.md }}>
