@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,6 +10,7 @@ import { Card, Muted, Bar, Tile } from '../ui/base';
 import { Counter } from '../ui/Counter';
 import { SysButton } from '../ui/system';
 import { MealSection } from '../ui/MealSection';
+import { RateSheet, shouldAskRating } from '../ui/RateSheet';
 import { HomeHead } from '../ui/HomeHead';
 import { Ring } from '../ui/Ring';
 import { PushNudge } from '../ui/PushNudge';
@@ -101,16 +102,32 @@ export default function Today() {
      на каждое нажатие в списке из восьми блюд ощущается как залипание.
      Промах пальцем по соседнему блюду иначе пришлось бы искать и снимать
      руками — отмена висит рядом с начислением. */
+  /* Предложение оценить блюдо. Спрашиваем после окна отмены и один раз
+     на блюдо — как в вебе (`clRateDishMaybe`): сразу поверх отметки это
+     мешало бы отменить промах, а каждый день — надоедало бы. */
+  const [rate, setRate] = useState<{ id: number; name: string } | null>(null);
+  const undone = useRef<Set<number>>(new Set());
+
   const toggle = useCallback(async (item: MealItem) => {
     const next = item.log_status === 'eaten' ? 'planned' : 'eaten';
     const ok = await postStatus(item, next);
     if (ok && next === 'eaten') {
+      undone.current.delete(item.id);
       toast('+10 баллов', {
         kind: 'award',
         sub: `${item.dish_name} · отмечено`,
         actionLabel: 'Отменить',
-        onAction: () => { postStatus({ ...item, log_status: 'eaten' }, 'planned'); },
+        onAction: () => {
+          undone.current.add(item.id);
+          postStatus({ ...item, log_status: 'eaten' }, 'planned');
+        },
       });
+      setTimeout(async () => {
+        if (undone.current.has(item.id)) return;
+        if (await shouldAskRating(item.dish_id)) {
+          setRate({ id: item.dish_id, name: item.dish_name });
+        }
+      }, 6500);
     }
   }, [postStatus, toast]);
 
@@ -147,6 +164,8 @@ export default function Today() {
   const pctEaten = target ? Math.round((eaten / target) * 100) : 0;
 
   return (
+    <>
+    <RateSheet dish={rate} onClose={() => setRate(null)} />
     <ScrollView
       style={{ flex: 1, backgroundColor: p.bg }}
       contentContainerStyle={{
@@ -323,5 +342,6 @@ export default function Today() {
         {items.length > 0 && `${doneCount} ${plural(doneCount, ['приём', 'приёма', 'приёмов'])} из ${items.length} отмечено`}
       </Muted>
     </ScrollView>
+    </>
   );
 }

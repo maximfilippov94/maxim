@@ -52,6 +52,15 @@ export default function MySpecialist() {
   const [minRate, setMinRate] = useState(0);
   const [passport, setPassport] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  /* Скидка новым клиентам и сколько её осталось. */
+  const [offer, setOffer] = useState<{ percent: number; left: number } | null>(null);
+  useEffect(() => {
+    if (!offer || offer.left <= 0) return;
+    const t = setInterval(() => {
+      setOffer(o => (o && o.left > 1 ? { ...o, left: o.left - 1 } : null));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [offer]);
   /* Избранное живёт в телефоне, а не на сервере: это закладка
      «вернуться и подумать», и специалисту незачем знать, кто его
      рассматривал. */
@@ -74,6 +83,17 @@ export default function MySpecialist() {
       if (!r.specialist) {
         const c = await api<{ specialists: CatalogSpecialist[] }>('/catalog');
         setList(c.specialists ?? []);
+        /* Предложение новым клиентам — то же, что в вебе над каталогом
+           (`clMaybeWelcomeOffer`). Там это всплывающее окно; здесь —
+           строка над списком: окно поверх каталога сразу после загрузки
+           на телефоне читается как реклама, а не как предложение, и
+           закрывается не глядя. Таймер тот же. */
+        api<{ welcome_offer?: { eligible?: boolean; percent?: number; seconds_left?: number } }>('/client/ai')
+          .then(a => {
+            const o = a.welcome_offer;
+            if (o?.eligible) setOffer({ percent: Number(o.percent) || 20, left: Number(o.seconds_left) || 0 });
+          })
+          .catch(() => {});
       }
     } catch (e: any) { setErr(e.message); setSpec(null); }
   }, []);
@@ -284,6 +304,28 @@ export default function MySpecialist() {
               {TITLES[prof]}
             </Text>
 
+            {/* Скидка новым клиентам: заметная строка с обратным отсчётом,
+                по нажатию — EQUA AI. */}
+            {offer ? (
+              <Pressable onPress={() => { haptic.tap(); router.push('/ai'); }}
+                style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, marginBottom: S.md })}>
+                <Card style={{ borderWidth: 1.5, borderColor: p.primary, gap: 4 }}>
+                  <Text style={{ ...FONT.caption, color: p.text3 }}>
+                    Предложение для новых клиентов
+                  </Text>
+                  <Text style={{ ...FONT.h3, color: p.text }}>
+                    EQUA AI со скидкой {offer.percent} %
+                  </Text>
+                  <Muted>
+                    Меню или план тренировок сразу, без ожидания ответа специалиста.
+                  </Muted>
+                  <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent, marginTop: 2 }}>
+                    Действует ещё {clock(offer.left)}
+                  </Text>
+                </Card>
+              </Pressable>
+            ) : null}
+
             <View style={{
               flexDirection: 'row', alignItems: 'center', gap: S.sm,
               backgroundColor: p.surface, borderRadius: R.pill,
@@ -453,4 +495,11 @@ export default function MySpecialist() {
       </ScrollView>
     </View>
   );
+}
+
+/** «02:14:09» — сколько осталось у предложения, формат веба (`aiOfferClock`). */
+function clock(sec: number) {
+  const s = Math.max(0, Math.floor(sec));
+  return [Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60]
+    .map(x => String(x).padStart(2, '0')).join(':');
 }
