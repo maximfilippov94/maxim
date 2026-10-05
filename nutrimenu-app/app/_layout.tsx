@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
@@ -9,6 +9,7 @@ import { AppProvider, useApp } from '../src/store';
 import { UpdateGate } from '../src/ui/UpdateGate';
 import { ToastHost } from '../src/ui/Toast';
 import { setupNotificationHandler } from '../src/push';
+import { api } from '../src/api';
 
 /* Пока приложение открыто, уведомление всё равно показываем баннером:
    иначе новое сообщение теряется, если человек смотрит другой экран. */
@@ -29,6 +30,23 @@ function Root() {
     const first = segments[0] ?? '';
     if (!OPEN.includes(first)) router.replace('/welcome');
   }, [ready, me, segments]);
+
+  /* Анкета при первом входе. Без неё «Сегодня» открывается без цели и
+     без норм КБЖУ — экран с прочерками, по которому непонятно, что
+     делать. Спрашиваем сервер один раз за запуск: ответ не меняется сам
+     собой, а запрос на каждый переход экрана — лишняя работа на связи.
+
+     Сбой запроса не держит человека на месте: не смогли узнать —
+     пускаем дальше, анкету предложим в следующий раз. */
+  const askedOnboarding = useRef(false);
+  useEffect(() => {
+    if (!ready || me?.user_type !== 'client') return;
+    if (askedOnboarding.current) return;
+    askedOnboarding.current = true;
+    api<{ completed?: boolean }>('/client/onboarding')
+      .then(r => { if (!r.completed) router.replace('/onboarding'); })
+      .catch(() => {});
+  }, [ready, me]);
 
   /* Нажали на уведомление — открываем тот экран, о котором оно.
      Сервер кладёт адрес в data.screen; без сессии никуда не ведём:
@@ -115,6 +133,9 @@ function Root() {
         <Stack.Screen name="sp-health" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="push-prefs" />
+        {/* Анкета — без заголовка и без возврата: уйти с неё, не заполнив,
+            значит попасть на «Сегодня» без плана. */}
+        <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="specialist" />
         <Stack.Screen name="ai-chat" />
         <Stack.Screen name="cycle" />
