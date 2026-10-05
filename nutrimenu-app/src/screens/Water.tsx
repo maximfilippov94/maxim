@@ -17,6 +17,10 @@ import { Loading, Fail } from './Shopping';
 /* Ходовые объёмы: стакан, кружка, бутылка. Четвёртой кнопкой отмена —
    промахнуться легко, а ждать до завтра из-за лишнего стакана глупо. */
 const STEPS = [200, 300, 500];
+/* Нормы на выбор. Сервер принимает от 500 до 6000 мл, но шкала из шести
+   кнопок на телефоне не читается: четыре частых значения закрывают почти
+   всех, а точную цифру человек всё равно не знает. */
+const GOALS = [1500, 2000, 2500, 3000];
 
 const dmy = (s?: string | null) => {
   if (!s) return '—';
@@ -120,6 +124,29 @@ export default function Water() {
         : e.message));
   }, [fill]);
 
+  const [goalBusy, setGoalBusy] = useState(false);
+  /* Норму меняем на сервере сразу: это не форма, отменять тут нечего.
+     Уровень фигуры пересчитываем здесь же — иначе при поднятой планке
+     силуэт остаётся полным, и человек читает это как «не сработало».
+     Правило React Compiler на запись в это значение ворчит (оно уже
+     использовано в эффекте загрузки), но силуэт принимает именно
+     SharedValue, и так же сделана отметка глотка рядом. */
+  const setGoal = useCallback(async (goal_ml: number) => {
+    haptic.select(); setGoalBusy(true);
+    try {
+      const r = await api<{ goal_ml: number }>('/client/water/goal',
+        { method: 'PATCH', body: { goal_ml } });
+      setD(x => {
+        if (!x) return x;
+        fill.value = withSpring(r.goal_ml ? Math.min(1, x.today_ml / r.goal_ml) : 0,
+          { damping: 18 });
+        return { ...x, goal_ml: r.goal_ml };
+      });
+    } catch (e: any) {
+      haptic.error(); setErr(e?.message ?? 'Норма не сохранилась');
+    } finally { setGoalBusy(false); }
+  }, [fill]);
+
   /* Уровень поднимается сразу, запрос идёт следом: ждать сеть ради
      глотка воды незачем. Не прошло — возвращаем как было. */
   const add = useCallback(async (ml: number) => {
@@ -183,6 +210,32 @@ export default function Water() {
 
         <Animated.View entering={FadeInDown.delay(60).duration(240)}>
           <Steps onAdd={add} />
+        </Animated.View>
+
+        {/* Норма по умолчанию 2000 мл, а она зависит от веса и жары.
+            Маршрут правки был на сервере с самого начала, но его не звал
+            ни браузер, ни приложение — поменять норму было негде. */}
+        <Animated.View entering={FadeInDown.delay(90).duration(240)}>
+          <ListHead>Норма на день</ListHead>
+          <View style={{ flexDirection: 'row', gap: S.sm, paddingHorizontal: S.lg }}>
+            {GOALS.map(g => {
+              const on = d.goal_ml === g;
+              return (
+                <Pressable key={g} onPress={() => setGoal(g)} disabled={goalBusy}
+                  style={({ pressed }) => ({
+                    flex: 1, paddingVertical: 10, borderRadius: R.control, alignItems: 'center',
+                    backgroundColor: on ? p.mc : 'transparent',
+                    borderWidth: on ? 0 : 1, borderColor: p.btnLine,
+                    opacity: pressed && !on ? 0.6 : 1,
+                  })}>
+                  <Text style={{
+                    fontSize: 14, fontWeight: on ? '600' : '400',
+                    color: on ? p.onPrimary : p.text2,
+                  }}>{(g / 1000).toLocaleString('ru-RU')} л</Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </Animated.View>
 
         {/* Сегодняшний день в истории не показываем: он уже наверху

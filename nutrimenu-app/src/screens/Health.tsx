@@ -55,8 +55,21 @@ export default function HealthScreen({ clientId, title }: {
 }) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
-  const edit = clientId != null;
-  const base = edit ? `/specialist/clients/${clientId}/health` : '/client/health';
+  const spec = clientId != null;
+  const base = spec ? `/specialist/clients/${clientId}/health` : '/client/health';
+  /* Клиент ведёт своё здоровье сам: сервер принимает от него те же
+     записи, что от специалиста, — своими маршрутами. Раньше формы были
+     только у специалиста, и человек мог лишь смотреть на свои аллергии,
+     не добавив ни одной. */
+  const write = {
+    allergies: spec ? `/specialist/clients/${clientId}/allergies` : '/client/health/allergies',
+    meds: spec ? `/specialist/clients/${clientId}/meds` : '/client/health/meds',
+    labs: spec ? `/specialist/clients/${clientId}/labs` : '/client/health/labs',
+  };
+  /* Формы показываем в обеих ролях: клиент ведёт своё здоровье сам, и
+     сервер это принимает. Удаление адресуется по самой записи — в
+     remove ниже. */
+  const edit = true;
 
   const [d, setD] = useState<Health | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -70,9 +83,10 @@ export default function HealthScreen({ clientId, title }: {
 
   const remove = useCallback(async (kind: string, id: number) => {
     setD(cur => cur && { ...cur, [kind]: (cur as any)[kind].filter((x: any) => x.id !== id) });
-    try { await api(`/specialist/${kind}/${id}`, { method: 'DELETE' }); haptic.success(); }
+    const url = spec ? `/specialist/${kind}/${id}` : `/client/health/${kind}/${id}`;
+    try { await api(url, { method: 'DELETE' }); haptic.success(); }
     catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалилось'); load(); }
-  }, [load]);
+  }, [load, spec]);
 
   if (err && !d) return <Fail title="Здоровье" text={err} />;
   if (!d) return <Loading title="Здоровье" />;
@@ -98,19 +112,20 @@ export default function HealthScreen({ clientId, title }: {
           ) : null}
 
           {tab === 'allergies' ? (
-            <Allergies list={d.allergies} edit={edit} clientId={clientId}
+            <Allergies list={d.allergies} edit={edit} postTo={write.allergies}
               onAdd={load} onRemove={id => remove('allergies', id)} onError={setErr} />
           ) : null}
           {tab === 'meds' ? (
-            <Meds list={d.meds} edit={edit} clientId={clientId}
+            <Meds list={d.meds} edit={edit} postTo={write.meds} spec={spec}
+              finishTo={(id: number) => spec ? `/specialist/meds/${id}` : `/client/health/meds/${id}/finish`}
               onAdd={load} onRemove={id => remove('meds', id)} onError={setErr} />
           ) : null}
           {tab === 'labs' ? (
-            <Labs list={d.labs} edit={edit} clientId={clientId}
+            <Labs list={d.labs} edit={edit} postTo={write.labs}
               onAdd={load} onRemove={id => remove('labs', id)} onError={setErr} />
           ) : null}
           {tab === 'recommendations' ? (
-            <Recs list={d.recommendations} edit={edit} clientId={clientId}
+            <Recs list={d.recommendations} edit={spec} clientId={clientId} spec={spec}
               onAdd={load} onRemove={id => remove('recommendations', id)} onError={setErr} />
           ) : null}
         </ScrollView>
@@ -121,8 +136,8 @@ export default function HealthScreen({ clientId, title }: {
 
 /* ------------------------------------------------------------ аллергии */
 
-function Allergies({ list, edit, clientId, onAdd, onRemove, onError }: {
-  list: Allergy[]; edit: boolean; clientId?: number;
+function Allergies({ list, edit, postTo, onAdd, onRemove, onError }: {
+  list: Allergy[]; edit: boolean; postTo: string;
   onAdd: () => void; onRemove: (id: number) => void; onError: (m: string) => void;
 }) {
   const { p } = useApp();
@@ -134,7 +149,7 @@ function Allergies({ list, edit, clientId, onAdd, onRemove, onError }: {
     if (!title.trim()) { haptic.error(); onError('Что именно нельзя?'); return; }
     setBusy(true);
     try {
-      await api(`/specialist/clients/${clientId}/allergies`, {
+      await api(postTo, {
         method: 'POST', body: { title: title.trim(), kind },
       });
       setTitle(''); haptic.success(); onAdd();
@@ -184,8 +199,9 @@ function Allergies({ list, edit, clientId, onAdd, onRemove, onError }: {
 
 /* ------------------------------------------------- препараты и добавки */
 
-function Meds({ list, edit, clientId, onAdd, onRemove, onError }: {
-  list: Med[]; edit: boolean; clientId?: number;
+function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: {
+  list: Med[]; edit: boolean; postTo: string; spec: boolean;
+  finishTo: (id: number) => string;
   onAdd: () => void; onRemove: (id: number) => void; onError: (m: string) => void;
 }) {
   const { p } = useApp();
@@ -203,7 +219,7 @@ function Meds({ list, edit, clientId, onAdd, onRemove, onError }: {
     if (!title.trim()) { haptic.error(); onError('Укажите название'); return; }
     setBusy(true);
     try {
-      await api(`/specialist/clients/${clientId}/meds`, {
+      await api(postTo, {
         method: 'POST',
         body: {
           title: title.trim(), kind,
@@ -220,12 +236,22 @@ function Meds({ list, edit, clientId, onAdd, onRemove, onError }: {
      помнить, что уже пробовали и чем закончилось. */
   async function finish(m: Med) {
     try {
-      await api(`/specialist/meds/${m.id}`, {
-        method: 'PATCH', body: { ended_on: new Date().toISOString().slice(0, 10) },
-      });
+      /* У специалиста курс закрывается датой окончания, у клиента для
+         этого свой маршрут — поле ended_on он менять не может. */
+      await api(finishTo(m.id), spec
+        ? { method: 'PATCH', body: { ended_on: new Date().toISOString().slice(0, 10) } }
+        : { method: 'PATCH', body: {} });
       haptic.success(); onAdd();
     } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не сохранилось'); }
   }
+
+  /* Отметки приёма здесь нет сознательно. Маршрут /client/health/meds/{id}/intake
+     перезаписывает число приёмов за день целиком (taken_count), а GET
+     /client/health текущее значение не отдаёт: таблица health_med_logs
+     пишется, но нигде не читается. Кнопка «принял» без этого числа
+     сбрасывала бы счётчик в единицу при каждом входе на экран — лучше не
+     отмечать совсем, чем терять уже отмеченное. Доделывать надо на
+     сервере: вернуть taken_count в выдаче здоровья. */
 
   return (
     <View>
@@ -271,7 +297,7 @@ function Meds({ list, edit, clientId, onAdd, onRemove, onError }: {
                 </View>
                 {edit ? <Del onConfirm={() => onRemove(m.id)} what={m.title} /> : null}
               </View>
-              {edit && active ? (
+              {active ? (
                 <Pressable onPress={() => { haptic.tap(); finish(m); }} hitSlop={8}
                   style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, alignSelf: 'flex-start' })}>
                   <Text style={{ ...FONT.small, color: p.accent, fontWeight: '600' }}>
@@ -289,8 +315,8 @@ function Meds({ list, edit, clientId, onAdd, onRemove, onError }: {
 
 /* -------------------------------------------------------------- анализы */
 
-function Labs({ list, edit, clientId, onAdd, onRemove, onError }: {
-  list: Lab[]; edit: boolean; clientId?: number;
+function Labs({ list, edit, postTo, onAdd, onRemove, onError }: {
+  list: Lab[]; edit: boolean; postTo: string;
   onAdd: () => void; onRemove: (id: number) => void; onError: (m: string) => void;
 }) {
   const { p } = useApp();
@@ -305,7 +331,7 @@ function Labs({ list, edit, clientId, onAdd, onRemove, onError }: {
     try {
       const file = await pickPhoto();
       if (!file) { setBusy(false); return; }
-      await uploadForm(`/specialist/clients/${clientId}/labs`, file, 'file', {
+      await uploadForm(postTo, file, 'file', {
         title: title.trim(),
         taken_on: new Date().toISOString().slice(0, 10),
       });
@@ -395,8 +421,8 @@ function Labs({ list, edit, clientId, onAdd, onRemove, onError }: {
 
 /* --------------------------------------------------------- рекомендации */
 
-function Recs({ list, edit, clientId, onAdd, onRemove, onError }: {
-  list: Recommendation[]; edit: boolean; clientId?: number;
+function Recs({ list, edit, clientId, spec, onAdd, onRemove, onError }: {
+  list: Recommendation[]; edit: boolean; clientId?: number; spec: boolean;
   onAdd: () => void; onRemove: (id: number) => void; onError: (m: string) => void;
 }) {
   const { p } = useApp();
