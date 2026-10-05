@@ -124,11 +124,11 @@ export default function MySpecialist() {
     return true;
   }), [list, prof, onlyFav, fav, q]);
 
-  if (spec === undefined) return <Loading title="Мой специалист" />;
+  if (spec === undefined) return <Loading title="Мои специалисты" />;
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title={spec ? 'Мой специалист' : 'Каталог'} back />
+      <NavBar title={spec ? 'Мои специалисты' : 'Каталог'} back />
       <ScrollView contentContainerStyle={{
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
       }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

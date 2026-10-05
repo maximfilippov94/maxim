@@ -126,10 +126,11 @@ export default function Progress() {
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
                   <Text style={{ ...FONT.num, color: p.text }}>{kg(last)}</Text>
                   <Text style={{ ...FONT.body, color: p.text3 }}>кг</Text>
-                  {/* Снижение — зелёным в обеих темах: в «Фарфоре» акцент
-                      графитовый, и им знак изменения не прочитать */}
+                  {/* Снижение зелёным, рост жёлтым — как `.health-vital em`
+                      в вебе (`--good` / `--warn`). Были сиреневый и лайм:
+                      ими в интерфейсе помечено совсем другое. */}
                   {delta != null && delta !== 0 ? (
-                    <Text style={{ ...FONT.h3, color: delta < 0 ? p.mp : p.mf, marginLeft: 'auto' }}>
+                    <Text style={{ ...FONT.h3, color: delta < 0 ? p.good : p.warn, marginLeft: 'auto' }}>
                       {delta > 0 ? '+' : '−'}{kg(Math.abs(delta))} кг
                     </Text>
                   ) : null}
@@ -189,8 +190,11 @@ export default function Progress() {
                       <ListRow key={w.id} first={i === 0}
                         label={dmy(w.measured_on)}
                         value={`${kg(+w.weight_kg)} кг`}
+                        /* В вебе шаг в истории не раскрашен (`.hr-d` без
+                           своего цвета) — цветом там помечают только итог
+                           за период. */
                         right={shown ? (
-                          <Text style={{ ...FONT.small, color: step! < 0 ? p.mp : p.mf }}>
+                          <Text style={{ ...FONT.small, color: p.text3 }}>
                             {step! > 0 ? '+' : '−'}{kg(Math.abs(step!))}
                           </Text>
                         ) : undefined} />

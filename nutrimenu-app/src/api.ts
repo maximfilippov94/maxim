@@ -301,6 +301,9 @@ export interface ShoppingItem {
 export interface ShoppingResponse {
   menu: { id: number; title: string; days_count: number } | null;
   days: number;
+  /** На какие дни считан список — сервер отдаёт обе даты */
+  date_from?: string | null;
+  date_to?: string | null;
   items: ShoppingItem[];
   /** Продукты, которые клиент отметил как «всегда есть дома» */
   pantry: ShoppingItem[];

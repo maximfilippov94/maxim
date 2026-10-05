@@ -10,7 +10,7 @@ import { ListGroup, ListHead } from '../ui/List';
 import { Icon } from '../ui/Icon';
 import { Bar } from '../ui/base';
 import { Empty, SysConfirm, sysNative } from '../ui/system';
-import { plural } from '../format';
+import { plural, dmy } from '../format';
 import { haptic } from '../haptics';
 
 export default function Shopping() {
@@ -100,8 +100,13 @@ export default function Shopping() {
           <View style={{ marginTop: 10 }}>
             <Bar value={total ? done / total : 0} />
           </View>
+          {/* Период называем так же, как в вебе: не «7 дней меню», а на
+              какие именно числа считан список — иначе непонятно, список
+              это на эту неделю или на следующую. */}
           <Text style={{ ...FONT.small, color: p.text3, marginTop: 8 }}>
-            {data.days} {plural(data.days, ['день', 'дня', 'дней'])} меню
+            {data.date_from && data.date_to
+              ? `Продукты на ${data.days} ${plural(data.days, ['день', 'дня', 'дней'])}: ${dmy(data.date_from)} — ${dmy(data.date_to)}`
+              : `${data.days} ${plural(data.days, ['день', 'дня', 'дней'])} меню`}
           </Text>
         </View>
       </ListGroup>
