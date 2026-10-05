@@ -333,6 +333,17 @@ export interface ServicesResponse {
   payments_mode: 'off' | 'demo' | 'live';
   note?: string | null;
   subscription: Subscription | null;
+  /**
+   * Неоконченная оплата за последние двое суток: банк ещё не подтвердил
+   * или платёж сорвался. Человеку, вернувшемуся из платёжной страницы,
+   * надо сказать, на каком всё свете.
+   */
+  checkout?: {
+    service_id: number; title: string;
+    payment_status: 'pending' | 'canceled' | 'failed';
+  } | null;
+  /** Остаток в зачёт следующей оплаты */
+  credit_kop?: number;
 }
 
 /**

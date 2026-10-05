@@ -147,6 +147,10 @@ function Compose({ busy, setBusy, onDone, onError }: {
   const { p } = useApp();
   const [text, setText] = useState('');
   const [photo, setPhoto] = useState<{ uri: string; name: string; type: string } | null>(null);
+  /* Форма закрыта, пока её не позвали, — как в вебе (`feed-new`):
+     развёрнутая она занимала треть экрана у человека, который зашёл
+     просто посмотреть ленту. */
+  const [open, setOpen] = useState(false);
 
   async function attach() {
     try {
@@ -167,15 +171,37 @@ function Compose({ busy, setBusy, onDone, onError }: {
         ? await uploadForm<{ post: Post }>('/feed', photo, 'photo', { text: body })
         : await api<{ post: Post }>('/feed', { method: 'POST', body: { text: body } });
       if (r.post) onDone(r.post);
-      setText(''); setPhoto(null);
+      setText(''); setPhoto(null); setOpen(false);
       haptic.success();
     } catch (e: any) { haptic.error(); onError(e?.message ?? 'Пост не опубликовался'); }
     finally { setBusy(false); }
   }
 
+  if (!open) {
+    return (
+      <Pressable onPress={() => { haptic.tap(); setOpen(true); }}
+        style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
+        <Card style={{ marginTop: S.md, marginBottom: S.md,
+          flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <View style={{
+            width: 38, height: 38, borderRadius: 19, alignItems: 'center',
+            justifyContent: 'center', backgroundColor: p.inset,
+          }}>
+            <Icon name="camera" size={17} color={p.text2} width={1.8} />
+          </View>
+          <Text style={{ ...FONT.body, color: p.text2, flex: 1 }} numberOfLines={2}>
+            Поделиться приёмом пищи или результатом
+          </Text>
+          <Icon name="plus" size={18} color={p.text3} width={2} />
+        </Card>
+      </Pressable>
+    );
+  }
+
   return (
     <Card style={{ marginTop: S.md, marginBottom: S.md, gap: S.sm }}>
       <TextInput
+        autoFocus
         value={text} onChangeText={t => setText(t.slice(0, MAX))}
         multiline placeholder="Что сегодня в тарелке? Как идут дела?"
         placeholderTextColor={p.text3}
@@ -202,6 +228,12 @@ function Compose({ busy, setBusy, onDone, onError }: {
       ) : null}
 
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+        {/* Закрыть форму, не публикуя: в вебе лист просто закрывается. */}
+        <Pressable onPress={() => { haptic.tap(); setOpen(false); setText(''); setPhoto(null); }}
+          hitSlop={10}
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+          <Text style={{ ...FONT.small, color: p.text3 }}>Отмена</Text>
+        </Pressable>
         <Pressable onPress={attach} hitSlop={10}
           style={({ pressed }) => ({
             flexDirection: 'row', alignItems: 'center', gap: 6, opacity: pressed ? 0.5 : 1,

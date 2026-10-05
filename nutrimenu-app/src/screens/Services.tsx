@@ -192,6 +192,57 @@ export default function Services() {
           </View>
         </Card>
 
+        {/* Незавершённая оплата. Человек уходит на страницу банка и
+            возвращается — без этой строки он видит прежний экран и не
+            понимает, прошла оплата или нет. В вебе это `checkout`. */}
+        {d.checkout ? (() => {
+          const bad = d.checkout.payment_status === 'canceled'
+            || d.checkout.payment_status === 'failed';
+          return (
+            <Animated.View entering={FadeInDown.duration(220)}>
+              <Card style={{ marginBottom: S.md, flexDirection: 'row',
+                alignItems: 'flex-start', gap: S.md,
+                borderWidth: 1, borderColor: bad ? p.danger : p.warn }}>
+                <Icon name={bad ? 'info' : 'clock'} size={19} width={1.9}
+                  color={bad ? p.danger : p.warn} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ ...FONT.h3, color: p.text }}>
+                    {bad ? 'Оплата не завершена' : 'Ожидаем подтверждение оплаты'}
+                  </Text>
+                  <Muted style={{ marginTop: 3, lineHeight: 18 }}>
+                    {bad
+                      ? `Услуга «${d.checkout.title}» не подключена. Деньги и текущие услуги не изменились.`
+                      : `Банк ещё не подтвердил оплату «${d.checkout.title}». Обычно это занимает несколько секунд.`}
+                  </Muted>
+                  {bad ? (
+                    <Pressable onPress={() => {
+                      haptic.tap();
+                      setPromo(''); setPromoRes(null); setErr(null);
+                      setPick({ id: d.checkout!.service_id, title: d.checkout!.title });
+                    }}
+                      style={({ pressed }) => ({ marginTop: S.sm, opacity: pressed ? 0.6 : 1 })}>
+                      <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>
+                        Попробовать снова
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              </Card>
+            </Animated.View>
+          );
+        })() : null}
+
+        {/* Остаток в зачёт виден до выбора услуги, а не всплывает в чеке. */}
+        {Number(d.credit_kop) > 0 ? (
+          <Card style={{ marginBottom: S.md, flexDirection: 'row',
+            alignItems: 'center', gap: S.md }}>
+            <Icon name="coin" size={18} color={p.accent} width={1.8} />
+            <Text style={{ ...FONT.body, color: p.text2, flex: 1 }}>
+              {rub(Number(d.credit_kop))} в зачёт следующей оплаты
+            </Text>
+          </Card>
+        ) : null}
+
         {sub?.awaiting_accept ? (
           <Animated.View entering={FadeInDown.duration(220)}>
             <Card style={{ marginBottom: S.md, borderWidth: 1.5, borderColor: p.primary }}>
