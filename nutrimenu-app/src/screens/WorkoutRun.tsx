@@ -13,7 +13,7 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Modal, StyleSheet,
+  View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Modal, StyleSheet, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -108,10 +108,28 @@ export default function WorkoutRun() {
     finally { setBusy(false); }
   }, [s, x, mine.length, isTime, secs, reps, weight, ex, i, total]);
 
-  const finishAsk = useCallback(() => {
+  const finishAsk = useCallback((early?: boolean) => {
     if (!s) return;
-    router.replace({ pathname: '/wo-finish', params: { id: String(s.id) } });
+    router.replace({
+      pathname: '/wo-finish',
+      params: { id: String(s.id), early: early ? '1' : '' },
+    });
   }, [s]);
+
+  /* Выход из тренировки — выбор из трёх, как в вебе (`clWoLeave`):
+     вернуться, уйти с сохранёнными подходами или закрыть занятие
+     досрочно. Простое «назад» прятало последний вариант: тренировка
+     оставалась незакрытой, и в истории её не было вовсе. */
+  const leave = useCallback(() => {
+    haptic.tap();
+    Alert.alert('Выйти из тренировки?',
+      'Все сохранённые подходы останутся в тренировке. Можно вернуться к ней позже.',
+      [
+        { text: 'Продолжить', style: 'cancel' },
+        { text: 'Сохранить и выйти', onPress: () => router.back() },
+        { text: 'Завершить досрочно', style: 'destructive', onPress: () => finishAsk(true) },
+      ]);
+  }, [finishAsk]);
 
   if (err) {
     return (
@@ -157,7 +175,7 @@ export default function WorkoutRun() {
             position: 'absolute', top: insets.top + 8, left: S.lg, right: S.lg,
             flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           }}>
-            <RoundBtn icon="close" label="Выйти из тренировки" onPress={() => router.back()} />
+            <RoundBtn icon="close" label="Выйти из тренировки" onPress={leave} />
             <View style={{
               paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
               backgroundColor: 'rgba(9,16,18,0.55)',

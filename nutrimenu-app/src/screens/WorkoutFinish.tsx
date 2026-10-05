@@ -21,8 +21,11 @@ import { haptic } from '../haptics';
 export default function WorkoutFinish() {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
-  const q = useLocalSearchParams<{ id?: string }>();
+  const q = useLocalSearchParams<{ id?: string; early?: string }>();
   const id = Number(q.id) || 0;
+  /* Тренировку закрыли, не доделав подходы: сервер помечает её
+     «завершена досрочно» — в истории это видно. */
+  const early = q.early === '1';
   const [feel, setFeel] = useState(0);
   const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
@@ -32,7 +35,9 @@ export default function WorkoutFinish() {
     setBusy(true);
     try {
       await api(`/client/sessions/${id}/finish`,
-        { method: 'POST', body: { feeling: feel || null, comment: comment.trim() } });
+        { method: 'POST', body: {
+          feeling: feel || null, comment: comment.trim(), finish_early: early ? 1 : 0,
+        } });
       haptic.success();
       router.replace({ pathname: '/wo-done', params: { id: String(id) } });
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось завершить'); }
@@ -54,6 +59,11 @@ export default function WorkoutFinish() {
           <Icon name="check" size={30} color={p.accent} />
         </View>
         <Text style={{ ...FONT.h1, color: p.text }}>Тренировка окончена</Text>
+        {early ? (
+          <Text style={{ ...FONT.small, color: p.text3, marginTop: 4 }}>
+            Завершена досрочно
+          </Text>
+        ) : null}
       </Animated.View>
 
       <Text style={{ ...FONT.h3, color: p.text, marginTop: S.xxl, marginBottom: S.md }}>

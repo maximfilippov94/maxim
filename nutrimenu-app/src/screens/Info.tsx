@@ -75,7 +75,11 @@ export default function Info() {
 
         {d.updates.length ? (
           <View style={{ marginTop: d.about.length ? S.lg : 0 }}>
-            <Label>Что нового</Label>
+            {/* Число записей рядом с заголовком — как в вебе. */}
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm }}>
+              <Label>Что нового</Label>
+              <Muted>{d.updates.length}</Muted>
+            </View>
             <View style={{ marginTop: S.sm }}>
               {d.updates.map((x, i) => (
                 <Animated.View key={x.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>

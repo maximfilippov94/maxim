@@ -558,8 +558,12 @@ function HistoryView({ list }: { list: WoHistoryItem[] | null }) {
               <Text style={{ fontSize: 14.5, fontWeight: '700', color: p.text }}>{s.title}</Text>
               <Muted numberOfLines={2}>
                 {dayLabel(s.planned_on)}
+                {/* «завершена досрочно» — как в вебе: иначе короткая
+                    тренировка выглядит как недоработка счётчика. */}
                 {s.status === 'done'
-                  ? ` · ${mmss(s.duration_sec ?? 0)} · ≈${s.kcal ?? 0} ккал` : ' · пропущена'}
+                  ? `${s.finished_early ? ' · завершена досрочно' : ''}`
+                    + ` · ${mmss(s.duration_sec ?? 0)} · ≈${s.kcal ?? 0} ккал`
+                  : ' · пропущена'}
               </Muted>
             </View>
             {s.feeling ? (

@@ -1079,6 +1079,8 @@ export interface WoHistoryItem {
   id: number; planned_on: string; status: 'done' | 'skipped';
   duration_sec: number | null; kcal: number | null; feeling: number | null;
   comment: string | null; title: string; duration_min: number; items: number;
+  /** Тренировку закрыли, не доделав подходы */
+  finished_early?: number | boolean;
 }
 
 export const WO_LEVELS: Record<number, string> = {
