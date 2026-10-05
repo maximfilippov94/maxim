@@ -22,6 +22,12 @@ export default function SpTabs() {
         <NativeTabs.Trigger.Icon sf="person.2" />
         <NativeTabs.Trigger.Label>Клиенты</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
+      {/* Третья вкладка — то, с чем специалист работает каждый день:
+          у тренера программы, у остальных база блюд. Как в вебе. */}
+      <NativeTabs.Trigger name="work">
+        <NativeTabs.Trigger.Icon sf="square.grid.2x2" />
+        <NativeTabs.Trigger.Label>Работа</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="chats">
         <NativeTabs.Trigger.Icon sf="bubble.left" />
         <NativeTabs.Trigger.Label>Чат</NativeTabs.Trigger.Label>

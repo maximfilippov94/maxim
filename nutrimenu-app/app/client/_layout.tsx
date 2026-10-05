@@ -36,15 +36,17 @@ export default function ClientTabs() {
         <NativeTabs.Trigger.Icon sf="calendar" />
         <NativeTabs.Trigger.Label>Неделя</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
-      {/* Тренировки стоят между планом питания и чатом: это третий
-          ежедневный экран, а не раздел «где-то в настройках». */}
-      <NativeTabs.Trigger name="workouts">
-        <NativeTabs.Trigger.Icon sf="figure.strengthtraining.traditional" />
-        <NativeTabs.Trigger.Label>Тренировки</NativeTabs.Trigger.Label>
-      </NativeTabs.Trigger>
+      {/* Порядок тот же, что в вебе: чат третий, тренировки четвёртые.
+          Разный порядок у одних и тех же пяти вкладок сбивает с толку
+          сильнее, чем любая из возможных расстановок по отдельности:
+          человек открывает приложение после сайта и промахивается. */}
       <NativeTabs.Trigger name="chat">
         <NativeTabs.Trigger.Icon sf="bubble.left" />
         <NativeTabs.Trigger.Label>Чат</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="workouts">
+        <NativeTabs.Trigger.Icon sf="dumbbell" />
+        <NativeTabs.Trigger.Label>Тренировки</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="more">
         <NativeTabs.Trigger.Icon sf="ellipsis" />
