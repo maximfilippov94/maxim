@@ -15,13 +15,13 @@
  * кнопкой, которая ничего не делает, хуже, чем сказать.
  */
 import React, { useCallback, useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, AiState, AiPlan, AI_PLAN_WHAT } from '../api';
-import { S, R, FONT } from '../theme';
+import { S, R, FONT, CYCLE } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
@@ -122,6 +122,18 @@ export default function AI() {
     } finally { setBusy(false); }
   }, [missing, load, toast, quote]);
 
+  /* Разрешение учитывать цикл. Хранится в настройках цикла — тем же
+     полем, что правит веб. */
+  const setCycleAccess = useCallback(async (on: boolean) => {
+    haptic.select();
+    try {
+      await api('/client/health/cycle/settings', {
+        method: 'PATCH', body: { ai_cycle_access: on },
+      });
+      await load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось изменить доступ'); }
+  }, [load]);
+
   const cancel = useCallback(() => {
     Alert.alert('Отключить EQUA AI?',
       'Доступ останется до конца оплаченного срока, продления не будет.', [
@@ -210,6 +222,54 @@ export default function AI() {
               ))}
             </ListGroup>
           </>
+        ) : null}
+
+        {/* Чем модель руководствовалась. Сервер отдаёт это в `note`
+            каждого плана, и в вебе объяснение стоит прямо под составом —
+            в приложении его не было, и план выглядел взявшимся ниоткуда. */}
+        {cur && (d.plans ?? []).some(x => x.note) ? (
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: S.sm }}>
+            {(d.plans ?? []).filter(x => x.note).map((x, i) => (
+              <Card key={`note-${i}`}>
+                <Label>
+                  {x.kind === 'menu' ? 'Почему такое меню' : 'Почему такая программа'}
+                </Label>
+                <Text style={{ ...FONT.body, color: p.text2, marginTop: 6, lineHeight: 20 }}>
+                  {x.kind === 'menu'
+                    ? String(x.note).replace(/^Меню на месяц/u, 'Текущее меню')
+                    : x.note}
+                </Text>
+              </Card>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Учитывать ли цикл в адаптации — решает клиент. Это его данные,
+            и доступ он открывает отдельно; в приложении спросить было
+            негде, хотя сервер поле принимает. */}
+        {cur && d.cycle_context?.enabled ? (
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.md }}>
+            <Card style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
+              <Icon name="cal" size={19} width={1.8}
+                color={d.cycle_context.allowed ? CYCLE : p.text3} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Label>Цикл и самочувствие</Label>
+                <Text style={{ ...FONT.h3, color: p.text, marginTop: 2 }}>
+                  {d.cycle_context.allowed
+                    ? 'EQUA AI учитывает ваш ритм'
+                    : 'Разрешить учитывать в адаптации'}
+                </Text>
+                <Muted style={{ marginTop: 4, lineHeight: 18 }}>
+                  {d.cycle_context.allowed
+                    ? `${d.cycle_context.phase || 'Текущий этап'} — модель смотрит на фазу, когда правит нагрузку и меню.`
+                    : 'Модель сможет смягчать нагрузку и менять меню по фазе. Данные остаются у вас.'}
+                </Muted>
+              </View>
+              <Switch value={!!d.cycle_context.allowed} onValueChange={setCycleAccess}
+                trackColor={{ true: p.primary, false: p.inset }}
+                thumbColor={p.name === 'light' ? '#FFFFFF' : undefined} />
+            </Card>
+          </View>
         ) : null}
 
         {/* ------------------------------------------------- что мешает */}
