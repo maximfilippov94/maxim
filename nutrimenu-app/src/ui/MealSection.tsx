@@ -14,7 +14,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import Animated, { LinearTransition } from 'react-native-reanimated';
+import Animated, {
+  LinearTransition, FadeIn, FadeOut,
+  useSharedValue, useAnimatedStyle, withTiming, Easing,
+} from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useApp } from '../store';
@@ -22,6 +25,7 @@ import { api, thumbUrl, MealItem, FoodEntry, MEAL_TITLES } from '../api';
 import { S, R, FONT, alpha, mix } from '../theme';
 import { Icon } from './Icon';
 import { FoodRows, MealAdd } from './FoodBlock';
+import { ReplacePicker } from './ReplacePicker';
 import { round, plural } from '../format';
 import { haptic } from '../haptics';
 
@@ -47,6 +51,16 @@ export function MealSection({ meal, items, own, onToggle, onChanged }: {
   const { p } = useApp();
   const [folded, setFolded] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
+  /* Замену выбирают здесь же: уносить человека на экран блюда, чтобы он
+     там нашёл ту же кнопку, было лишним шагом. */
+  const [replace, setReplace] = useState<number | null>(null);
+
+  /* Шеврон поворачивается вместе с раскрытием, а не перескакивает:
+     движение показывает, что именно произошло. */
+  const turn = useSharedValue(0);
+  const chevron = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${turn.value}deg` }],
+  }));
 
   /* Свёрнутое состояние читаем один раз при появлении секции. Пока ответа
      нет, секция развёрнута: мигание «открыто → закрыто» заметнее, чем
@@ -54,19 +68,27 @@ export function MealSection({ meal, items, own, onToggle, onChanged }: {
   useEffect(() => {
     let alive = true;
     AsyncStorage.getItem(foldKey(meal))
-      .then(v => { if (alive && v === '1') setFolded(true); })
+      .then(v => {
+        if (!alive) return;
+        const off = v === '1';
+        setFolded(off);
+        turn.value = off ? 0 : 90;
+      })
       .catch(() => {});
     return () => { alive = false; };
-  }, [meal]);
+  }, [meal, turn]);
+
 
   const toggleFold = useCallback(() => {
     haptic.select();
     setFolded(prev => {
       const next = !prev;
+      turn.value = withTiming(next ? 0 : 90,
+        { duration: 220, easing: Easing.out(Easing.cubic) });
       AsyncStorage.setItem(foldKey(meal), next ? '1' : '0').catch(() => {});
       return next;
     });
-  }, [meal]);
+  }, [meal, turn]);
 
   /* Скрыть блюдо и вернуть его — один маршрут с разным флагом, как в вебе
      (`clMealVisibility`). Список перечитываем после ответа: скрытое блюдо
@@ -91,6 +113,8 @@ export function MealSection({ meal, items, own, onToggle, onChanged }: {
 
   return (
     <Animated.View layout={LinearTransition.duration(220)} style={{ marginBottom: S.md }}>
+      <ReplacePicker itemId={replace ?? 0} open={replace != null}
+        onClose={() => setReplace(null)} onDone={onChanged} />
       <Pressable
         onPress={toggleFold}
         accessibilityRole="button"
@@ -119,24 +143,29 @@ export function MealSection({ meal, items, own, onToggle, onChanged }: {
             {' ккал'}
           </Text>
         ) : null}
-        <View style={{
+        <Animated.View style={[{
           width: 26, height: 26, borderRadius: 9, backgroundColor: p.inset,
           alignItems: 'center', justifyContent: 'center',
-          transform: [{ rotate: folded ? '0deg' : '90deg' }],
-        }}>
+        }, chevron]}>
           <Icon name="chevr" size={15} color={p.text2} />
-        </View>
+        </Animated.View>
       </Pressable>
 
       {folded ? null : (
-        <View style={{
-          backgroundColor: p.surface, borderRadius: R.lg, overflow: 'hidden',
-          borderWidth: 1, borderColor: p.border,
-        }}>
+        /* Раскрытие и сворачивание плавные: тело растворяется, а высоту
+           секции доводит переход расположения у родителя. Резкая смена
+           читалась как перескок — список под ней прыгал на полэкрана. */
+        <Animated.View
+          entering={FadeIn.duration(180)}
+          exiting={FadeOut.duration(130)}
+          style={{
+            backgroundColor: p.surface, borderRadius: R.lg, overflow: 'hidden',
+            borderWidth: 1, borderColor: p.border,
+          }}>
           {visible.map((x, i) => (
             <MealRow key={x.id} x={x} first={i === 0} busy={busy === x.id}
               onToggle={onToggle}
-              onReplace={() => { haptic.tap(); router.push(`/dish/${x.id}?repl=1`); }}
+              onReplace={() => { haptic.tap(); setReplace(x.id); }}
               onHide={() => visibility(x, true)} />
           ))}
           {hidden.map(x => (
@@ -160,7 +189,7 @@ export function MealSection({ meal, items, own, onToggle, onChanged }: {
           ))}
           <FoodRows entries={own} onChanged={onChanged} first={visible.length === 0 && hidden.length === 0} />
           <MealAdd meal={meal} />
-        </View>
+        </Animated.View>
       )}
     </Animated.View>
   );

@@ -5,12 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, mediaUrl, DishItem, Replacement, ReplacementSource, MEAL_TITLES } from '../api';
+import { api, mediaUrl, DishItem, MEAL_TITLES } from '../api';
 import { S, R, FONT, STAR, alpha } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { SysButton, Empty } from '../ui/system';
+import { ReplacePicker } from '../ui/ReplacePicker';
 import { round, plural } from '../format';
 import { haptic } from '../haptics';
 
@@ -29,8 +30,6 @@ export default function Dish() {
   const [x, setX] = useState<DishItem | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [gram, setGram] = useState(0);
-  const [repl, setRepl] = useState<Replacement[] | null>(null);
-  const [replSrc, setReplSrc] = useState<ReplacementSource>('auto');
   const [busy, setBusy] = useState(false);
   /* Своя оценка живёт отдельно от блюда: сервер возвращает новую
      среднюю сразу, и перечитывать весь экран ради одной звезды незачем. */
@@ -65,35 +64,21 @@ export default function Dish() {
     } finally { setBusy(false); }
   }, [iid]);
 
-  const openRepl = useCallback(async () => {
-    haptic.tap();
-    try {
-      const r = await api<{ dishes: Replacement[]; source: ReplacementSource }>(
-        `/client/menu-items/${iid}/replacements`);
-      setReplSrc(r.source ?? 'auto');
-      setRepl(r.dishes ?? []);
-    } catch (e: any) { setErr(e?.message ?? 'Замены недоступны'); }
-  }, [iid]);
+  /* Подбор замены показывает общая шторка: та же, что открывается из
+     строки дня. Раньше список рисовался прямо на экране — текстом, без
+     снимков, и расхождения по КБЖУ набирались лаймом по светлой
+     карточке, то есть не читались. */
+  const [replOpen, setReplOpen] = useState(false);
+  const openRepl = useCallback(() => { haptic.tap(); setReplOpen(true); }, []);
 
-  /* Пришли по кнопке «Заменить блюдо» из списка дня — сразу открываем
-     подбор, не заставляя искать ту же кнопку ещё раз. Один раз за вход:
-     закрытый список не должен открываться снова сам собой. */
+  /* Пришли по кнопке «Заменить блюдо» из списка дня — открываем подбор
+     сразу. Один раз за вход: закрытую шторку не открываем снова. */
   const replAsked = useRef(false);
   useEffect(() => {
     if (replParam !== '1' || !x || replAsked.current) return;
     replAsked.current = true;
-    openRepl();
-  }, [replParam, x, openRepl]);
-
-  const doRepl = useCallback(async (dishId: number) => {
-    setBusy(true);
-    try {
-      await api(`/client/menu-items/${iid}/replace`, { method: 'POST', body: { dish_id: dishId } });
-      haptic.success(); setRepl(null); await load();
-    } catch (e: any) {
-      haptic.error(); setErr(e?.message ?? 'Эта замена недоступна');
-    } finally { setBusy(false); }
-  }, [iid, load]);
+    setReplOpen(true);
+  }, [replParam, x]);
 
   /* Оценка уходит сразу по нажатию и рисуется до ответа: ждать сервер,
      глядя на неподсвеченную звезду, человек читает как «не нажалось».
@@ -266,67 +251,8 @@ export default function Dish() {
           <Text style={{ ...FONT.small, color: p.danger, marginBottom: S.md }}>{err}</Text>
         ) : null}
 
-        {/* Замены приходят списком — показываем их здесь же, а не в
-            отдельном окне: выбор блюда рядом с составом понятнее. */}
-        {repl ? (
-          <Animated.View entering={FadeInDown.duration(220)}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
-              marginTop: S.sm, marginBottom: S.sm }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ ...FONT.h3, color: p.text }}>Чем заменить</Text>
-                <Muted style={{ marginTop: 2 }}>
-                  {replSrc === 'specialist'
-                    ? 'Замены, которые разрешил специалист'
-                    : 'Подобрали блюда с близкими КБЖУ'}
-                </Muted>
-              </View>
-              <Pressable onPress={() => setRepl(null)} hitSlop={10}>
-                <Icon name="close" size={17} color={p.text3} />
-              </Pressable>
-            </View>
-            {repl.length === 0 ? (
-              <Empty icon="rectangle.on.rectangle.slash" height={160}
-                title="Замен нет"
-                note="Подходящих блюд для этого приёма не нашлось." />
-            ) : (
-              <Card style={{ padding: 0, marginBottom: S.md }}>
-                {repl.map((d, i) => {
-                  return (
-                    <Pressable key={d.id} onPress={() => doRepl(d.id)} disabled={busy}>
-                      {({ pressed }) => (
-                        <View style={{
-                          flexDirection: 'row', alignItems: 'center', gap: S.md,
-                          paddingVertical: 11, paddingHorizontal: S.lg,
-                          borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
-                          backgroundColor: pressed ? p.ov1 : 'transparent',
-                        }}>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 15, fontWeight: '600', color: p.text }}>{d.name}</Text>
-                            <Muted style={{ marginTop: 2 }}>
-                              {d.portion_g} г · {d.kcal} ккал · Б {d.protein} · Ж {d.fat} · У {d.carbs}
-                            </Muted>
-                            {/* Чем замена отличается от исходного блюда. Порог у
-                                каждого показателя свой: 15 ккал незаметны, а 15 г
-                                белка — уже другой приём пищи. */}
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 3 }}>
-                              <Diff n={d.kcal_diff} lim={15}
-                                text={Math.abs(d.kcal_diff) <= 15
-                                  ? 'калории те же' : `${signed(d.kcal_diff)} ккал`} />
-                              <Sep /><Diff n={d.protein_diff} lim={9} text={`Б ${signed(d.protein_diff)}`} />
-                              <Sep /><Diff n={d.fat_diff} lim={9} text={`Ж ${signed(d.fat_diff)}`} />
-                              <Sep /><Diff n={d.carbs_diff} lim={14} text={`У ${signed(d.carbs_diff)}`} />
-                            </View>
-                          </View>
-                          <Icon name="chevr" size={14} color={p.text3} width={2} />
-                        </View>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </Card>
-            )}
-          </Animated.View>
-        ) : null}
+        <ReplacePicker itemId={iid} open={replOpen}
+          onClose={() => setReplOpen(false)} onDone={load} />
 
         {/* Все действия — системными кнопками: главное залито, остальные
             стеклянные, опасное спрашивает подтверждение. */}
@@ -384,20 +310,3 @@ function SkipRow({ onPick, disabled }: { onPick: (reason: string) => void; disab
   );
 }
 
-/* Знак расхождения ставим сами: минус — типографский, иначе в строке
-   цифр он выглядит как дефис переноса. */
-const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0');
-
-/** Одно расхождение: в пределах порога — спокойным цветом, за ним — тревожным. */
-function Diff({ n, lim, text }: { n: number; lim: number; text: string }) {
-  const { p } = useApp();
-  /* Красить строку целиком одним цветом нельзя: «калории те же» при
-     белке −14 г читалось бы как «всё совпало», а это неправда. */
-  return (
-    <Text style={{ ...FONT.small, color: Math.abs(n) <= lim ? p.primary : p.warn }}>{text}</Text>
-  );
-}
-const Sep = () => {
-  const { p } = useApp();
-  return <Text style={{ ...FONT.small, color: p.text3 }}> · </Text>;
-};

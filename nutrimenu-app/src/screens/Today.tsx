@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
@@ -328,7 +328,11 @@ export default function Today() {
         </View>
       ) : null}
       {MEAL_ORDER.map((mt, gi) => (
-        <Animated.View key={mt} entering={FadeInDown.delay(150 + gi * 60).duration(300)}>
+        /* Переход расположения и на обёртке: без него соседние приёмы
+           пищи перескакивали в новое положение, пока сама секция
+           сворачивалась плавно. */
+        <Animated.View key={mt} layout={LinearTransition.duration(220)}
+          entering={FadeInDown.delay(150 + gi * 60).duration(300)}>
           <MealSection
             meal={mt}
             items={items.filter(x => x.meal_type === mt)}

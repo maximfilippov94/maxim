@@ -9,6 +9,7 @@ import { S, R, FONT, LAYOUT, macroColor } from '../theme';
 import { Card, Label, Muted, Bar, Tile } from '../ui/base';
 import { Ring } from '../ui/Ring';
 import { Icon } from '../ui/Icon';
+import { ReplacePicker } from '../ui/ReplacePicker';
 import { Empty } from '../ui/system';
 import { round, plural, menuDate, dayTitle, dowShort, isToday } from '../format';
 import { haptic } from '../haptics';
@@ -21,11 +22,13 @@ export default function Week() {
   const [d, setD] = useState<WeekResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [day, setDay] = useState(1);
+  /* Та же шторка подбора, что на «Сегодня» и в карточке блюда. */
+  const [replace, setReplace] = useState<number | null>(null);
 
-  useEffect(() => {
-    api<WeekResponse>('/client/week').then(r => {
+  const load = useCallback((keepDay?: boolean) => {
+    api<WeekResponse>('/client/week', { noCache: true }).then(r => {
       setD(r);
-      if (r.menu) {
+      if (r.menu && !keepDay) {
         /* Открываем на сегодняшнем дне меню, а не на первом: чаще всего
            смотрят именно его, а листать назад можно и руками. */
         const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -35,6 +38,8 @@ export default function Week() {
       }
     }).catch(e => setErr(e.message));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const pick = useCallback((n: number) => { haptic.select(); setDay(n); }, []);
 
@@ -48,6 +53,9 @@ export default function Week() {
   const macroCol = (cur: number, tg: number) => macroColor(p, cur, tg);
 
   return (
+    <>
+    <ReplacePicker itemId={replace ?? 0} open={replace != null}
+      onClose={() => setReplace(null)} onDone={() => load(true)} />
     <ScrollView
       style={{ flex: 1, backgroundColor: p.bg }}
       contentContainerStyle={{
@@ -215,6 +223,18 @@ export default function Week() {
                             {round(i.portion_g)} г · {round(i.nutrition?.kcal)} ккал
                           </Muted>
                         </View>
+                        {/* Замена доступна и на неделе — как в вебе: план
+                            правят, глядя на всю неделю, а не только на
+                            сегодняшний день. */}
+                        <Pressable hitSlop={8} accessibilityLabel="Заменить блюдо"
+                          onPress={() => { haptic.tap(); setReplace(i.id); }}
+                          style={({ pressed }) => ({
+                            width: 30, height: 30, borderRadius: 10,
+                            alignItems: 'center', justifyContent: 'center',
+                            backgroundColor: pressed ? p.ov3 : p.inset,
+                          })}>
+                          <Icon name="replace" size={16} color={p.text2} />
+                        </Pressable>
                         <Icon name="chevr" size={13} color={p.text3} width={2} />
                       </Pressable>
                     ))}
@@ -253,5 +273,6 @@ export default function Week() {
         </>
       )}
     </ScrollView>
+    </>
   );
 }
