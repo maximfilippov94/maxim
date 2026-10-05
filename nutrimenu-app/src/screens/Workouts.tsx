@@ -111,9 +111,15 @@ export default function Workouts() {
   }, [tab, hist]);
 
   const idx = useSharedValue(0);
+  /* Шаг бегунка — измеренная ширина сегмента, а не 100 точек: `translateX`
+     берёт точки, и на экране в 393 пункта сегмент выходит около 118 —
+     бегунок отставал на 18 точек на «Программе» и на 35 на «Истории»,
+     съезжая с подписи. Ширину берём замером дорожки. */
+  const [segW, setSegW] = useState(0);
+  const step = segW ? (segW - 8) / TABS.length : 0;
   const indicator = useAnimatedStyle(() => ({
-    transform: [{ translateX: withTiming(idx.value * 100, { duration: 240, easing: EASE_OUT }) }],
-  }));
+    transform: [{ translateX: withTiming(idx.value * step, { duration: 240, easing: EASE_OUT }) }],
+  }), [step]);
 
   const pick = (k: 'week' | 'plan' | 'history', i: number) => {
     if (k === tab) return;
@@ -185,12 +191,14 @@ export default function Workouts() {
 
       {/* Сегменты: бегунок едет, а не перекрашивается — так видно, откуда
           и куда переключились. */}
-      <View style={{
-        flexDirection: 'row', backgroundColor: p.inset, borderRadius: 999,
-        padding: 4, marginBottom: S.xl, position: 'relative',
-      }}>
+      <View
+        onLayout={e => setSegW(Math.round(e.nativeEvent.layout.width))}
+        style={{
+          flexDirection: 'row', backgroundColor: p.inset, borderRadius: 999,
+          padding: 4, marginBottom: S.xl, position: 'relative',
+        }}>
         <Animated.View style={[{
-          position: 'absolute', top: 4, bottom: 4, left: 4, width: '33.333%',
+          position: 'absolute', top: 4, bottom: 4, left: 4, width: step,
           borderRadius: 999, backgroundColor: p.surface,
         }, indicator]} />
         {TABS.map(([k, l], i) => (
