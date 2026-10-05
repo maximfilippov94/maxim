@@ -138,6 +138,23 @@ function Root() {
         <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
         <Stack.Screen name="specialist" />
         <Stack.Screen name="ai-chat" />
+        <Stack.Screen name="ai" />
+        <Stack.Screen name="ai-review" />
+        <Stack.Screen name="ai-intake" />
+        {/* Анкеты — свой поток с шагами: системный жест назад уводил бы
+            из середины анкеты, а не на предыдущий вопрос. */}
+        <Stack.Screen name="ai-nutrition" options={{ gestureEnabled: false }} />
+        <Stack.Screen name="ai-fitness" options={{ gestureEnabled: false }} />
+        <Stack.Screen
+          name="ai-checkin"
+          options={{
+            presentation: 'formSheet',
+            sheetAllowedDetents: [0.8, 0.95],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 24,
+            gestureEnabled: true,
+          }}
+        />
         <Stack.Screen name="cycle" />
         <Stack.Screen name="dish/[id]" />
         {/* Системная шторка iOS с фиксаторами высоты: тянется пальцем,

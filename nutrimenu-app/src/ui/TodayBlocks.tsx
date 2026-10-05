@@ -202,7 +202,45 @@ export function TodayPlanSource({
     );
   }
 
-  if (!aiOn) return null;
+  /* Ни специалиста, ни AI: раньше блок просто исчезал, и новый человек
+     оставался на «Сегодня» без единой подсказки, с чего начать. Веб в
+     этом месте предлагает выбор, его и показываем. */
+  if (!aiOn) {
+    return (
+      <View style={[styles.row, { backgroundColor: p.surface, borderColor: p.border,
+        flexDirection: 'column', alignItems: 'stretch', gap: 10 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={[styles.icon, { backgroundColor: p.inset }]}>
+            <Icon name="spark" size={19} color={p.text2} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[FONT.caption, { color: p.text3 }]}>Плана пока нет</Text>
+            <Text style={[FONT.h3, { color: p.text }]} numberOfLines={2}>
+              Выберите, кто его составит
+            </Text>
+          </View>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Pressable onPress={() => { haptic.select(); router.push('/specialist'); }}
+            style={({ pressed }) => ({
+              flex: 1, paddingVertical: 10, borderRadius: 14, alignItems: 'center',
+              borderWidth: 1, borderColor: p.btnLine, opacity: pressed ? 0.6 : 1,
+            })}>
+            <Text style={[FONT.callout, { color: p.text }]} numberOfLines={1}>Специалист</Text>
+          </Pressable>
+          <Pressable onPress={() => { haptic.select(); router.push('/ai'); }}
+            style={({ pressed }) => ({
+              flex: 1, paddingVertical: 10, borderRadius: 14, alignItems: 'center',
+              backgroundColor: p.primary, opacity: pressed ? 0.85 : 1,
+            })}>
+            <Text style={[FONT.callout, { color: p.onPrimary, fontWeight: '600' }]} numberOfLines={1}>
+              EQUA AI
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
 
   const left = typeof ai?.days_left === 'number' ? ai.days_left : null;
   return (

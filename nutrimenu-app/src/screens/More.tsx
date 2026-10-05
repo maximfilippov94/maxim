@@ -88,6 +88,8 @@ export default function More() {
             <ListRow icon="heart" label="Лента"
               onPress={() => router.push('/feed')} />
           )}
+          <ListRow icon="spark" label="EQUA AI"
+            onPress={() => router.push('/ai')} />
           <ListRow icon="bell" label="Уведомления"
             onPress={() => router.push('/notifications')} />
           {/* Лента — что уже пришло, настройки — что присылать впредь.

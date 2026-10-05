@@ -1,0 +1,304 @@
+/**
+ * EQUA AI: что подключено и что можно подключить.
+ *
+ * В приложении этого экрана не было: чат с моделью работал, а оформить
+ * набор, заполнить анкеты и посмотреть, что собрано, можно было только
+ * в браузере.
+ *
+ * Порядок на экране повторяет порядок действий, а не состав данных:
+ * сначала то, что уже есть, потом чего не хватает для запуска, и только
+ * потом цены. Человеку, у которого не заполнена анкета, цена ни о чём
+ * не говорит — ему нужно знать следующий шаг.
+ *
+ * Оплату приложение не проводит. Когда сервер работает с живым эквайером,
+ * экран прямо говорит, что оформить нужно на сайте: прятать это за
+ * кнопкой, которая ничего не делает, хуже, чем сказать.
+ */
+import React, { useCallback, useState } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInDown } from 'react-native-reanimated';
+import { router, useFocusEffect } from 'expo-router';
+import { useApp } from '../store';
+import { api, AiState, AiPlan, AI_PLAN_WHAT } from '../api';
+import { S, FONT } from '../theme';
+import { NavBar } from '../ui/NavBar';
+import { Card, Label, Muted } from '../ui/base';
+import { Icon } from '../ui/Icon';
+import { ListGroup, ListHead, ListRow } from '../ui/List';
+import { SysButton, Empty } from '../ui/system';
+import { useToast } from '../ui/Toast';
+import { rub, plural } from '../format';
+import { haptic } from '../haptics';
+
+const dmy = (s?: string | null) => {
+  if (!s) return '—';
+  const x = String(s).slice(0, 10).split('-');
+  return x.length === 3 ? `${x[2]}.${x[1]}.${x[0]}` : String(s);
+};
+
+export default function AI() {
+  const { p } = useApp();
+  const insets = useSafeAreaInsets();
+  const toast = useToast();
+  const [d, setD] = useState<AiState | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(() => {
+    api<AiState>('/client/ai')
+      .then(r => { setD(r); setErr(null); })
+      .catch(e => setErr(e?.message ?? 'Не открылось'));
+  }, []);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  /* Чего не хватает для этого набора: сначала анкеты, потом сверка того,
+     как AI их понял. Решает всё равно сервер — экран лишь не ведёт
+     человека в отказ. */
+  const missing = useCallback((plan: AiPlan): 'nutrition' | 'fitness' | null => {
+    if (!d) return null;
+    if ((plan === 'nutrition' || plan === 'both') && !d.nutrition_ready) return 'nutrition';
+    if ((plan === 'workouts' || plan === 'both') && !d.fitness_ready) return 'fitness';
+    return null;
+  }, [d]);
+
+  const connect = useCallback(async (plan: AiPlan) => {
+    const need = missing(plan);
+    if (need === 'nutrition') {
+      haptic.tap();
+      router.push({ pathname: '/ai-nutrition', params: { plan } });
+      return;
+    }
+    if (need === 'fitness') {
+      haptic.tap();
+      router.push({ pathname: '/ai-fitness', params: { plan } });
+      return;
+    }
+    setBusy(true); setErr(null);
+    try {
+      const r = await api<{ pay?: { confirmation_url?: string } }>('/client/ai',
+        { method: 'POST', body: { plan } });
+      /* Живой эквайер отдаёт ссылку на оплату. В приложении её не
+         открываем: платежи здесь не проводятся. */
+      if (r.pay?.confirmation_url) {
+        toast('Оплату нужно пройти на сайте', { sub: 'nutrimenu.ru · раздел EQUA AI', ms: 6000 });
+      } else {
+        haptic.success();
+        toast('EQUA AI подключён', { sub: 'собираем ваш план' });
+      }
+      load();
+    } catch (e: any) {
+      haptic.error();
+      /* Сервер различает, чего не хватает, — ведём туда, а не показываем
+         отказ как ошибку. */
+      const m = String(e?.message ?? '');
+      if (/вопросы о питании/i.test(m)) router.push({ pathname: '/ai-nutrition', params: { plan } });
+      else if (/вопросы о тренировк/i.test(m)) router.push({ pathname: '/ai-fitness', params: { plan } });
+      else if (/подтвердите/i.test(m)) router.push({ pathname: '/ai-intake', params: { plan } });
+      else setErr(m || 'Не получилось подключить');
+    } finally { setBusy(false); }
+  }, [missing, load, toast]);
+
+  const cancel = useCallback(() => {
+    Alert.alert('Отключить EQUA AI?',
+      'Доступ останется до конца оплаченного срока, продления не будет.', [
+      { text: 'Оставить', style: 'cancel' },
+      {
+        text: 'Отключить', style: 'destructive',
+        onPress: async () => {
+          try {
+            await api('/client/ai/cancel', { method: 'POST', body: {} });
+            haptic.success(); toast('Продление отключено'); load();
+          } catch (e: any) {
+            haptic.error(); setErr(e?.message ?? 'Не получилось');
+          }
+        },
+      },
+    ]);
+  }, [load, toast]);
+
+  if (!d) {
+    return (
+      <View style={{ flex: 1, backgroundColor: p.bg }}>
+        <NavBar back title="EQUA AI" />
+        {err ? <Muted style={{ padding: S.lg }}>{err}</Muted>
+          : <ActivityIndicator color={p.primary} style={{ marginTop: 40 }} />}
+      </View>
+    );
+  }
+
+  const conflict = d.specialist_conflict ?? [];
+  const cur = d.current;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: p.bg }}>
+      <NavBar back title="EQUA AI" />
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        showsVerticalScrollIndicator={false}>
+
+        {err ? (
+          <Text style={{ ...FONT.small, color: p.danger, paddingHorizontal: S.lg, paddingTop: S.sm }}>
+            {err}
+          </Text>
+        ) : null}
+
+        {/* ---------------------------------------------- уже подключено */}
+        {cur ? (
+          <Animated.View entering={FadeInDown.duration(220)} style={{ paddingHorizontal: S.lg, paddingTop: S.md }}>
+            <Card>
+              <Label>Подключено</Label>
+              <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>{cur.title}</Text>
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md,
+                paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: p.ov2,
+              }}>
+                <Icon name="clock" size={16}
+                  color={cur.days_left <= 3 ? p.danger : cur.days_left <= 7 ? p.warn : p.primary}
+                  width={1.8} />
+                <Text style={{ ...FONT.body, fontWeight: '600', color: p.text }}>
+                  {cur.days_left} {plural(cur.days_left, ['день', 'дня', 'дней'])} до {dmy(cur.expires_at)}
+                </Text>
+              </View>
+              {cur.is_free ? (
+                <Muted style={{ marginTop: S.md }}>
+                  Доступ выдан без оплаты — платежи ещё не подключены.
+                </Muted>
+              ) : null}
+            </Card>
+
+            <View style={{ gap: S.md, marginTop: S.md }}>
+              <SysButton label="Открыть чат с EQUA AI" icon="sparkles" variant="prominent"
+                onPress={() => { haptic.tap(); router.push('/ai-chat'); }} />
+              <SysButton label="Проверить, как идёт план" icon="chart.line.uptrend.xyaxis"
+                onPress={() => { haptic.tap(); router.push('/ai-review'); }} />
+            </View>
+          </Animated.View>
+        ) : null}
+
+        {/* ------------------------------------------- что собрано моделью */}
+        {cur && d.plans?.length ? (
+          <>
+            <ListHead>Что собрано</ListHead>
+            <ListGroup>
+              {d.plans.map((x, i) => (
+                <ListRow key={`${x.kind}-${i}`} first={i === 0}
+                  label={x.kind === 'menu' ? 'Меню' : 'Программа тренировок'}
+                  value={x.period_from ? `${dmy(x.period_from)} — ${dmy(x.period_to)}` : dmy(x.created_at)} />
+              ))}
+            </ListGroup>
+          </>
+        ) : null}
+
+        {/* ------------------------------------------------- что мешает */}
+        {conflict.length ? (
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
+            <Card style={{ borderColor: p.warn, borderWidth: 1 }}>
+              <Label>Сначала завершите работу со специалистом</Label>
+              <Text style={{ ...FONT.body, color: p.text2, marginTop: 6, lineHeight: 20 }}>
+                EQUA AI — замена личному сопровождению, а не дополнение к нему.
+                У вас работает {conflict.map(c => c.name).join(', ')}.
+              </Text>
+              <View style={{ marginTop: S.md }}>
+                <SysButton label="К моим специалистам"
+                  onPress={() => { haptic.tap(); router.push('/specialist'); }} />
+              </View>
+            </Card>
+          </View>
+        ) : null}
+
+        {/* ------------------------------------------------------ наборы */}
+        {!cur || d.upgrade ? (
+          <>
+            <ListHead>{cur ? 'Добрать второй набор' : 'Наборы'}</ListHead>
+            {d.welcome_offer?.eligible ? (
+              <View style={{ paddingHorizontal: S.lg, paddingBottom: S.sm }}>
+                <Muted>
+                  Скидка {d.welcome_offer.percent}% действует первые сутки после регистрации.
+                </Muted>
+              </View>
+            ) : null}
+            <View style={{ paddingHorizontal: S.lg, gap: S.md }}>
+              {(cur && d.upgrade
+                ? [{ plan: d.upgrade.to, title: d.upgrade.title, price_kop: d.upgrade.price_kop }]
+                : d.tariffs
+              ).map(t => {
+                const need = missing(t.plan);
+                const free = d.payments_mode === 'off' || t.price_kop === 0;
+                return (
+                  <Card key={t.plan}>
+                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.md }}>
+                      <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{t.title}</Text>
+                      <Text style={{ ...FONT.h3, color: p.text }}>
+                        {free ? 'бесплатно' : rub(t.price_kop)}
+                      </Text>
+                    </View>
+                    {cur && d.upgrade?.credit_kop ? (
+                      <Muted style={{ marginTop: 4 }}>
+                        зачтён остаток прежнего набора — {rub(d.upgrade.credit_kop)}
+                      </Muted>
+                    ) : null}
+                    <View style={{ marginTop: S.md, gap: 5 }}>
+                      {(AI_PLAN_WHAT[t.plan] ?? []).map(line => (
+                        <View key={line} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
+                          <Icon name="check" size={13} color={p.primary} width={2.2} />
+                          <Text style={{ ...FONT.small, color: p.text2, flex: 1, lineHeight: 18 }}>
+                            {line}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    <View style={{ marginTop: S.lg }}>
+                      <SysButton
+                        label={need === 'nutrition' ? 'Ответить про питание'
+                          : need === 'fitness' ? 'Ответить про тренировки'
+                          : free ? 'Подключить' : 'Оформить'}
+                        variant="prominent"
+                        disabled={busy || conflict.length > 0}
+                        onPress={() => connect(t.plan)} />
+                    </View>
+                    {need ? (
+                      <Muted style={{ marginTop: S.sm }}>
+                        Перед запуском нужны ответы — несколько вопросов о вас.
+                      </Muted>
+                    ) : null}
+                  </Card>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
+
+        {/* --------------------------------------------------- анкеты */}
+        <ListHead>Ваши ответы</ListHead>
+        <ListGroup>
+          <ListRow first icon="bowl" label="Про питание"
+            value={d.nutrition_ready ? 'заполнено' : 'нет ответов'}
+            onPress={() => { haptic.tap(); router.push('/ai-nutrition'); }} />
+          <ListRow icon="dumbbell" label="Про тренировки"
+            value={d.fitness_ready ? 'заполнено' : 'нет ответов'}
+            onPress={() => { haptic.tap(); router.push('/ai-fitness'); }} />
+        </ListGroup>
+
+        {!d.has_model ? (
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
+            <Muted>
+              Модель сейчас недоступна — план собирается по правилам сервиса,
+              без неё. Это временно.
+            </Muted>
+          </View>
+        ) : null}
+
+        {cur ? (
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.xl }}>
+            <SysButton label="Отключить продление" variant="destructive" onPress={cancel} />
+          </View>
+        ) : null}
+
+        {!cur && !d.tariffs?.length ? (
+          <Empty icon="sparkles" title="Наборы недоступны"
+            note="Сейчас EQUA AI нельзя подключить. Попробуйте позже." />
+        ) : null}
+      </ScrollView>
+    </View>
+  );
+}

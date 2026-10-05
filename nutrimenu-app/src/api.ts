@@ -982,6 +982,49 @@ export const WO_FEEL: [number, string, string][] = [
   [4, 'Тяжело', '😤'], [5, 'На пределе', '🥵'],
 ];
 
+/* ---------- EQUA AI: наборы, анкеты, подписка ----------
+   Набор продаётся один на клиента: питание, тренировки или оба вместе.
+   Оба по отдельности не бывают — сервер переводит на «both», зачитывая
+   остаток прежнего. Живой специалист и AI одновременно невозможны. */
+export type AiPlan = 'nutrition' | 'workouts' | 'both';
+export interface AiTariff { plan: AiPlan; title: string; price_kop: number }
+export interface AiCurrent {
+  id: number; plan: AiPlan; title: string;
+  is_free: boolean;
+  expires_at: string | null;
+  days_left: number;
+  remainder_kop: number;
+}
+export interface AiPlanRow {
+  kind: string; target_id: number | null;
+  period_from: string | null; period_to: string | null;
+  note: string | null; created_at: string;
+}
+export interface AiState {
+  tariffs: AiTariff[];
+  /** off — доступ выдаётся бесплатно, live — нужна оплата, demo — без денег. */
+  payments_mode: 'off' | 'demo' | 'live';
+  current: AiCurrent | null;
+  plans: AiPlanRow[];
+  upgrade: { to: AiPlan; add: string; title: string; price_kop: number;
+             full_price_kop: number; credit_kop: number } | null;
+  nutrition_ready: boolean;
+  fitness_ready: boolean;
+  specialist_conflict: { id: number; name: string; profession?: string; role?: string }[];
+  has_model: boolean;
+  welcome_offer: { eligible: boolean; percent: number; seconds_left: number };
+  cycle_context?: { enabled: boolean; allowed: boolean; phase?: string | null };
+}
+/** Что входит в набор — словами, а не названием поля. */
+export const AI_PLAN_WHAT: Record<AiPlan, string[]> = {
+  nutrition: ['Меню по неделям на 30 дней', 'КБЖУ, порции и замены',
+              'Список покупок на каждую неделю', 'Еженедельная адаптация плана'],
+  workouts: ['Программа под цель и уровень', 'Разбор по подходам и весам',
+             'Учёт выполнения', 'Прогрессия по факту, а не по календарю'],
+  both: ['Меню и программа как одна система', 'Покупки и замены блюд',
+         'Адаптация питания и нагрузки', 'Единый чат с EQUA AI'],
+};
+
 /* ---------- Недельный отчёт по клиенту ----------
    Приверженность считается от плана: planned — блюд в плане за семь
    дней, eaten_of_plan — сколько из них отмечено съеденными, untracked —
