@@ -89,6 +89,9 @@ export default function SpMore() {
             onPress={() => router.push('/sp-verification')} />
           <ListRow icon="star" label="Отзывы"
             onPress={() => router.push('/sp-reviews')} />
+          <ListRow icon="grad" label="Профессия"
+            value={PROFESSION[pr?.profession ?? ''] ?? '—'}
+            onPress={() => router.push('/sp-profession')} />
         </ListGroup>
 
         <ListHead>Клиенты</ListHead>
@@ -118,6 +121,10 @@ export default function SpMore() {
             onPress={() => router.push('/sp-templates')} />
           <ListRow icon="trend" label="Аналитика"
             onPress={() => router.push('/sp-analytics')} />
+          {/* Продвижение рядом с аналитикой: по показам и переходам видно,
+              стоило ли оно денег. */}
+          <ListRow icon="trophy" label="Продвижение"
+            onPress={() => router.push('/sp-promotion')} />
           <ListRow icon="coin" label="Баланс"
             onPress={() => router.push('/sp-balance')} />
           <ListRow icon="tag" label="Услуги и цены"

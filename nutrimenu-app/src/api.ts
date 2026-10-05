@@ -987,6 +987,39 @@ export const WO_FEEL: [number, string, string][] = [
   [4, 'Тяжело', '😤'], [5, 'На пределе', '🥵'],
 ];
 
+/* ---------- Продвижение карточки в каталоге ---------- */
+export interface PromoTariff { days: number; price_kop: number }
+export interface PromoCurrent {
+  id: number; days: number; expires_at: string;
+  impressions: number; clicks: number; days_left: number;
+}
+export interface PromoHistory {
+  id: number; days: number; price_kop: number; status: string;
+  impressions: number; clicks: number;
+  paid_at?: string | null; started_at?: string | null; expires_at?: string | null;
+}
+export interface PromotionState {
+  tariffs: PromoTariff[];
+  current: PromoCurrent | null;
+  history: PromoHistory[];
+  payments_mode: 'off' | 'demo' | 'live';
+}
+
+/* ---------- Смена профессии ----------
+   Профессия решает, какие разделы открыты, поэтому меняет её владелец по
+   заявке, а не сам специалист. */
+export type ProfessionKey = 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
+export interface ProfessionRequest {
+  id: number;
+  current_profession: string;
+  requested_profession: string;
+  status: 'pending' | 'approved' | 'rejected' | string;
+  request_note?: string | null;
+  review_note?: string | null;
+  created_at: string;
+  reviewed_at?: string | null;
+}
+
 /* ---------- EQUA AI: наборы, анкеты, подписка ----------
    Набор продаётся один на клиента: питание, тренировки или оба вместе.
    Оба по отдельности не бывают — сервер переводит на «both», зачитывая

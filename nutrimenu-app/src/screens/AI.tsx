@@ -15,13 +15,13 @@
  * кнопкой, которая ничего не делает, хуже, чем сказать.
  */
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, AiState, AiPlan, AI_PLAN_WHAT } from '../api';
-import { S, FONT } from '../theme';
+import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
@@ -44,6 +44,12 @@ export default function AI() {
   const [d, setD] = useState<AiState | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /* Промокод спрашиваем только при настоящей оплате: пока платежи
+     выключены, набор выдаётся бесплатно, и скидка ни к чему. */
+  const [code, setCode] = useState('');
+  const [quote, setQuote] = useState<{ percent: number; total_kop: number;
+    discount_kop: number; code: string } | null>(null);
+  const [codeErr, setCodeErr] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api<AiState>('/client/ai')
@@ -62,6 +68,23 @@ export default function AI() {
     return null;
   }, [d]);
 
+  /* Проверяем до покупки: сервер считает цену сам и возвращает её — так
+     человек видит, что код сработал, прежде чем платить. */
+  const check = useCallback(async (plan: AiPlan) => {
+    const c = code.trim().toUpperCase();
+    if (!c) return;
+    setCodeErr(null);
+    try {
+      const r = await api<{ percent: number; total_kop: number;
+        discount_kop: number; code: string }>('/client/ai/promo',
+        { method: 'POST', body: { plan, code: c } });
+      haptic.success(); setQuote(r);
+    } catch (e: any) {
+      haptic.error(); setQuote(null);
+      setCodeErr(e?.message ?? 'Код не подошёл');
+    }
+  }, [code]);
+
   const connect = useCallback(async (plan: AiPlan) => {
     const need = missing(plan);
     if (need === 'nutrition') {
@@ -77,7 +100,7 @@ export default function AI() {
     setBusy(true); setErr(null);
     try {
       const r = await api<{ pay?: { confirmation_url?: string } }>('/client/ai',
-        { method: 'POST', body: { plan } });
+        { method: 'POST', body: { plan, ...(quote?.code ? { promo_code: quote.code } : {}) } });
       /* Живой эквайер отдаёт ссылку на оплату. В приложении её не
          открываем: платежи здесь не проводятся. */
       if (r.pay?.confirmation_url) {
@@ -97,7 +120,7 @@ export default function AI() {
       else if (/подтвердите/i.test(m)) router.push({ pathname: '/ai-intake', params: { plan } });
       else setErr(m || 'Не получилось подключить');
     } finally { setBusy(false); }
-  }, [missing, load, toast]);
+  }, [missing, load, toast, quote]);
 
   const cancel = useCallback(() => {
     Alert.alert('Отключить EQUA AI?',
@@ -247,6 +270,41 @@ export default function AI() {
                         </View>
                       ))}
                     </View>
+                    {/* Поле кода — внутри набора: скидка считается от его
+                        цены, и общее поле «на весь экран» давало бы цену,
+                        не относящуюся ни к одному из них. */}
+                    {!free ? (
+                      <View style={{ marginTop: S.md }}>
+                        <View style={{ flexDirection: 'row', gap: S.sm }}>
+                          <TextInput value={code}
+                            onChangeText={t => { setCode(t.toUpperCase()); setCodeErr(null); setQuote(null); }}
+                            placeholder="Промокод" placeholderTextColor={p.text3}
+                            autoCapitalize="characters" maxLength={24}
+                            style={{
+                              flex: 1, backgroundColor: p.inset, color: p.text,
+                              borderRadius: R.control, paddingHorizontal: S.lg,
+                              paddingVertical: 10, fontSize: 15, letterSpacing: 1,
+                            }} />
+                          <Pressable onPress={() => check(t.plan)} disabled={!code.trim()}
+                            style={({ pressed }) => ({
+                              paddingHorizontal: 16, justifyContent: 'center',
+                              borderRadius: R.control, borderWidth: 1, borderColor: p.btnLine,
+                              opacity: !code.trim() ? 0.4 : pressed ? 0.6 : 1,
+                            })}>
+                            <Text style={{ ...FONT.callout, color: p.text }}>Проверить</Text>
+                          </Pressable>
+                        </View>
+                        {quote ? (
+                          <Text style={{ ...FONT.small, color: p.primary, marginTop: 6 }}>
+                            Код принят: −{quote.percent}%, к оплате {rub(quote.total_kop)}
+                          </Text>
+                        ) : null}
+                        {codeErr ? (
+                          <Text style={{ ...FONT.small, color: p.danger, marginTop: 6 }}>{codeErr}</Text>
+                        ) : null}
+                      </View>
+                    ) : null}
+
                     <View style={{ marginTop: S.lg }}>
                       <SysButton
                         label={need === 'nutrition' ? 'Ответить про питание'

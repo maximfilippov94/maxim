@@ -17,6 +17,7 @@ import { useApp } from '../store';
 import { api } from '../api';
 import { S, R, FONT, LAYOUT } from '../theme';
 import { Card, Muted } from '../ui/base';
+import { router } from 'expo-router';
 import { Icon } from '../ui/Icon';
 import { NavBar } from '../ui/NavBar';
 import { SysButton, Empty } from '../ui/system';
@@ -146,7 +147,12 @@ export default function Cycle() {
   if (!c && !err) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
-        <NavBar title="Цикл" back />
+        <NavBar title="Цикл" back right={
+          <Pressable hitSlop={10}
+            onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
+            <Icon name="device" size={19} color={p.primary} width={1.8} />
+          </Pressable>
+        } />
         <ActivityIndicator color={p.primary} style={{ marginTop: S.xxl }} />
       </View>
     );
@@ -156,7 +162,12 @@ export default function Cycle() {
   if (!c?.enabled) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
-        <NavBar title="Цикл" back />
+        <NavBar title="Цикл" back right={
+          <Pressable hitSlop={10}
+            onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
+            <Icon name="device" size={19} color={p.primary} width={1.8} />
+          </Pressable>
+        } />
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <Empty icon="heart" title="Календарь цикла выключен"
             note="Включите его в разделе «Здоровье» — EQUA будет учитывать фазу в питании и тренировках." />
@@ -177,7 +188,12 @@ export default function Cycle() {
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title="Цикл" back />
+      <NavBar title="Цикл" back right={
+          <Pressable hitSlop={10}
+            onPress={() => { haptic.tap(); router.push('/cycle-settings'); }}>
+            <Icon name="device" size={19} color={p.primary} width={1.8} />
+          </Pressable>
+        } />
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: LAYOUT.screenPad,

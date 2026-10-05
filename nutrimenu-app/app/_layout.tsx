@@ -109,6 +109,8 @@ function Root() {
         <Stack.Screen name="sp-workout-form" />
         <Stack.Screen name="sp-workout-build" />
         <Stack.Screen name="sp-workout-assign" />
+        <Stack.Screen name="sp-promotion" />
+        <Stack.Screen name="sp-profession" />
         <Stack.Screen
           name="sp-invite"
           options={{
@@ -156,6 +158,7 @@ function Root() {
           }}
         />
         <Stack.Screen name="cycle" />
+        <Stack.Screen name="cycle-settings" />
         <Stack.Screen name="dish/[id]" />
         {/* Системная шторка iOS с фиксаторами высоты: тянется пальцем,
             фон остаётся видимым — привычное поведение, а не своё окно. */}
