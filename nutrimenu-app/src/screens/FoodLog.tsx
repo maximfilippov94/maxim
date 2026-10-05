@@ -252,47 +252,59 @@ export default function FoodLog() {
           </View>
         )}
 
-        {cart.length ? (
-          <View style={{ marginTop: S.lg }}>
-            <Label>Съедено</Label>
-            <Card style={{ marginTop: S.sm, padding: 0 }}>
-              {cart.map((c, i) => (
-                <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: S.md,
-                  padding: S.lg, borderTopWidth: i ? 1 : 0, borderTopColor: p.border }}>
-                  <View style={{ flex: 1 }}>
-                    <Text numberOfLines={1} style={{ ...FONT.body, fontWeight: '600', color: p.text }}>{c.name}</Text>
-                    <Muted style={{ marginTop: 1 }}>{round(c.grams)} г · {round(c.kcal)} ккал</Muted>
-                  </View>
-                  <Pressable hitSlop={10} onPress={() => { haptic.tap(); setCart(x => x.filter((_, k) => k !== i)); }}>
-                    <Icon name="close" size={17} color={p.text3} />
-                  </Pressable>
-                </View>
-              ))}
-            </Card>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between',
-              alignItems: 'baseline', marginTop: S.md }}>
-              <Muted>{cart.length} {plural(cart.length, ['продукт', 'продукта', 'продуктов'])}</Muted>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: p.text }}>{round(total)} ккал</Text>
-            </View>
-            {err ? <Text style={{ ...FONT.small, color: p.danger, marginTop: S.sm }}>{err}</Text> : null}
-          </View>
-        ) : null}
       </ScrollView>
 
-      {/* Кнопка записи закреплена внизу, а не стоит под корзиной: список
-          найденного бывает длинным, и человек, набравший продукты, просто
-          не доходил до неё — еда оставалась неотправленной, а он считал,
-          что уже записал её. */}
+      {/* Набранное и кнопка записи — одной закреплённой панелью внизу.
+          Раньше корзина лежала под списком найденного: чтобы увидеть, что
+          уже добавлено, приходилось прокручивать весь список, а кнопку
+          записи и вовсе не находили. Теперь всё видно, не сходя с места.
+
+          Список внутри панели прокручивается сам и не растёт выше трети
+          экрана — иначе десяток продуктов закрыл бы собой поиск. */}
       {cart.length ? (
         <View style={{
-          paddingHorizontal: S.lg, paddingTop: S.md,
-          paddingBottom: insets.bottom + S.md,
+          paddingTop: S.md, paddingBottom: insets.bottom + S.md,
           borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: p.border,
           backgroundColor: p.surface,
         }}>
-          <SysButton
-            label={`Записать ${cart.length} ${plural(cart.length, ['продукт', 'продукта', 'продуктов'])} · ${round(total)} ккал`}
-            variant="prominent" disabled={busy} onPress={save} />
+          <View style={{ flexDirection: 'row', alignItems: 'baseline',
+            justifyContent: 'space-between', paddingHorizontal: S.lg, marginBottom: S.sm }}>
+            <Label>Съедено</Label>
+            <Text style={{ ...FONT.small, color: p.text3 }}>
+              {cart.length} {plural(cart.length, ['продукт', 'продукта', 'продуктов'])}
+            </Text>
+          </View>
+
+          <ScrollView style={{ maxHeight: 148 }} showsVerticalScrollIndicator={false}>
+            {cart.map((c, i) => (
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: S.md,
+                paddingHorizontal: S.lg, paddingVertical: 9,
+                borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: p.borderSoft }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={{ ...FONT.body, fontWeight: '600', color: p.text }}>
+                    {c.name}
+                  </Text>
+                  <Muted style={{ marginTop: 1 }}>{round(c.grams)} г · {round(c.kcal)} ккал</Muted>
+                </View>
+                <Pressable hitSlop={10}
+                  onPress={() => { haptic.tap(); setCart(x => x.filter((_, k) => k !== i)); }}>
+                  <Icon name="close" size={17} color={p.text3} />
+                </Pressable>
+              </View>
+            ))}
+          </ScrollView>
+
+          {err ? (
+            <Text style={{ ...FONT.small, color: p.danger, paddingHorizontal: S.lg, marginTop: S.sm }}>
+              {err}
+            </Text>
+          ) : null}
+
+          <View style={{ paddingHorizontal: S.lg, marginTop: S.md }}>
+            <SysButton
+              label={`Записать ${cart.length} ${plural(cart.length, ['продукт', 'продукта', 'продуктов'])} · ${round(total)} ккал`}
+              variant="prominent" disabled={busy} onPress={save} />
+          </View>
         </View>
       ) : null}
     </View>
