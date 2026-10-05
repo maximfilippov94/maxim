@@ -19,4 +19,17 @@ ruvector.db
 ruvector.db-*
 .swarm/
 .claude/settings.json.bak-*
-.claude-flow/*.json
+# Рантайм ruflo: метрики, снимок карты кода, состояние политик и сессий
+# перезаписываются на каждом запуске демона и конфликтуют при слиянии.
+# Конфигурация и описание возможностей остаются в репозитории.
+.claude-flow/metrics/
+.claude-flow/mods/
+.claude-flow/policy/
+.claude-flow/security/
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+.claude-flow/*.pid
+.claude-flow/*-state.json
+.claude-flow/*-policy.json
+.claude-flow/memory-package.json
