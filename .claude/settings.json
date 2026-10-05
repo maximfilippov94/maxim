@@ -1,13 +1,17 @@
 {
-  "mcpServers": {
-    "@21st-dev/magic": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@21st-dev/magic@latest",
-        "API_KEY=c4d7f0b1719e5c34795d2c1aa1276f8583b9cb7bd607eb8c47327c805b257918"
-      ]
-    }
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_FLOW_V3_ENABLED": "true",
+    "CLAUDE_FLOW_HOOKS_ENABLED": "true",
+    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx @claude-flow*)",
+      "Bash(npx claude-flow*)",
+      "Bash(node .claude/*)",
+      "mcp__claude-flow__*"
+    ]
   },
   "hooks": {
     "PreToolUse": [
@@ -167,20 +171,6 @@
       }
     ]
   },
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "CLAUDE_FLOW_V3_ENABLED": "true",
-    "CLAUDE_FLOW_HOOKS_ENABLED": "true",
-    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
-  },
-  "permissions": {
-    "allow": [
-      "Bash(npx @claude-flow*)",
-      "Bash(npx claude-flow*)",
-      "Bash(node .claude/*)",
-      "mcp__claude-flow__*"
-    ]
-  },
   "enabledPlugins": {
     "ruflo-mods@ruflo": true,
     "ruflo-swarm@ruflo": true,
@@ -192,6 +182,16 @@
         "source": "github",
         "repo": "ruvnet/ruflo"
       }
+    }
+  },
+  "mcpServers": {
+    "@21st-dev/magic": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@21st-dev/magic@latest",
+        "API_KEY=c4d7f0b1719e5c34795d2c1aa1276f8583b9cb7bd607eb8c47327c805b257918"
+      ]
     }
   }
 }
