@@ -18,7 +18,7 @@ import Animated, { LinearTransition } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useApp } from '../store';
-import { api, thumbUrl, MealItem, FoodEntry, MEAL_TITLES, MEAL_TIME } from '../api';
+import { api, thumbUrl, MealItem, FoodEntry, MEAL_TITLES } from '../api';
 import { S, R, FONT, alpha, mix } from '../theme';
 import { Icon } from './Icon';
 import { FoodRows, MealAdd } from './FoodBlock';
@@ -109,7 +109,7 @@ export function MealSection({ meal, items, own, onToggle, onChanged }: {
           {MEAL_TITLES[meal]}
         </Text>
         <Text style={{ ...FONT.caption, color: p.text3, flexShrink: 1 }} numberOfLines={1}>
-          {MEAL_TIME[meal]} · {count ? `${count} ${plural(count, ['позиция', 'позиции', 'позиций'])}` : 'пусто'}
+          {count ? `${count} ${plural(count, ['позиция', 'позиции', 'позиций'])}` : 'пусто'}
         </Text>
         <View style={{ flex: 1 }} />
         {planK || doneK ? (

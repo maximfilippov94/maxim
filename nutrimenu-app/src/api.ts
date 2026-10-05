@@ -265,9 +265,6 @@ export const MEAL_TITLES: Record<string, string> = {
   snack2: 'Перекус', dinner: 'Ужин',
 };
 export const MEAL_ORDER = ['breakfast', 'snack1', 'lunch', 'snack2', 'dinner'];
-export const MEAL_TIME: Record<string, string> = {
-  breakfast: '08:30', snack1: '11:00', lunch: '14:00', snack2: '16:30', dinner: '19:00',
-};
 
 /* Фильтр по приёмам. Оба перекуса — одна кнопка: для выбора блюда
    разница между «перекусом до обеда» и «после» не значит ничего, а две

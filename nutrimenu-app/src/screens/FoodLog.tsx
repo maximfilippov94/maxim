@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, Food, FoodMeal, FOOD_MEALS, MEAL_TIME } from '../api';
+import { api, Food, FoodMeal, FOOD_MEALS } from '../api';
 import { round, plural } from '../format';
 import { S, R, FONT, LAYOUT } from '../theme';
 import { NavBar } from '../ui/NavBar';
@@ -176,7 +176,7 @@ export default function FoodLog() {
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       {/* Приём в заголовке: ряд кнопок убран, и человек должен видеть,
           куда попадёт добавленное. */}
-      <NavBar title={`${MEAL_TITLES_SHORT[meal] ?? 'Съел своё'} · ${MEAL_TIME[meal]}`} back />
+      <NavBar title={MEAL_TITLES_SHORT[meal] ?? 'Съел своё'} back />
       <ScrollView contentContainerStyle={{ paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32 }}
         keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
