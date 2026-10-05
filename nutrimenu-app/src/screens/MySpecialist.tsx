@@ -5,16 +5,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useApp } from '../store';
-import { api, Specialist, CatalogSpecialist } from '../api';
-import { plural } from '../format';
+import { api, Specialist, CatalogSpecialist, SPEC_ROLES } from '../api';
+import { plural, rub } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted, Pills } from '../ui/base';
 import { Icon } from '../ui/Icon';
-import { SysButton, Empty } from '../ui/system';
+import { SysButton, SysConfirm, Empty } from '../ui/system';
 import { haptic } from '../haptics';
+import { useToast } from '../ui/Toast';
 import { Loading } from './Shopping';
-import { SpecCard, Face, VerifiedMark, PROF } from '../ui/SpecCard';
+import { SpecCard, Face, VerifiedMark } from '../ui/SpecCard';
 
 type Prof = '' | 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
 const FAV_KEY = 'nm_fav_sp';
@@ -50,10 +51,20 @@ export default function MySpecialist() {
      «вернуться и подумать», и специалисту незачем знать, кто его
      рассматривал. */
   const [fav, setFav] = useState<number[]>([]);
+  const toast = useToast();
+  const [mine, setMine] = useState<Specialist[]>([]);
+  const [credit, setCredit] = useState(0);
 
   const load = useCallback(async () => {
     try {
-      const r = await api<{ specialist: Specialist | null }>('/client/my-specialist');
+      const r = await api<{ specialist: Specialist | null; specialists?: Specialist[];
+        credit_kop?: number }>('/client/my-specialist');
+      /* Специалистов может быть несколько — нутрициолог, тренер,
+         эндокринолог. Поле `specialist` сервер оставил для старых
+         сборок, список лежит рядом. AI сюда не попадает: у него своя
+         строка в «Ещё». */
+      setMine((r.specialists ?? []).filter(x => !x.is_ai));
+      setCredit(Number(r.credit_kop ?? 0));
       setSpec(r.specialist);
       if (!r.specialist) {
         const c = await api<{ specialists: CatalogSpecialist[] }>('/catalog');
@@ -61,6 +72,21 @@ export default function MySpecialist() {
       }
     } catch (e: any) { setErr(e.message); setSpec(null); }
   }, []);
+  /* Завершить работу: доступ закрывается, роль освобождается, остаток
+     уходит в зачёт следующей оплаты. В приложении этого не было вовсе —
+     уйти от специалиста можно было только с сайта. */
+  const endWork = useCallback(async (id: number) => {
+    try {
+      const r = await api<{ refund_kop?: number }>(`/client/specialists/${id}/end`,
+        { method: 'POST' });
+      haptic.success();
+      toast(Number(r.refund_kop) > 0
+        ? `${rub(Number(r.refund_kop))} в зачёт`
+        : 'Работа завершена');
+      await load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не получилось'); }
+  }, [load, toast]);
+
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
@@ -138,18 +164,89 @@ export default function MySpecialist() {
         ) : null}
 
         {spec ? (
-          <Animated.View entering={FadeInDown.duration(240)}>
-            <Card style={{ marginTop: S.md, alignItems: 'center', paddingVertical: S.xl }}>
-              <Face url={spec.avatar_url} name={spec.name} size={80} />
-              <Text style={{ ...FONT.h2, color: p.text, marginTop: S.md }}>{spec.name}</Text>
-              <Muted style={{ marginTop: 2 }}>
-                {PROF[spec.profession ?? 'nutritionist'] ?? 'Специалист'}
-              </Muted>
-              {spec.verified ? <VerifiedMark style={{ marginTop: S.sm, alignSelf: 'center' }} /> : null}
-            </Card>
-            <View style={{ gap: S.md, marginTop: S.lg }}>
-              <SysButton label="Написать" icon="bubble.left" variant="prominent"
-                onPress={() => { haptic.tap(); router.push('/client/chat'); }} />
+          <Animated.View entering={FadeInDown.duration(240)} style={{ marginTop: S.md }}>
+            {/* Остаток за незавершённые услуги: он спишется сам, но знать
+                о нём человек должен заранее — как в вебе. */}
+            {credit > 0 ? (
+              <Card style={{ marginBottom: S.md, flexDirection: 'row',
+                alignItems: 'flex-start', gap: S.md }}>
+                <Icon name="coin" size={19} color={p.accent} width={1.8} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ ...FONT.h3, color: p.text }}>{rub(credit)} в зачёт</Text>
+                  <Muted style={{ marginTop: 2, lineHeight: 18 }}>
+                    Остаток за незавершённые услуги. Спишется со следующей оплаты —
+                    ничего делать не нужно.
+                  </Muted>
+                </View>
+              </Card>
+            ) : null}
+
+            {/* Три роли подряд: занятая — карточкой со специалистом,
+                свободная — приглашением найти. В приложении был виден
+                только один человек, и о том, что ролей три, узнать было
+                неоткуда. */}
+            {SPEC_ROLES.map(([role, label, note, ic]) => {
+              const s = mine.find(x => (x.role ?? 'nutritionist') === role);
+              if (s) {
+                return (
+                  <Card key={role} style={{ marginBottom: S.sm, flexDirection: 'row',
+                    alignItems: 'center', gap: S.md }}>
+                    <Face url={s.avatar_url} name={s.name} size={46} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={1}>
+                          {s.name}
+                        </Text>
+                        {s.verified ? <VerifiedMark compact /> : null}
+                      </View>
+                      <Muted numberOfLines={1}>
+                        {label}{s.has_nutrition ? ' · ведёт питание' : ''}
+                      </Muted>
+                    </View>
+                    <Pressable hitSlop={8}
+                      onPress={() => { haptic.tap(); router.push(`/chat/${s.id}` as any); }}
+                      style={({ pressed }) => ({
+                        width: 38, height: 38, borderRadius: 19, alignItems: 'center',
+                        justifyContent: 'center', backgroundColor: p.inset,
+                        opacity: pressed ? 0.7 : 1,
+                      })}>
+                      <Icon name="chat" size={17} color={p.text2} width={1.8} />
+                    </Pressable>
+                    {/* Завершить работу можно было только на сайте. */}
+                    <SysConfirm
+                      label="Завершить"
+                      title={`Завершить работу с «${s.name}»?`}
+                      message={s.refund_kop
+                        ? `Доступ закроется, роль освободится. ${rub(s.refund_kop)} вернётся в зачёт следующей оплаты.`
+                        : 'Доступ закроется, роль освободится — можно будет выбрать другого.'}
+                      confirmLabel="Завершить"
+                      destructive
+                      onConfirm={() => endWork(s.id)} />
+                  </Card>
+                );
+              }
+              return (
+                <Pressable key={role}
+                  onPress={() => { haptic.tap(); setProf(role as Prof); setSpec(null); }}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1, marginBottom: S.sm })}>
+                  <Card style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+                    <View style={{
+                      width: 46, height: 46, borderRadius: 23, alignItems: 'center',
+                      justifyContent: 'center', backgroundColor: p.inset,
+                    }}>
+                      <Icon name={ic} size={20} color={p.text3} width={1.8} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ ...FONT.h3, color: p.text }}>{label}</Text>
+                      <Muted numberOfLines={1}>{note}</Muted>
+                    </View>
+                    <Icon name="plus" size={18} color={p.text3} width={2} />
+                  </Card>
+                </Pressable>
+              );
+            })}
+
+            <View style={{ gap: S.md, marginTop: S.md }}>
               <SysButton label="Услуги и цены" icon="tag"
                 onPress={() => { haptic.tap(); router.push('/services'); }} />
             </View>

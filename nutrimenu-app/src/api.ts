@@ -538,7 +538,22 @@ export interface Specialist {
   id: number; name: string; avatar_url?: string | null; profession?: string;
   /** 1 — EQUA проверила диплом и сертификаты специалиста */
   verified?: number;
+  /** Какую роль он занимает у клиента: их может быть несколько */
+  role?: string | null;
+  /** Ведёт ли он питание — питание ведёт кто-то один */
+  has_nutrition?: number;
+  is_ai?: number;
+  /** Сколько вернётся в зачёт, если завершить с ним работу */
+  refund_kop?: number;
+  services?: string[];
 }
+
+/** Роли и чем занят каждый — те же слова, что `SPEC_ROLES` в вебе. */
+export const SPEC_ROLES: [string, string, string, string][] = [
+  ['nutritionist', 'Нутрициолог', 'Меню, КБЖУ и разбор питания', 'bowl'],
+  ['trainer', 'Тренер', 'Программа тренировок и техника', 'dumbbell'],
+  ['endocrinologist', 'Эндокринолог', 'Анализы, препараты, назначения', 'heart'],
+];
 export interface Checkin {
   week_start: string; ease_score: number; wellbeing_score?: number | null;
   difficulties?: string | null; comment?: string | null; created_at: string;

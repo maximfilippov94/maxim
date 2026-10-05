@@ -12,7 +12,7 @@ import { uploadForm } from '../upload';
 import { pickPhoto, shootPhoto } from '../photo';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
-import { Card, Label, Muted, Bar } from '../ui/base';
+import { Card, Muted, Bar } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { SysButton, SysConfirm } from '../ui/system';
 import { plural, dmy } from '../format';
@@ -62,56 +62,56 @@ export default function Rewards() {
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
       }} showsVerticalScrollIndicator={false}>
 
-        {/* Баланс и уровень: одна карточка отвечает на «сколько у меня»
-            и «сколько до следующего» — дальше уже подробности. */}
+        {/* Баланс, уровень и серия — одной карточкой, как `rw-hero`
+            в вебе: сначала сколько баллов, рядом уровень и серия одной
+            строкой, под ними полоса и сколько XP до следующего уровня.
+            Серия стояла отдельной карточкой — это было своё деление. */}
         <Animated.View entering={FadeInDown.duration(240)}>
           <Card style={{ marginTop: S.md, marginBottom: S.md }}>
-            <Label>Баллы</Label>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
-              <Text style={{ ...FONT.num, color: p.text }}>{g.balance}</Text>
-              <Muted style={{ marginLeft: 6 }}>всего заработано {g.earned}</Muted>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, marginTop: S.lg }}>
-              <View style={{
-                paddingHorizontal: 9, paddingVertical: 3, borderRadius: R.sm,
-                backgroundColor: p.primarySoft,
-              }}>
-                <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
-                  Ур. {g.level}
-                </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                  <Text style={{ ...FONT.num, color: p.text }}>{g.balance}</Text>
+                  <Muted style={{ marginLeft: 6 }}>баллов</Muted>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center',
+                  flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  <Muted>Ур. {g.level} · {g.level_title} ·</Muted>
+                  <Icon name="flame" size={13} color={p.warn} width={1.8} />
+                  <Muted>
+                    {g.streak} {plural(g.streak, ['день', 'дня', 'дней'])}
+                  </Muted>
+                </View>
               </View>
-              <Text style={{ ...FONT.h3, color: p.text }}>{g.level_title}</Text>
+              <View style={{
+                width: 42, height: 42, borderRadius: 21, alignItems: 'center',
+                justifyContent: 'center', backgroundColor: p.primarySoft,
+              }}>
+                <Icon name="coin" size={20} color={p.accent} width={1.8} />
+              </View>
             </View>
-            <View style={{ marginTop: S.md }}><Bar value={inLevel} /></View>
+            <View style={{ marginTop: S.lg }}><Bar value={inLevel} /></View>
             <Muted style={{ marginTop: S.sm }}>
-              {g.earned} / {g.level_next} до следующего уровня
+              {g.earned} / {g.level_next} XP до следующего уровня
             </Muted>
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(40).duration(240)}
-          style={{ flexDirection: 'row', gap: S.md, marginBottom: S.md }}>
-          <Card style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Icon name="flame" size={15} color={p.mf} />
-              <Label>Серия</Label>
-            </View>
-            <Text style={{ fontSize: 22, fontWeight: '700', color: p.text, marginTop: 3 }}>
-              {g.streak}
-            </Text>
-            <Muted>{plural(g.streak, ['день', 'дня', 'дней'])} подряд</Muted>
-          </Card>
-          <Card style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Icon name="check" size={15} color={p.mp} />
-              <Label>Идеальных дней</Label>
-            </View>
-            <Text style={{ fontSize: 22, fontWeight: '700', color: p.text, marginTop: 3 }}>
-              {g.perfect_days}
-            </Text>
-            <Muted>без пропусков</Muted>
-          </Card>
-        </Animated.View>
+        {/* Идеальных дней веб не показывает, хотя сервер их считает.
+            Оставлено отдельной плиткой: убирать работающее, чтобы сойтись
+            с сайтом, — не то же самое, что свести оформление. */}
+        {g.perfect_days ? (
+          <Animated.View entering={FadeInDown.delay(40).duration(240)}>
+            <Card style={{ marginBottom: S.md, flexDirection: 'row',
+              alignItems: 'center', gap: S.md }}>
+              <Icon name="check" size={17} color={p.mp} width={1.8} />
+              <Text style={{ ...FONT.body, color: p.text2, flex: 1 }}>Идеальных дней</Text>
+              <Text style={{ fontSize: 19, fontWeight: '700', color: p.text }}>
+                {g.perfect_days}
+              </Text>
+            </Card>
+          </Animated.View>
+        ) : null}
 
         <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
           Задания дня
