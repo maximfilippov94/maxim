@@ -7,14 +7,20 @@
       "ios": { "simulator": false },
       "android": { "buildType": "apk" }
     },
+    "development-simulator": {
+      "extends": "development",
+      "ios": { "simulator": true }
+    },
     "preview": {
       "distribution": "internal",
+      "ios": { "simulator": false },
       "android": { "buildType": "apk" },
       "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
-      "channel": "production"
+      "channel": "production",
+      "android": { "buildType": "app-bundle" }
     }
   },
   "submit": { "production": {} }

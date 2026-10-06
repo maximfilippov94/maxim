@@ -17,13 +17,17 @@
         "UIBackgroundModes": [
           "remote-notification"
         ]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {
       "package": "ru.equa.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundImage": "./assets/adaptive-icon-bg.png", "backgroundColor": "#159A6E"
+        "backgroundImage": "./assets/adaptive-icon-bg.png",
+        "backgroundColor": "#159A6E"
       },
       "permissions": [
         "CAMERA",
@@ -61,6 +65,13 @@
           "dark": {
             "backgroundColor": "#121820"
           }
+        }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Камера нужна для видеозвонка со специалистом.",
+          "microphonePermission": "Микрофон нужен для видеозвонка и голосовых сообщений."
         }
       ]
     ],
