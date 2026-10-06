@@ -287,8 +287,13 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
                         только в свайпе. Жест знают не все, а подсказка внизу
                         экрана прямо зовёт нажать значок — значка при этом на
                         экране не было вовсе. Свайп остаётся вторым путём. */}
-                    <Button systemImage="house" onPress={() => onHome(it)}
-                      modifiers={[m.buttonStyle('borderless'), m.tint(p.text3)]} />
+                    <Button onPress={() => onHome(it)}
+                      modifiers={[m.buttonStyle('borderless'), m.tint(p.text3)]}>
+                      {/* Значок идёт вложенным, а не свойством systemImage:
+                          оно работает только вместе с подписью, и кнопка
+                          без неё выходила пустой — её не было видно. */}
+                      <SImage systemName="house" size={17} color={p.text3} />
+                    </Button>
                   </HStack>
                 </SwipeActions>
               );
