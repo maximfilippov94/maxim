@@ -8,6 +8,8 @@ import * as Notifications from 'expo-notifications';
 import { AppProvider, useApp } from '../src/store';
 import { UpdateGate } from '../src/ui/UpdateGate';
 import { ToastHost } from '../src/ui/Toast';
+import { CallProvider } from '../src/call/store';
+import { CallScreen } from '../src/ui/CallScreen';
 import { setupNotificationHandler } from '../src/push';
 import { api } from '../src/api';
 
@@ -85,6 +87,9 @@ function Root() {
       <ReducedMotionConfig mode={ReduceMotion.System} />
       <StatusBar style={p.name === 'light' ? 'dark' : 'light'} />
       <ToastHost>
+      {/* Экран звонка живёт поверх всей навигации: входящий приходит на
+          любом экране, и уводить человека с того, где он был, незачем. */}
+      <CallScreen />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" />
@@ -252,7 +257,9 @@ function Root() {
 export default function Layout() {
   return (
     <SafeAreaProvider>
-      <AppProvider><Root /></AppProvider>
+      <AppProvider>
+        <CallProvider><Root /></CallProvider>
+      </AppProvider>
     </SafeAreaProvider>
   );
 }

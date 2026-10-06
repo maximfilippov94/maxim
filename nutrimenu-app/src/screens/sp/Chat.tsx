@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { api, SpClient } from '../../api';
 import { NavBar } from '../../ui/NavBar';
+import { CallButton } from '../../ui/CallButton';
 import { ChatView } from '../../ui/ChatView';
 import { kg } from '../../format';
 
@@ -28,7 +29,7 @@ export default function SpChat() {
       title={c?.name ?? 'Клиент'}
       subtitle={c?.weight_kg ? `${kg(c.weight_kg)} кг · ${c.goal ?? ''}`.trim() : undefined}
       avatarUrl={c?.avatar_url}
-      back={<NavBar title={c?.name ?? 'Клиент'} back />}
+      back={<NavBar title={c?.name ?? 'Клиент'} back right={<CallButton clientId={cid} />} />}
       bottomInset={12}
       emptyNote="Напишите клиенту — он увидит сообщение в приложении."
     />

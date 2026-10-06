@@ -8,6 +8,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { api, ChatPeer } from '../api';
 import { ChatView } from '../ui/ChatView';
 import { NavBar } from '../ui/NavBar';
+import { CallButton } from '../ui/CallButton';
 
 const SUB: Record<string, string> = {
   trainer: 'тренер', coach: 'коуч', endocrinologist: 'врач',
@@ -40,7 +41,7 @@ export default function ChatPeerScreen() {
       avatarUrl={peer?.avatar_url}
       emptyNote="Напишите специалисту — он ответит здесь."
       typingEndpoint="/client/chat-typing"
-      back={<NavBar title={peer?.name ?? 'Чат'} back />}
+      back={<NavBar title={peer?.name ?? 'Чат'} back right={<CallButton />} />}
     />
   );
 }
