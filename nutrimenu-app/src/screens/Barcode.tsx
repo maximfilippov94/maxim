@@ -10,12 +10,14 @@
  * запомненным штрихкодом.
  */
 import React, { useCallback, useRef, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, Linking } from 'react-native';
+import {
+  View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Linking, StyleSheet,
+} from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../store';
-import { api, Food } from '../api';
+import { api, Food, MEAL_TITLES } from '../api';
 import { round } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
@@ -42,18 +44,34 @@ export default function Barcode() {
      сервер и мигали ответами. */
   const seen = useRef<string | null>(null);
 
+  /* Код, который распознали или ввели руками, но не нашли в каталоге:
+     по нему предлагаем завести продукт по этикетке — как в вебе. */
+  const [missing, setMissing] = useState<string | null>(null);
+  const [typed, setTyped] = useState('');
+
   const lookup = useCallback(async (code: string) => {
-    if (seen.current === code || busy) return;
-    seen.current = code;
-    setBusy(true); setErr(null);
+    const c = String(code ?? '').replace(/\D+/g, '');
+    /* Восемь цифр — короче штрихкодов не бывает. Проверяем до запроса,
+       как веб: иначе на каждую опечатку уходит обращение к серверу. */
+    if (c.length < 8) {
+      haptic.error();
+      setErr('В штрихкоде должно быть не меньше 8 цифр.');
+      return;
+    }
+    if (seen.current === c || busy) return;
+    seen.current = c;
+    setBusy(true); setErr(null); setMissing(null);
     haptic.tap();
     try {
-      const j = await api<{ food: Food }>(`/client/foods/barcode/${code}`);
+      const j = await api<{ food: Food }>(`/client/foods/barcode/${c}`, { noCache: true });
       haptic.success();
       setFound(j.food);
     } catch (e: any) {
       haptic.error();
-      setErr(e?.message ?? 'Такого штрихкода не нашлось');
+      /* Товара нет в каталоге — это не ошибка, а развилка: искать по
+         названию или завести по этикетке. Остальные сбои — ошибка. */
+      if (e?.status === 404) setMissing(c);
+      else setErr(e?.message ?? 'Не удалось найти продукт');
       /* Даём отсканировать ещё раз — вдруг просто смазало. */
       setTimeout(() => { seen.current = null; }, 1500);
     } finally { setBusy(false); }
@@ -113,44 +131,161 @@ export default function Barcode() {
     );
   }
 
+  const mealTitle = MEAL_TITLES[meal ?? ''] ?? 'Приём пищи';
+  const toSearch = () => { haptic.tap(); router.replace(`/food-log?meal=${meal ?? ''}`); };
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#000' }}>
+    <View style={{ flex: 1, backgroundColor: '#0C1118' }}>
       <CameraView
-        style={{ flex: 1 }}
+        style={StyleSheet.absoluteFill}
         facing="back"
         barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
-        onBarcodeScanned={({ data }) => lookup(String(data).replace(/\D+/g, ''))}
+        onBarcodeScanned={({ data }) => lookup(String(data))}
       />
-      {/* Рамка прицела: без неё непонятно, куда подносить пачку. */}
-      <View pointerEvents="none" style={{
-        position: 'absolute', left: 0, right: 0, top: 0, bottom: 0,
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        <View style={{
-          width: '74%', aspectRatio: 1.6, borderRadius: R.lg,
-          borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)',
-        }} />
-        <Text style={{ ...FONT.body, color: '#fff', marginTop: S.lg, textAlign: 'center' }}>
-          {busy ? 'Ищем товар…' : 'Наведите на штрихкод'}
-        </Text>
-        {err ? (
-          <Text style={{ ...FONT.small, color: '#FFB4AE', marginTop: S.sm, textAlign: 'center',
-            paddingHorizontal: S.xl }}>{err}</Text>
-        ) : null}
-      </View>
+      {/* Поверх кадра — тёмная подложка: белый текст на светлой кухне
+          иначе не читается. */}
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill,
+        { backgroundColor: 'rgba(12,17,24,0.45)' }]} />
 
-      <View style={{ position: 'absolute', left: S.lg, right: S.lg, bottom: insets.bottom + 24, gap: S.sm }}>
-        <SysButton label="Ввести руками"
-          onPress={() => { haptic.tap(); router.replace(`/food-log?meal=${meal ?? ''}`); }} />
-      </View>
-      <Pressable onPress={() => { haptic.tap(); router.back(); }} hitSlop={12}
-        accessibilityRole="button" accessibilityLabel="Закрыть сканер"
-        style={({ pressed }) => ({ position: 'absolute', top: insets.top + 8, left: S.lg,
-          width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-          transform: [{ scale: pressed ? 0.94 : 1 }],
-          backgroundColor: 'rgba(0,0,0,0.45)' })}>
-        <Icon name="close" size={20} color="#fff" width={2.2} />
-      </Pressable>
+      <ScrollView contentContainerStyle={{
+        paddingTop: insets.top + S.md, paddingHorizontal: S.lg,
+        paddingBottom: insets.bottom + S.xl,
+      }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+        {/* Шапка: какой приём пищи и куда это кладётся */}
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={{ ...FONT.label, color: 'rgba(255,255,255,0.62)' }}>
+              {mealTitle.toUpperCase()}
+            </Text>
+            <Text style={{ ...FONT.h1, color: '#fff', marginTop: 2 }}>Добавить еду</Text>
+          </View>
+          <Pressable onPress={() => { haptic.tap(); router.back(); }} hitSlop={10}
+            accessibilityRole="button" accessibilityLabel="Закрыть сканер"
+            style={({ pressed }) => ({
+              width: 44, height: 44, borderRadius: 22, alignItems: 'center',
+              justifyContent: 'center', borderWidth: 1.5, borderColor: '#fff',
+              transform: [{ scale: pressed ? 0.94 : 1 }],
+            })}>
+            <Icon name="close" size={20} color="#fff" width={2.2} />
+          </Pressable>
+        </View>
+
+        {/* Возврат к поиску по названию — первый выход, если кода нет */}
+        <Pressable onPress={toSearch}
+          style={({ pressed }) => ({
+            flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+            marginTop: S.md, paddingVertical: 9, paddingHorizontal: 14,
+            borderRadius: R.pill, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)',
+            opacity: pressed ? 0.6 : 1,
+          })}>
+          <View style={{ transform: [{ rotate: '180deg' }] }}>
+            <Icon name="chevr" size={15} color="#fff" />
+          </View>
+          <Text style={{ ...FONT.body, color: '#fff' }}>К поиску</Text>
+        </Pressable>
+
+        <View style={{ marginTop: S.lg }}>
+          <Text style={{ ...FONT.label, color: 'rgba(255,255,255,0.62)' }}>СКАНЕР ПРОДУКТОВ</Text>
+          <Text style={{ ...FONT.h2, color: '#fff', marginTop: 2 }}>Наведите на штрихкод</Text>
+          <Text style={{ ...FONT.body, color: 'rgba(255,255,255,0.72)', marginTop: 4 }}>
+            Держите упаковку ровно, чтобы код попал в рамку
+          </Text>
+        </View>
+
+        {/* Состояние распознавания словами: человек должен понимать,
+            ждёт камера код или уже ищет товар. */}
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start',
+          marginTop: S.lg, paddingVertical: 9, paddingHorizontal: 14,
+          borderRadius: R.pill, backgroundColor: 'rgba(12,17,24,0.72)',
+        }}>
+          <View style={{
+            width: 9, height: 9, borderRadius: 5,
+            backgroundColor: busy ? p.warn : p.primary,
+          }} />
+          <Text style={{ ...FONT.body, color: '#fff' }}>
+            {busy ? 'Ищем продукт…' : 'Автопоиск включён'}
+          </Text>
+        </View>
+
+        {/* Рамка прицела: четыре уголка и линия — как в вебе */}
+        <View style={{ height: 230, marginTop: S.lg, justifyContent: 'center' }}>
+          <View style={StyleSheet.absoluteFill}>
+            {([['tl', { top: 0, left: 0 }], ['tr', { top: 0, right: 0 }],
+               ['bl', { bottom: 0, left: 0 }], ['br', { bottom: 0, right: 0 }]] as const)
+              .map(([k, pos]) => (
+                <View key={k} style={{
+                  position: 'absolute', width: 54, height: 54, ...pos,
+                  borderColor: p.primary,
+                  borderTopWidth: k[0] === 't' ? 4 : 0,
+                  borderBottomWidth: k[0] === 'b' ? 4 : 0,
+                  borderLeftWidth: k[1] === 'l' ? 4 : 0,
+                  borderRightWidth: k[1] === 'r' ? 4 : 0,
+                  borderRadius: 6,
+                }} />
+              ))}
+          </View>
+          <View style={{ height: 2, backgroundColor: p.primary, marginHorizontal: 28 }} />
+        </View>
+
+        {/* Ручной ввод: код бывает стёрт, а цифры под ним читаются */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.xl }}>
+          <Text style={{ ...FONT.h3, color: '#fff' }}>Штрихкод</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.3)' }} />
+          <Text style={{ ...FONT.small, color: 'rgba(255,255,255,0.72)' }}>
+            или введите код вручную
+          </Text>
+        </View>
+        <TextInput
+          value={typed}
+          onChangeText={v => { setTyped(v.replace(/\D+/g, '').slice(0, 20)); setErr(null); }}
+          keyboardType="number-pad"
+          placeholder="Например, 4610401523495"
+          placeholderTextColor="rgba(12,17,24,0.45)"
+          accessibilityLabel="Штрихкод"
+          style={{
+            marginTop: S.sm, backgroundColor: '#fff', color: '#0C1118',
+            borderRadius: R.lg, paddingHorizontal: S.xl, paddingVertical: 16, fontSize: 17,
+          }} />
+
+        {err ? (
+          <Text style={{ ...FONT.small, color: '#FFB4AE', marginTop: S.sm }}>{err}</Text>
+        ) : null}
+
+        {/* Кода нет в каталоге — две дороги, как в вебе */}
+        {missing ? (
+          <View style={{
+            marginTop: S.md, padding: S.lg, borderRadius: R.lg,
+            backgroundColor: 'rgba(12,17,24,0.72)', gap: S.sm,
+          }}>
+            <Text style={{ ...FONT.h3, color: '#fff' }}>Штрихкод распознан</Text>
+            <Text style={{ ...FONT.small, color: 'rgba(255,255,255,0.72)' }}>
+              Товар {missing} пока не найден в каталоге.
+            </Text>
+            <View style={{ gap: S.sm, marginTop: S.xs }}>
+              <SysButton label="Найти по названию" height={44} onPress={toSearch} />
+              <SysButton label="Добавить по этикетке" height={44}
+                onPress={() => {
+                  haptic.tap();
+                  router.replace(`/food-log?meal=${meal ?? ''}&code=${missing}`);
+                }} />
+            </View>
+          </View>
+        ) : null}
+
+        <View style={{ marginTop: S.lg }}>
+          <SysButton label="Найти продукт" variant="prominent"
+            disabled={busy} onPress={() => lookup(typed)} />
+        </View>
+
+        <Text style={{
+          ...FONT.small, color: 'rgba(255,255,255,0.6)',
+          textAlign: 'center', marginTop: S.lg,
+        }}>
+          Камера используется только для считывания кода
+        </Text>
+      </ScrollView>
     </View>
   );
 }
