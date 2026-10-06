@@ -207,7 +207,20 @@ async function request<T = any>(
       const busy = RETRY_STATUS.includes(res.status)
         ? 'Сервер сейчас не отвечает. Попробуйте ещё раз через минуту.'
         : null;
-      throw new ApiError(json?.error ?? busy ?? 'Ошибка сервера', res.status, json);
+      /* Отказ по делу сервер объясняет по-русски — такой текст и несём
+         на экран. Поломку он описывает служебно и по-английски
+         («Server error»), и человеку это не говорит ничего: на экран
+         идёт своя фраза, а подробность с причиной — в журнал, иначе
+         чинить нечего. */
+      const broken = res.status >= 500 && !busy;
+      if (broken) {
+        console.warn('[api] ' + method + ' ' + path + ' → ' + res.status,
+          json?.detail ?? json?.error ?? '(пустой ответ)');
+      }
+      const text = broken
+        ? 'На сервере ошибка. Мы её видим, попробуйте позже.'
+        : (json?.error ?? busy ?? 'Ошибка сервера');
+      throw new ApiError(text, res.status, json);
     }
     return json as T;
   }
