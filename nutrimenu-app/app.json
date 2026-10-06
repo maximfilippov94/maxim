@@ -11,8 +11,8 @@
       "supportsTablet": false,
       "bundleIdentifier": "ru.equa.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "Камера нужна для видеозвонков со специалистом и фото блюд.",
-        "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонков и голосовых сообщений специалисту.",
+        "NSCameraUsageDescription": "Камера нужна для видеозвонка со специалистом, снимков блюд и сканирования штрихкода продукта.",
+        "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонка и голосовых сообщений специалисту.",
         "NSPhotoLibraryUsageDescription": "Доступ к фото нужен, чтобы прикреплять снимки к сообщениям и прогрессу.",
         "UIBackgroundModes": [
           "remote-notification"
@@ -42,7 +42,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Камера нужна, чтобы отсканировать штрихкод продукта и не вводить КБЖУ с упаковки руками."
+          "cameraPermission": "Камера нужна для видеозвонка со специалистом, снимков блюд и сканирования штрихкода продукта."
         }
       ],
       "expo-image-picker",
@@ -70,8 +70,8 @@
       [
         "@config-plugins/react-native-webrtc",
         {
-          "cameraPermission": "Камера нужна для видеозвонка со специалистом.",
-          "microphonePermission": "Микрофон нужен для видеозвонка и голосовых сообщений."
+          "cameraPermission": "Камера нужна для видеозвонка со специалистом, снимков блюд и сканирования штрихкода продукта.",
+          "microphonePermission": "Микрофон нужен для видеозвонка и голосовых сообщений специалисту."
         }
       ]
     ],
