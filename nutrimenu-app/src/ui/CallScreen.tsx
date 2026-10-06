@@ -30,10 +30,11 @@ export function CallScreen() {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
   const c = useCall();
-  const w = webrtc();
 
   if (c.stage === 'idle') return null;
-  const RTCView = w?.RTCView;
+  /* Спрашиваем нативную часть только когда звонок уже идёт: экран висит
+     поверх всей навигации и рисуется на каждом экране. */
+  const RTCView = webrtc()?.RTCView;
   const live = c.stage === 'active';
 
   return (

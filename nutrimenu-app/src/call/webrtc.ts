@@ -2,10 +2,19 @@
  * Доступ к нативному WebRTC.
  *
  * Модуль нативный, и в Expo Go его нет — там внутри только то, что Expo
- * положил в своё приложение заранее. Поэтому грузим его через `require`
- * в try/catch: без своей сборки приложение работает как прежде, а звонки
- * честно говорят, что им нужна своя сборка, вместо падения на старте.
+ * положил в своё приложение заранее.
+ *
+ * Обернуть `require` в try/catch недостаточно, и это проверено на живом
+ * телефоне: при обращении к отсутствующему нативному модулю
+ * `TurboModuleRegistry` бросает `Invariant Violation` уже при
+ * инициализации пакета, и падает не вызов, а весь разбор дерева —
+ * приложение не открывается вовсе. Поэтому сначала спрашиваем, не Expo
+ * ли это Go, и только потом грузим. `isRunningInExpoGo` сама себя
+ * защищает: нативного модуля `ExpoGo` вне Expo Go нет, и она просто
+ * вернёт false.
  */
+import { isRunningInExpoGo } from 'expo';
+
 export interface WebRTC {
   RTCPeerConnection: any;
   RTCSessionDescription: any;
@@ -19,6 +28,10 @@ let cached: WebRTC | null | undefined;
 
 export function webrtc(): WebRTC | null {
   if (cached !== undefined) return cached;
+  if (isRunningInExpoGo()) {
+    cached = null;
+    return cached;
+  }
   try {
     /* eslint-disable @typescript-eslint/no-require-imports */
     const m = require('react-native-webrtc');
