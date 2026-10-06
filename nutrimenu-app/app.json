@@ -25,7 +25,7 @@
     "android": {
       "package": "ru.equa.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/equa-adaptive.png",
         "backgroundColor": "#DBFC15"
       },
       "permissions": [
@@ -57,7 +57,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/equa-splash.png",
           "imageWidth": 190,
           "resizeMode": "contain",
           "backgroundColor": "#121820",
@@ -77,6 +77,6 @@
     "experiments": {
       "typedRoutes": true
     },
-    "icon": "./assets/icon.png"
+    "icon": "./assets/equa-icon.png"
   }
 }
