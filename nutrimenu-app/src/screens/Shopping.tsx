@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, ShoppingResponse, ShoppingItem } from '../api';
-import { S, FONT } from '../theme';
+import { S, FONT, SWIPE } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListHead } from '../ui/List';
 import { Icon } from '../ui/Icon';
@@ -259,13 +259,13 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
                       label={on ? 'Вернуть' : 'Куплено'}
                       systemImage={on ? 'arrow.uturn.backward' : 'checkmark'}
                       onPress={() => onSet(it, !on)}
-                      modifiers={[m.tint(on ? p.text3 : p.primary)]}
+                      modifiers={[m.tint(on ? SWIPE.calm : SWIPE.go)]}
                     />
                     <Button
                       label="Есть дома"
                       systemImage="house"
                       onPress={() => onHome(it)}
-                      modifiers={[m.tint(p.text3)]}
+                      modifiers={[m.tint(SWIPE.calm)]}
                     />
                   </SwipeActions.Actions>
                   <HStack spacing={12}
@@ -308,7 +308,7 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
               <SwipeActions key={it.key}>
                 <SwipeActions.Actions edge="trailing">
                   <Button label="Вернуть" systemImage="arrow.uturn.backward"
-                    onPress={() => onBack(it)} modifiers={[m.tint(p.primary)]} />
+                    onPress={() => onBack(it)} modifiers={[m.tint(SWIPE.go)]} />
                 </SwipeActions.Actions>
                 <HStack spacing={12}>
                   <SImage systemName="house" size={19} color={p.text3} />
