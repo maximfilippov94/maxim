@@ -9,7 +9,10 @@
  * Не нашли — это не тупик: предлагаем завести продукт руками, уже с
  * запомненным штрихкодом.
  */
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing,
+} from 'react-native-reanimated';
 import {
   View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Linking, StyleSheet,
 } from 'react-native';
@@ -48,6 +51,19 @@ export default function Barcode() {
      по нему предлагаем завести продукт по этикетке — как в вебе. */
   const [missing, setMissing] = useState<string | null>(null);
   const [typed, setTyped] = useState('');
+
+  /* Движение линии прицела. Значения из веба: 2,3 секунды на проход,
+     от −30 до +30 точек, прозрачность от 0,55 до единицы. */
+  const sweepAt = useSharedValue(0);
+  useEffect(() => {
+    sweepAt.value = withRepeat(
+      withTiming(1, { duration: 2300, easing: Easing.inOut(Easing.ease) }),
+      -1, true);
+  }, [sweepAt]);
+  const sweep = useAnimatedStyle(() => ({
+    transform: [{ translateY: -30 + sweepAt.value * 60 }],
+    opacity: 0.55 + sweepAt.value * 0.45,
+  }));
 
   const lookup = useCallback(async (code: string) => {
     const c = String(code ?? '').replace(/\D+/g, '');
@@ -226,7 +242,23 @@ export default function Barcode() {
                 }} />
               ))}
           </View>
-          <View style={{ height: 2, backgroundColor: p.primary, marginHorizontal: 28 }} />
+          {/* Линия ходит вверх-вниз, как в вебе (`scan-sweep`): 2,3 с
+              туда-обратно, со свечением. Неподвижная полоса читается
+              как часть рамки, а движение говорит, что камера работает
+              и ждёт код. «Уменьшение движения» в настройках телефона
+              останавливает её — об этом заботится ReducedMotionConfig
+              на корне приложения. */}
+          <Animated.View style={[{
+            height: 2, backgroundColor: p.primary, marginHorizontal: 28,
+            shadowColor: p.primary, shadowOpacity: 0.6,
+            shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+          }, sweep]} />
+          <Text style={{
+            position: 'absolute', left: 12, right: 12, bottom: 0,
+            textAlign: 'center', fontSize: 11, color: '#fff',
+          }}>
+            Распознавание начнётся автоматически
+          </Text>
         </View>
 
         {/* Ручной ввод: код бывает стёрт, а цифры под ним читаются */}
