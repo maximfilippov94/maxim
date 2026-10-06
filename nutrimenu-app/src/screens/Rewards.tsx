@@ -4,7 +4,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useApp } from '../store';
 import { api, Gamification, GamReward, ClientTask } from '../api';
@@ -66,7 +66,7 @@ export default function Rewards() {
             в вебе: сначала сколько баллов, рядом уровень и серия одной
             строкой, под ними полоса и сколько XP до следующего уровня.
             Серия стояла отдельной карточкой — это было своё деление. */}
-        <Animated.View entering={FadeInDown.duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <Card style={{ marginTop: S.md, marginBottom: S.md }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -101,7 +101,7 @@ export default function Rewards() {
             Оставлено отдельной плиткой: убирать работающее, чтобы сойтись
             с сайтом, — не то же самое, что свести оформление. */}
         {g.perfect_days ? (
-          <Animated.View entering={FadeInDown.delay(40).duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <Card style={{ marginBottom: S.md, flexDirection: 'row',
               alignItems: 'center', gap: S.md }}>
               <Icon name="check" size={17} color={p.mp} width={1.8} />

@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, WO_FEEL } from '../api';
 import { S, R, FONT } from '../theme';
@@ -51,7 +51,7 @@ export default function WorkoutFinish() {
         paddingBottom: insets.bottom + S.xxl,
       }}
       keyboardShouldPersistTaps="handled">
-      <Animated.View entering={FadeInDown.duration(300)} style={{ alignItems: 'center' }}>
+      <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: 'center' }}>
         <View style={{
           width: 64, height: 64, borderRadius: 32, backgroundColor: p.primarySoft,
           alignItems: 'center', justifyContent: 'center', marginBottom: S.lg,

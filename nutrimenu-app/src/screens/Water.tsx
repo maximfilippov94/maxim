@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, WaterResponse } from '../api';
 import { S, R, FONT } from '../theme';
@@ -193,7 +193,7 @@ export default function Water() {
           <Text style={{ ...FONT.h1, color: p.text, marginTop: S.xs }}>Вода</Text>
         </View>
 
-        <Animated.View entering={FadeInDown.duration(240)}
+        <Animated.View entering={FadeIn.duration(240)}
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center',
             paddingTop: S.lg, paddingBottom: S.lg }}>
           {/* Пустая часть — та же вода, но бледная: на вашем рисунке это
@@ -210,14 +210,14 @@ export default function Water() {
           </Text>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(60).duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <Steps onAdd={add} />
         </Animated.View>
 
         {/* Норма по умолчанию 2000 мл, а она зависит от веса и жары.
             Маршрут правки был на сервере с самого начала, но его не звал
             ни браузер, ни приложение — поменять норму было негде. */}
-        <Animated.View entering={FadeInDown.delay(90).duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <ListHead>Норма на день</ListHead>
           <View style={{ flexDirection: 'row', gap: S.sm, paddingHorizontal: S.lg }}>
             {GOALS.map(g => {
@@ -243,7 +243,7 @@ export default function Water() {
         {/* Сегодняшний день в истории не показываем: он уже наверху
             крупной цифрой, а в списке отставал бы на один глоток. */}
         {d.history.filter(h => h.logged_on !== today).length ? (
-          <Animated.View entering={FadeInDown.delay(120).duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <ListHead>Последние дни</ListHead>
             <ListGroup>
               {d.history.filter(h => h.logged_on !== today).reverse().map((h, i) => (

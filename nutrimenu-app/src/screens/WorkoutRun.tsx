@@ -18,9 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, {
-  FadeIn, SlideInDown, useAnimatedProps, useSharedValue, withTiming, Easing,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, SlideInDown, useAnimatedProps, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, mediaUrl, WoSession, WoExercise, WO_LEVELS } from '../api';
 import { S, R, FONT } from '../theme';

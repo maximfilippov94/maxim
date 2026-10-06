@@ -13,7 +13,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, SpWorkoutRow, WO_LEVELS } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -85,7 +85,7 @@ export default function SpWorkouts() {
             <Empty icon="dumbbell" title="Тренировок пока нет"
               note="Соберите первую из библиотеки упражнений — потом её можно назначить сразу нескольким клиентам и повторять каждую неделю." />
           ) : rows.map((w, i) => (
-            <Animated.View key={w.id} entering={FadeInDown.delay(i * 35).duration(240)}>
+            <Animated.View key={w.id} entering={FadeIn.duration(240)}>
               <Pressable onPress={() => open(w.id)}
                 style={({ pressed }) => ({
                   flexDirection: 'row', alignItems: 'center', gap: S.md,

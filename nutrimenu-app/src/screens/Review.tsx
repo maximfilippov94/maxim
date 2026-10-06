@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, MyReview } from '../api';
 import { S, R, FONT, STAR, alpha } from '../theme';
@@ -102,7 +102,7 @@ export default function ReviewScreen() {
           paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
         }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginTop: S.md, gap: S.md }}>
               <View>
                 <Text style={{ ...FONT.h3, color: p.text }}>{d.specialist.name}</Text>

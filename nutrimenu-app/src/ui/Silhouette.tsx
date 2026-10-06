@@ -1,8 +1,6 @@
 import React from 'react';
 import Svg, { Defs, Mask, Image as SvgImage, Rect, Path, G } from 'react-native-svg';
-import Animated, {
-  useAnimatedProps, useDerivedValue, withRepeat, withTiming, Easing, SharedValue,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useDerivedValue, withRepeat, withTiming, Easing, SharedValue } from 'react-native-reanimated';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 

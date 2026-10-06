@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, mediaUrl, Post } from '../api';
 import { uploadForm } from '../upload';
@@ -121,7 +121,7 @@ export default function Feed() {
               note="Первый пост может быть вашим: фото тарелки, результат недели или мысль о том, что помогает держаться." />
           ) : list.map((post, i) => (
             <Animated.View key={post.id}
-              entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(220)}>
+              entering={FadeIn.duration(220)}>
               <PostCard post={post} onLike={() => like(post)} onDelete={() => remove(post.id)} />
             </Animated.View>
           ))}

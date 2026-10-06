@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import {
   api, Health, Allergy, Med, Lab, Recommendation,
@@ -258,7 +258,7 @@ function Allergies({ list, edit, postTo, onAdd, onRemove, onError }: {
           ? 'Пока ничего. Аллергии и непереносимости учитываются при составлении меню.'
           : 'Специалист пока не отметил аллергий.'} />
       ) : list.map((a, i) => (
-        <Animated.View key={a.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+        <Animated.View key={a.id} entering={FadeIn.duration(200)}>
           <Card style={{ marginBottom: S.sm, flexDirection: 'row', alignItems: 'center', gap: S.md }}>
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={{ ...FONT.h3, color: p.text }}>{a.title}</Text>
@@ -389,7 +389,7 @@ function Meds({ list, edit, postTo, spec, finishTo, onAdd, onRemove, onError }: 
       ) : list.map((m, i) => {
         const active = !m.ended_on;
         return (
-          <Animated.View key={m.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+          <Animated.View key={m.id} entering={FadeIn.duration(200)}>
             <Card style={{ marginBottom: S.sm, gap: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
                 <View style={{ flex: 1, minWidth: 0 }}>
@@ -641,7 +641,7 @@ function Labs({ list, edit, postTo, spec, onAdd, onRemove, onError }: {
           ? 'Анализов пока нет. Файл хранится как есть — показатели по строкам не разбираются.'
           : 'Анализы пока не добавлены.'} />
       ) : list.map((l, i) => (
-        <Animated.View key={l.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+        <Animated.View key={l.id} entering={FadeIn.duration(200)}>
           <Card style={{ marginBottom: S.sm }}>
             <Pressable onPress={() => open(l)} disabled={!l.file_url}
               style={({ pressed }) => ({
@@ -779,7 +779,7 @@ function Recs({ list, edit, clientId, spec, onAdd, onRemove, onError }: {
           r.valid_until ? `до ${day(r.valid_until)}` : null,
         ].filter(Boolean).join(' · ');
         return (
-        <Animated.View key={r.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+        <Animated.View key={r.id} entering={FadeIn.duration(200)}>
           <Card style={{ marginBottom: S.sm, gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
               <View style={{ flex: 1 }}>

@@ -13,7 +13,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, ChatPeer } from '../api';
@@ -93,7 +93,7 @@ export default function ChatList() {
             onPress={() => { haptic.tap(); router.push('/specialist' as any); }} />
         </View>
       ) : list.map((c, i) => (
-        <Animated.View key={c.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(220)}>
+        <Animated.View key={c.id} entering={FadeIn.duration(220)}>
           <Pressable onPress={() => {
             haptic.tap();
             /* У EQUA AI свой экран: там ждут ответа здесь и сейчас и

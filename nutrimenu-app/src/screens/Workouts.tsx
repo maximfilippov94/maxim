@@ -17,9 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, {
-  FadeInDown, useAnimatedStyle, useSharedValue, withTiming, Easing,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useApp } from '../store';
 import {
   api, mediaUrl, WoWeek, WoPlanItem, WoHistoryItem, WO_LEVELS, WO_FEEL,
@@ -271,7 +269,7 @@ function WeekView({ d, doneToday, onStart, onSkip }: {
 
   return (
     <>
-      <Animated.View entering={FadeInDown.duration(260)}>
+      <Animated.View entering={FadeIn.duration(260)}>
         <Card style={{ marginBottom: S.lg }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
@@ -323,12 +321,12 @@ function WeekView({ d, doneToday, onStart, onSkip }: {
       </Animated.View>
 
       {it ? (
-        <Animated.View entering={FadeInDown.delay(40).duration(260)}>
+        <Animated.View entering={FadeIn.duration(260)}>
           <HeroCard it={it} badge={it.status === 'in_progress' ? 'Продолжаем' : 'Сегодня'}
             onStart={onStart} onSkip={onSkip} />
         </Animated.View>
       ) : doneToday ? (
-        <Animated.View entering={FadeInDown.delay(40).duration(260)}>
+        <Animated.View entering={FadeIn.duration(260)}>
           <Card style={{ marginBottom: S.lg }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
               <Shot url={doneToday.cover} size={46} />
@@ -345,7 +343,7 @@ function WeekView({ d, doneToday, onStart, onSkip }: {
           </Card>
         </Animated.View>
       ) : (
-        <Animated.View entering={FadeInDown.delay(40).duration(260)}>
+        <Animated.View entering={FadeIn.duration(260)}>
           <Card style={{ marginBottom: S.lg, flexDirection: 'row', alignItems: 'center', gap: S.md }}>
             <View style={{
               width: 46, height: 46, borderRadius: 14, backgroundColor: p.inset,
@@ -360,7 +358,7 @@ function WeekView({ d, doneToday, onStart, onSkip }: {
       )}
 
       {d.next ? (
-        <Animated.View entering={FadeInDown.delay(80).duration(260)}>
+        <Animated.View entering={FadeIn.duration(260)}>
           <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Следующая тренировка</Text>
           <Card style={{ flexDirection: 'row', alignItems: 'center', gap: S.md, padding: S.md }}>
             <Shot url={d.next.cover} size={46} />
@@ -475,7 +473,7 @@ function PlanView({ d, onStart }: { d: WoWeek; onStart: (i: WoPlanItem) => void 
         const ds = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
         const list = by[ds] ?? [];
         return (
-          <Animated.View key={ds} entering={FadeInDown.delay(i * 40).duration(260)}>
+          <Animated.View key={ds} entering={FadeIn.duration(260)}>
             <Card style={{
               marginBottom: S.sm, padding: S.md,
               borderWidth: ds === t ? 1.5 : undefined,

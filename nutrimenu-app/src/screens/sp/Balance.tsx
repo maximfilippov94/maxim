@@ -9,7 +9,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, Alert, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, BalanceResponse, BalanceEntry, Subscription, PayoutDetails } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -152,7 +152,7 @@ export default function SpBalance() {
 
         {tab === 'moves' ? (
           d.entries.length ? d.entries.map((e, i) => (
-            <Animated.View key={e.id} entering={FadeInDown.delay(Math.min(i, 8) * 30).duration(220)}>
+            <Animated.View key={e.id} entering={FadeIn.duration(220)}>
               <EntryRow e={e} />
             </Animated.View>
           )) : (
@@ -306,7 +306,7 @@ function DetailsForm({ current, onDone, onCancel }: {
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(220)}>
+    <Animated.View entering={FadeIn.duration(220)}>
       <Card style={{ marginTop: S.md }}>
         <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.md }}>Реквизиты для вывода</Text>
 
@@ -396,7 +396,7 @@ function PayoutForm({ details, balance, onDone, onCancel, onEdit }: {
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(220)}>
+    <Animated.View entering={FadeIn.duration(220)}>
       <Card style={{ marginTop: S.md }}>
         <Text style={{ ...FONT.h3, color: p.text }}>Вывод денег</Text>
         <Muted style={{ marginTop: 4 }}>

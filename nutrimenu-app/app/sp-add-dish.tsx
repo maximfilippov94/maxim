@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../src/store';
 import {
   api, mediaUrl, Dish, MEAL_TITLES, MEAL_KEYS, MealKey, mealKeyOf, dishMeals,
@@ -173,7 +173,7 @@ export default function AddDish() {
         }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {shown.map((d, i) => (
             <Animated.View key={d.id}
-              entering={FadeInDown.delay(Math.min(i, 10) * 20).duration(200)}>
+              entering={FadeIn.duration(200)}>
               <DishTile dish={d} size={cardW}
                 onPress={() => { haptic.tap(); setPicked(d); }} />
             </Animated.View>

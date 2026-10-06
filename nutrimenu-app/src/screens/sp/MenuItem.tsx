@@ -15,7 +15,7 @@ import { View, Text, ScrollView, ActivityIndicator, Pressable } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, mediaUrl, DishFull, MEAL_TITLES } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -104,7 +104,7 @@ export default function SpMenuItem() {
           {d.name}
         </Text>
 
-        <Animated.View entering={FadeInDown.duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <View style={{
             width: '100%', aspectRatio: 1, borderRadius: R.lg, overflow: 'hidden',
             backgroundColor: p.inset, marginBottom: S.md,
@@ -119,7 +119,7 @@ export default function SpMenuItem() {
           </View>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(40).duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <Card style={{ marginBottom: S.md }}>
             <Label>Порция</Label>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
@@ -165,7 +165,7 @@ export default function SpMenuItem() {
         </Animated.View>
 
         {d.ingredients?.length ? (
-          <Animated.View entering={FadeInDown.delay(80).duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
               Состав
             </Text>
@@ -187,7 +187,7 @@ export default function SpMenuItem() {
         ) : null}
 
         {d.instructions ? (
-          <Animated.View entering={FadeInDown.delay(120).duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
               Рецепт
             </Text>

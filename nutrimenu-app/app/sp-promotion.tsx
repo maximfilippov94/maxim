@@ -14,7 +14,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../src/store';
 import { api, PromotionState } from '../src/api';
 import { S, FONT } from '../src/theme';
@@ -92,7 +92,7 @@ export default function SpPromotion() {
 
         <View style={{ paddingHorizontal: S.lg, paddingTop: S.md }}>
           {cur ? (
-            <Animated.View entering={FadeInDown.duration(220)}>
+            <Animated.View entering={FadeIn.duration(220)}>
               <Card>
                 <Label>Карточка поднята</Label>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 }}>

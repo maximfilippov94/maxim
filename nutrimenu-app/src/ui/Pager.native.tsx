@@ -1,8 +1,6 @@
 import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import PagerView from 'react-native-pager-view';
-import Animated, {
-  useEvent, useHandler, useSharedValue, withTiming, Easing,
-} from 'react-native-reanimated';
+import Animated, { useEvent, useHandler, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import type { PagerHandle, PagerProps } from './Pager';
 
 const AnimatedPager = Animated.createAnimatedComponent(PagerView);

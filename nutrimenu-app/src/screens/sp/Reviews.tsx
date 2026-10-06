@@ -9,7 +9,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, Review } from '../../api';
 import { plural } from '../../format';
@@ -74,7 +74,7 @@ export default function SpReviews() {
 
         {d.reviews.map((r, i) => (
           <Animated.View key={r.id}
-            entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+            entering={FadeIn.duration(200)}>
             <Card style={{ marginTop: S.md, gap: S.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
                 <View style={{ flexDirection: 'row', gap: 2 }}>

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, Food, FoodMeal, FOOD_MEALS } from '../api';
 import { round, plural } from '../format';
@@ -233,7 +233,7 @@ export default function FoodLog() {
         ) : (
           <View style={{ marginTop: S.sm }}>
             {found.map((f, i) => (
-              <Animated.View key={f.id} entering={FadeInDown.delay(Math.min(i, 8) * 20).duration(180)}>
+              <Animated.View key={f.id} entering={FadeIn.duration(180)}>
                 <Pressable onPress={() => open(f)}
                   style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: S.md,
                     minHeight: 52, paddingVertical: 10,

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../../store';
 import { api, SpClient } from '../../api';
@@ -75,7 +75,7 @@ export default function SpChats() {
         <Empty icon="bubble.left.and.bubble.right" title="Переписок пока нет"
           note="Напишите клиенту из его карточки — диалог появится здесь." />
       ) : shown.map((c, i) => (
-        <Animated.View key={c.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(220)}>
+        <Animated.View key={c.id} entering={FadeIn.duration(220)}>
           <Pressable onPress={() => { haptic.tap(); router.push(`/sp-chat/${c.id}`); }}>
             {({ pressed }) => (
               <Card style={{ marginBottom: S.sm, flexDirection: 'row', alignItems: 'center',

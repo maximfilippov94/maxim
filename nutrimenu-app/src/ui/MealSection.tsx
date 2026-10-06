@@ -14,10 +14,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
-import Animated, {
-  LinearTransition, FadeIn, FadeOut,
-  useSharedValue, useAnimatedStyle, withTiming, Easing,
-} from 'react-native-reanimated';
+import Animated, { LinearTransition, FadeIn, FadeOut, useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useApp } from '../store';

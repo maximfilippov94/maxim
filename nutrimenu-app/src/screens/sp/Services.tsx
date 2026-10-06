@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, SpService, SpServiceType, SERVICE_KIND } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -117,7 +117,7 @@ export default function SpServices() {
         </View>
 
         {open ? (
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginTop: S.md }}>
               <Label>Название</Label>
               <TextInput value={title} onChangeText={t => { setTitle(t); setErr(null); }}
@@ -219,7 +219,7 @@ export default function SpServices() {
           <Empty icon="tag" title="Услуг пока нет"
             note="Добавьте хотя бы одну — клиент увидит её в разделе «Услуги»." />
         ) : list.map((s, i) => (
-          <Animated.View key={s.id} entering={FadeInDown.delay(Math.min(i, 8) * 30).duration(220)}>
+          <Animated.View key={s.id} entering={FadeIn.duration(220)}>
             <Card style={{ marginTop: S.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
                 <View style={{ flex: 1 }}>

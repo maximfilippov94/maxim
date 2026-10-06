@@ -16,7 +16,7 @@ import {
   View, Text, TextInput, Pressable, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { api, Food, MEAL_TITLES, MealKey } from '../src/api';
 import { S, R, FONT } from '../src/theme';
 import { useApp } from '../src/store';
@@ -174,7 +174,7 @@ export default function SpAddFood() {
         ) : (
           <View style={{ marginTop: S.md }}>
             {found.map((f, i) => (
-              <Animated.View key={f.id} entering={FadeInDown.delay(Math.min(i, 8) * 24).duration(220)}>
+              <Animated.View key={f.id} entering={FadeIn.duration(220)}>
                 <Pressable onPress={() => {
                   haptic.tap();
                   setGrams(String(round(f.per_serving_g) || 100));

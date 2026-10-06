@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { useApp } from '../../store';
@@ -231,12 +231,12 @@ function WorkoutsTab({ cid }: { cid: number }) {
                     }} />
                   ) : null}
                   {w.skipped ? (
-                    <Animated.View entering={FadeInDown.delay(i * 40).duration(320)} style={{
+                    <Animated.View entering={FadeIn.duration(320)} style={{
                       height: `${(w.skipped / max) * 100}%`,
                       borderRadius: 6, backgroundColor: p.danger + '33', marginBottom: 2,
                     }} />
                   ) : null}
-                  <Animated.View entering={FadeInDown.delay(i * 40).duration(320)} style={{
+                  <Animated.View entering={FadeIn.duration(320)} style={{
                     height: `${(w.done / max) * 100}%`,
                     borderRadius: 6, backgroundColor: p.primary,
                   }} />
@@ -414,7 +414,7 @@ function Overview({ c, sub, onChanged }: {
   const tone = !sub || sub.kind !== 'subscription' || sub.days_left == null ? p.primary
     : sub.days_left <= 3 ? p.danger : sub.days_left <= 7 ? p.warn : p.primary;
   return (
-    <Animated.View entering={FadeInDown.duration(220)}>
+    <Animated.View entering={FadeIn.duration(220)}>
       <WeekReport cid={c.id} />
       {/* Какую услугу клиент подключил и до какого числа: специалист
           должен видеть это, не спрашивая человека. */}
@@ -646,7 +646,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
 
   if (!menu) {
     return (
-      <Animated.View entering={FadeInDown.duration(220)}>
+      <Animated.View entering={FadeIn.duration(220)}>
         <Empty icon="calendar.badge.plus" title="Меню ещё нет"
           note="Создайте первое меню для клиента." />
         <View style={{ gap: S.sm }}>
@@ -674,7 +674,7 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     (a, i) => a + scaleN(i, draft[i.id] ?? i.portion_g).kcal, 0);
 
   return (
-    <Animated.View entering={FadeInDown.duration(220)}>
+    <Animated.View entering={FadeIn.duration(220)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: S.sm }}>
         <Text style={{ ...FONT.h3, color: p.text, flex: 1 }} numberOfLines={1}>{menu.title}</Text>
@@ -946,7 +946,7 @@ function GenReport({ r }: { r: GenReportData }) {
   const { p } = useApp();
   const sign = (v: number | null) => v == null ? '' : `${v > 0 ? '+' : ''}${v}`;
   return (
-    <Animated.View entering={FadeInDown.duration(220)}>
+    <Animated.View entering={FadeIn.duration(220)}>
       <Card style={{ marginTop: S.lg, gap: S.sm }}>
         <Label>Черновик готов</Label>
         <Muted style={{ lineHeight: 19 }}>
@@ -1027,7 +1027,7 @@ function TasksTab({ cid }: { cid: number }) {
   if (!list) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
 
   return (
-    <Animated.View entering={FadeInDown.duration(220)}>
+    <Animated.View entering={FadeIn.duration(220)}>
       <Card style={{ marginBottom: S.md, gap: S.sm }}>
         <Label>Новое задание</Label>
         <TaskField value={title} onChange={setTitle} placeholder="Сдать общий анализ крови" />
@@ -1172,7 +1172,7 @@ function ProgressTab({ cid }: { cid: number }) {
   const delta = Math.round((last - first) * 10) / 10;
 
   return (
-    <Animated.View entering={FadeInDown.duration(220)}>
+    <Animated.View entering={FadeIn.duration(220)}>
       <Card style={{ marginBottom: S.md }}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
           <Text style={{ ...FONT.num, color: p.text }}>{kg(last)}</Text>

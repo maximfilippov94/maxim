@@ -12,7 +12,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { S, R, FONT } from '../theme';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
@@ -92,7 +92,7 @@ export function AuthShell({ children, back }: {
           ) : null}
         </View>
 
-        <Animated.View entering={FadeInDown.duration(260)}
+        <Animated.View entering={FadeIn.duration(260)}
           style={{
             flex: 1, backgroundColor: ON_PHOTO.sheet,
             borderTopLeftRadius: 28, borderTopRightRadius: 28,

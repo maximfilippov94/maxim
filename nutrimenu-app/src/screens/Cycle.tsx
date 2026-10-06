@@ -14,7 +14,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api } from '../api';
 import { S, R, FONT, LAYOUT, CYCLE, mix, alpha } from '../theme';
@@ -289,7 +289,7 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
         {err ? <Muted>{err}</Muted> : null}
 
         {/* Сводка: где человек находится в цикле прямо сейчас. */}
-        <Animated.View entering={FadeInDown.duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <Card style={{ marginBottom: S.md }}>
             <Text style={{ ...FONT.caption, color: p.text3 }}>
               {s.phase_label || 'Женское здоровье'}
@@ -348,7 +348,7 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
         {/* Прогноз ждёт ответа. В вебе это первая секция под сводкой:
             сервер не отмечает начало сам, пока человек не подтвердит. */}
         {s.prediction_due ? (
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginBottom: S.md, borderWidth: 1, borderColor: alpha(CYCLE, 40) }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
                 <View style={{
@@ -401,7 +401,7 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
         {/* Окончание тоже подтверждает человек: автоматически период не
             закрывается — в вебе так же. */}
         {s.end_due ? (
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginBottom: S.md, borderWidth: 1, borderColor: alpha(CYCLE, 40) }}>
               <Text style={{ ...FONT.caption, color: p.text3 }}>Уточним календарь</Text>
               <Text style={{ ...FONT.h3, color: p.text }}>Месячные завершились?</Text>
@@ -494,7 +494,7 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
         {/* Отметка выбранного дня. Открывается по нажатию на число —
             постоянно висящая форма занимала бы весь экран. */}
         {picked ? (
-          <Animated.View entering={FadeInDown.duration(200)}>
+          <Animated.View entering={FadeIn.duration(200)}>
             <Card>
               <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>
                 {/* «5 октября», а не «5 октябрь»: месяц рядом с числом

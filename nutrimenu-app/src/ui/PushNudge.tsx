@@ -18,7 +18,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, Pressable, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import Animated, { FadeInDown, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { S, R, FONT } from '../theme';
@@ -77,7 +77,7 @@ export function PushNudge() {
   };
 
   return (
-    <Animated.View entering={FadeInDown.duration(260)} exiting={FadeOut.duration(160)}
+    <Animated.View entering={FadeIn.duration(260)} exiting={FadeOut.duration(160)}
       style={{
         flexDirection: 'row', alignItems: 'center', gap: S.md,
         backgroundColor: p.primarySoft, borderRadius: R.lg,

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, thumbUrl, WeekResponse, MEAL_ORDER, MEAL_TITLES } from '../api';
 import { Image } from 'expo-image';
@@ -80,7 +80,7 @@ export default function Week() {
       ) : (
         <>
           {/* Полоса дней: день недели сверху, число снизу */}
-          <Animated.View entering={FadeInDown.duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: S.sm, paddingBottom: S.md }}>
               {Array.from({ length: menu.days_count }, (_, i) => i + 1).map(n => {
@@ -130,7 +130,7 @@ export default function Week() {
           </View>
 
           {tot ? (
-            <Animated.View entering={FadeInDown.delay(40).duration(240)}
+            <Animated.View entering={FadeIn.duration(240)}
               style={{ marginBottom: S.xl, gap: S.md }}>
               {/* Доля плана от личной нормы — кольцом, как в вебе: строка
                   «1790 / 1770» одна ничего не говорит о том, много это
@@ -194,7 +194,7 @@ export default function Week() {
               const kcal = group.reduce((a, i) => a + (i.nutrition?.kcal ?? 0), 0);
               return (
                 <Animated.View key={type} layout={LinearTransition.duration(220)}
-                  entering={FadeInDown.duration(220)}>
+                  entering={FadeIn.duration(220)}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between',
                     alignItems: 'baseline', marginTop: S.md, marginBottom: S.sm }}>
                     <Text style={{ ...FONT.h3, color: p.text }}>{MEAL_TITLES[type]}</Text>

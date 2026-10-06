@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, Verification, SpecDoc, DocKind, DOC_KINDS } from '../../api';
 import { openPrivateFile } from '../../openPrivateFile';
@@ -157,7 +157,7 @@ export default function VerificationScreen() {
           paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
         }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginTop: S.md, gap: S.sm }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
                 <View style={{
@@ -199,7 +199,7 @@ export default function VerificationScreen() {
             </Card>
           ) : d.documents.map((doc, i) => (
             <Animated.View key={doc.id}
-              entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+              entering={FadeIn.duration(200)}>
               <DocRow doc={doc} onOpen={() => open(doc)} onRemove={() => remove(doc.id)}
                 onPublic={on => setPublic(doc.id, on)} />
             </Animated.View>

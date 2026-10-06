@@ -10,7 +10,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, WoClientRow, WO_CLIENT_STATE } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -74,7 +74,7 @@ export default function WoClients() {
             <Empty icon="person.2" title="Подопечных пока нет"
               note="Клиент появится здесь, как только подключит вашу услугу или придёт по вашему коду." />
           ) : rows.map((c, i) => (
-            <Animated.View key={c.id} entering={FadeInDown.delay(i * 40).duration(260)}>
+            <Animated.View key={c.id} entering={FadeIn.duration(260)}>
               <Pressable onPress={() => { haptic.tap();
                   router.push({ pathname: '/sp-client/[id]', params: { id: String(c.id) } }); }}
                 style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}>

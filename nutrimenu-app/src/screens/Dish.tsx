@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, mediaUrl, DishItem, MEAL_TITLES } from '../api';
 import { S, R, FONT, STAR, alpha } from '../theme';
@@ -142,7 +142,7 @@ export default function Dish() {
         </Text>
 
         {mediaUrl(x.photo_url) ? (
-          <Animated.View entering={FadeInDown.duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             {/* Квадрат, а не низкая полоса: снимки блюд квадратные, и от
                 тарелки в полосе оставалась только середина. */}
             <Image source={{ uri: mediaUrl(x.photo_url)! }}
@@ -154,7 +154,7 @@ export default function Dish() {
 
         {/* Порцию назначает специалист — клиент её видит, но не меняет:
             иначе план и отчёт по нему перестают сходиться. */}
-        <Animated.View entering={FadeInDown.delay(40).duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <Card style={{ marginBottom: S.md }}>
             <Label>Порция</Label>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
@@ -180,7 +180,7 @@ export default function Dish() {
             отклоняет оценку неотмеченного блюда, и нажатие кончалось бы
             отказом. Средняя оценка видна всегда — как `dishRatingLine`. */}
         {(done || avg) ? (
-          <Animated.View entering={FadeInDown.delay(60).duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <Card style={{ marginBottom: S.md }}>
               {done ? (
                 <>
@@ -219,7 +219,7 @@ export default function Dish() {
         ) : null}
 
         {x.ingredients?.length ? (
-          <Animated.View entering={FadeInDown.delay(80).duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>Состав</Text>
             <Card style={{ padding: 0, marginBottom: S.md }}>
               {x.ingredients.map((ing, i) => (
@@ -239,7 +239,7 @@ export default function Dish() {
         ) : null}
 
         {x.instructions ? (
-          <Animated.View entering={FadeInDown.delay(120).duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>Рецепт</Text>
             <Card style={{ marginBottom: S.md }}>
               <Text style={{ fontSize: 15, lineHeight: 22, color: p.text2 }}>{x.instructions}</Text>

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Switch, Pressable, ActivityIndicator } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, mediaUrl, Preferences, parseList } from '../api';
 import { S, R, FONT } from '../theme';
@@ -124,7 +124,7 @@ export default function Profile() {
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
       }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-        <Animated.View entering={FadeInDown.duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <Card style={{ marginTop: S.md, marginBottom: S.md, alignItems: 'center', paddingVertical: S.xl }}>
             <Pressable onPress={changePhoto} disabled={photoBusy} hitSlop={8}
               style={({ pressed }) => ({ opacity: pressed || photoBusy ? 0.6 : 1 })}>

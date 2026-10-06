@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, Ticket, TicketMessage, TICKET_STATUS } from '../api';
 import { S, R, FONT } from '../theme';
@@ -61,7 +61,7 @@ export default function Support() {
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
       }} showsVerticalScrollIndicator={false}>
 
-        <Animated.View entering={FadeInDown.duration(220)}>
+        <Animated.View entering={FadeIn.duration(220)}>
           <Card style={{ marginTop: S.md }}>
             <Muted style={{ lineHeight: 20 }}>
               Здесь отвечают на вопросы о сервисе. Про питание, меню и вес
@@ -81,7 +81,7 @@ export default function Support() {
           </Card>
         ) : list.map((t, i) => (
           <Animated.View key={t.id}
-            entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+            entering={FadeIn.duration(200)}>
             <Pressable onPress={() => { haptic.tap(); setView({ kind: 'thread', id: t.id }); }}
               style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
               <Card style={{ marginTop: S.md, gap: 4 }}>

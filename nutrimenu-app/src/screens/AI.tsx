@@ -17,7 +17,7 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Switch } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, AiState, AiPlan, AI_PLAN_WHAT } from '../api';
@@ -179,7 +179,7 @@ export default function AI() {
 
         {/* ---------------------------------------------- уже подключено */}
         {cur ? (
-          <Animated.View entering={FadeInDown.duration(220)} style={{ paddingHorizontal: S.lg, paddingTop: S.md }}>
+          <Animated.View entering={FadeIn.duration(220)} style={{ paddingHorizontal: S.lg, paddingTop: S.md }}>
             <Card>
               <Label>Подключено</Label>
               <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>{cur.title}</Text>

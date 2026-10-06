@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { Image } from 'expo-image';
 import {
@@ -161,7 +161,7 @@ function DishRow({ dish: d, index }: { dish: Dish; index: number }) {
   const portion = d.base_portion_g || 250;
   const photo = thumbUrl(d);
   return (
-    <Animated.View entering={FadeInDown.delay(Math.min(index, 10) * 20).duration(200)}>
+    <Animated.View entering={FadeIn.duration(200)}>
       <Pressable onPress={() => { haptic.tap(); router.push(`/sp-dish-edit?id=${d.id}`); }}
         style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}>
         <Card style={{ marginBottom: S.sm, flexDirection: 'row', gap: S.md }}>

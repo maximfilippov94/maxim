@@ -9,9 +9,7 @@ import {
   View, Text, ScrollView, Keyboard, ActivityIndicator, Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, {
-  FadeInDown, useAnimatedKeyboard, useAnimatedStyle,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, ChatMessage } from '../api';
@@ -309,7 +307,7 @@ export function ChatView({
           {/* Пока модель думает — отдельный пузырь вместо пустоты. Рядом
               «Остановить»: ждать молча непонятно сколько. */}
           {(typingLabel && busy) || peerTyping ? (
-            <Animated.View entering={FadeInDown.duration(180)}
+            <Animated.View entering={FadeIn.duration(180)}
               style={{ alignItems: 'flex-start', marginBottom: S.sm }}>
               <View style={{
                 flexDirection: 'row', alignItems: 'center', gap: S.sm,
@@ -393,7 +391,7 @@ function Bubble({ m, mine, markdown, onReact }: {
   const bare = !!att && !m.body;
 
   return (
-    <Animated.View entering={FadeInDown.duration(200)}
+    <Animated.View entering={FadeIn.duration(200)}
       style={{ alignItems: mine ? 'flex-end' : 'flex-start', marginBottom: S.sm }}>
       <View style={{
         maxWidth: '82%',

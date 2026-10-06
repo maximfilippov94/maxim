@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, { LinearTransition } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
@@ -8,7 +8,6 @@ import { api, TodayResponse, MealItem, MEAL_ORDER } from '../api';
 import { S, R, FONT } from '../theme';
 import { Card, Muted, Bar, Tile } from '../ui/base';
 import { Counter } from '../ui/Counter';
-import { SysButton } from '../ui/system';
 import { MealSection } from '../ui/MealSection';
 import { RateSheet, shouldAskRating } from '../ui/RateSheet';
 import { HomeHead } from '../ui/HomeHead';
@@ -202,7 +201,7 @@ export default function Today() {
       {/* Питание за сегодня — одна карточка, как `.eq-daily` в вебе:
           съеденное, кольцо доли и три нутриента под ними. Раньше это
           были две карточки подряд, и доля цели нигде не называлась. */}
-      <Animated.View entering={FadeInDown.duration(280)}>
+      <View>
       <Card style={{ marginBottom: S.lg, borderRadius: R.xl, padding: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 22 }}>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -247,13 +246,13 @@ export default function Today() {
           </Text>
         ) : null}
       </Card>
-      </Animated.View>
+      </View>
 
       {/* Вес, отмеченное и вода — три плитки в ряд, как `.eq-metrics`
           в вебе: обводка вместо заливки, чтобы они читались одним
           блоком под карточкой питания, а не тремя карточками подряд.
           Вода раньше занимала отдельную строку во всю ширину. */}
-      <Animated.View entering={FadeInDown.delay(100).duration(280)}
+      <View
         style={{ flexDirection: 'row', gap: S.md, marginBottom: S.xl }}>
 
         {/* Вес записывают отсюда: плитка и показывает последний, и
@@ -304,20 +303,20 @@ export default function Today() {
               color={p.mc} height={5} />
           </View>
         </Tile>
-      </Animated.View>
+      </View>
 
       {/* Кто ведёт план, движение на сегодня и женское здоровье — три
           строки перед планом питания. Порядок тот же, что в вебе: человек
           сперва видит, с кем работает и что у него сегодня, и только потом
           разбирает еду по приёмам. */}
-      <Animated.View entering={FadeInDown.delay(120).duration(300)} style={{ gap: S.sm, marginBottom: S.md }}>
+      <View style={{ gap: S.sm, marginBottom: S.md }}>
         <TodayPlanSource
           specialistName={specName}
           ai={(data as any)?.ai_access ?? null}
         />
         <TodayWorkout data={wo} />
         <TodayCycle health={health} />
-      </Animated.View>
+      </View>
 
       {/* Приёмы пищи. Пока специалиста нет, ждать нечего: меню составляет
           он, и первый шаг — каталог, а не ожидание. */}
@@ -326,22 +325,23 @@ export default function Today() {
           он не обязан помнить, откуда какая строка взялась. */}
       {items.length === 0 && !hasSpec ? (
         <View style={{ marginBottom: S.md }}>
+          {/* Только подпись. Кнопка «Открыть каталог» вела туда же, куда
+              «Специалист» в блоке «Плана пока нет» на полэкрана выше —
+              два приглашения в одно место на одном экране заставляют
+              искать разницу там, где её нет. */}
           <Muted>
             Ведите дневник питания уже сейчас. Специалист составит меню под ваши цели,
             когда вы его выберете.
           </Muted>
-          <View style={{ marginTop: S.md }}>
-            <SysButton label="Открыть каталог" variant="prominent" icon="person.2"
-              onPress={() => { haptic.tap(); router.push('/specialist'); }} />
-          </View>
         </View>
       ) : null}
-      {MEAL_ORDER.map((mt, gi) => (
+      {MEAL_ORDER.map(mt => (
         /* Переход расположения и на обёртке: без него соседние приёмы
            пищи перескакивали в новое положение, пока сама секция
-           сворачивалась плавно. */
-        <Animated.View key={mt} layout={LinearTransition.duration(220)}
-          entering={FadeInDown.delay(150 + gi * 60).duration(300)}>
+           сворачивалась плавно. Появления с задержкой здесь нет: экран
+           открывают каждый день, и въезжающие по очереди блоки читаются
+           как поехавшая вёрстка, а не как оживление. */
+        <Animated.View key={mt} layout={LinearTransition.duration(220)}>
           <MealSection
             meal={mt}
             items={items.filter(x => x.meal_type === mt)}

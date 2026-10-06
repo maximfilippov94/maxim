@@ -8,7 +8,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { S, R, FONT } from '../src/theme';
 import { Logo } from '../src/ui/Logo';
 import { SocialAuth } from '../src/ui/SocialAuth';
@@ -48,7 +48,7 @@ export default function Welcome() {
         </Animated.View>
       </View>
 
-      <Animated.View entering={FadeInDown.delay(120).duration(420)}
+      <Animated.View entering={FadeIn.duration(420)}
         style={{ paddingHorizontal: S.xl, paddingBottom: insets.bottom + S.xl, gap: S.md }}>
         <BigButton title="Войти" filled onPress={() => { haptic.tap(); router.push('/login'); }} />
         <BigButton title="Зарегистрироваться"

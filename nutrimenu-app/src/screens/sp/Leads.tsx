@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, SpLead } from '../../api';
 import { S, FONT } from '../../theme';
@@ -51,7 +51,7 @@ export default function SpLeads() {
           paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
         }} showsVerticalScrollIndicator={false}>
           {list.map((l, i) => (
-            <Animated.View key={l.id} entering={FadeInDown.delay(Math.min(i, 8) * 30).duration(220)}>
+            <Animated.View key={l.id} entering={FadeIn.duration(220)}>
               <Pressable onPress={() => read(l)}>
                 <Card style={{ marginTop: S.md }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>

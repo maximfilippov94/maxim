@@ -9,7 +9,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, Alert, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, ServicesResponse, Subscription } from '../api';
 import { S, FONT } from '../theme';
@@ -228,7 +228,7 @@ export default function Services() {
           const bad = d.checkout.payment_status === 'canceled'
             || d.checkout.payment_status === 'failed';
           return (
-            <Animated.View entering={FadeInDown.duration(220)}>
+            <Animated.View entering={FadeIn.duration(220)}>
               <Card style={{ marginBottom: S.md, flexDirection: 'row',
                 alignItems: 'flex-start', gap: S.md,
                 borderWidth: 1, borderColor: bad ? p.danger : p.warn }}>
@@ -273,7 +273,7 @@ export default function Services() {
         ) : null}
 
         {sub?.awaiting_accept ? (
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginBottom: S.md, borderWidth: 1.5, borderColor: p.primary }}>
               <Label>Требуется подтверждение</Label>
               {/* Цена не сжимается и не переносится, название занимает остальное:
@@ -318,7 +318,7 @@ export default function Services() {
         ) : null}
 
         {sub && !sub.awaiting_accept ? (
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginBottom: S.md }}>
               {/* Название и цена — в одной строке. Пока цена стояла рядом с
                   колонкой «надзаголовок + название», она выравнивалась по
@@ -380,7 +380,7 @@ export default function Services() {
         {list.length ? list.map((s, i) => {
           const on = sub && Number(sub.service_id) === Number(s.id);
           return (
-            <Animated.View key={s.id} entering={FadeInDown.delay(i * 40).duration(240)}>
+            <Animated.View key={s.id} entering={FadeIn.duration(240)}>
               <Card style={{ marginBottom: S.sm,
                 ...(on ? { borderWidth: 1.5, borderColor: p.primary } : null) }}>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.md }}>
@@ -422,7 +422,7 @@ export default function Services() {
                     для такой новости. Поля не было вовсе, и скидку в
                     приложении применить было нельзя. */}
                 {pick?.id === s.id ? (
-                  <Animated.View entering={FadeInDown.duration(200)} style={{ marginTop: S.md }}>
+                  <Animated.View entering={FadeIn.duration(200)} style={{ marginTop: S.md }}>
                     <Label>Промокод, если есть</Label>
                     <View style={{ flexDirection: 'row', gap: S.sm, marginTop: 6 }}>
                       <TextInput value={promo} onChangeText={setPromo}

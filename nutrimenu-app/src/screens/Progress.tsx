@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
 import { api, mediaUrl, ProgressResponse } from '../api';
@@ -120,7 +120,7 @@ export default function Progress() {
         ) : null}
 
         {tab === 'weight' ? (
-          <Animated.View entering={FadeInDown.duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <ListGroup style={{ marginTop: 8 }}>
               <View style={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 6 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
@@ -207,7 +207,7 @@ export default function Progress() {
         ) : null}
 
         {tab === 'measure' ? (
-          <Animated.View entering={FadeInDown.duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <View style={{ paddingHorizontal: 18, paddingTop: 14, gap: S.md }}>
               <SysButton label="Добавить замеры" icon="ruler"
                 onPress={() => { haptic.tap(); router.push('/measure'); }} />
@@ -237,7 +237,7 @@ export default function Progress() {
         ) : null}
 
         {tab === 'photo' ? (
-          <Animated.View entering={FadeInDown.duration(240)}>
+          <Animated.View entering={FadeIn.duration(240)}>
             <View style={{ paddingHorizontal: 18, paddingTop: 14 }}>
               <SysButton label="Добавить фото" icon="photo.badge.plus"
                 disabled={busy} onPress={addPhoto} />

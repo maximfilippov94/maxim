@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, RefreshControl, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../../store';
 import { api, SpDashboard, SpAttention } from '../../api';
@@ -88,7 +88,7 @@ export default function SpHome() {
         </Card>
       ) : null}
 
-      <Animated.View entering={FadeInDown.duration(240)}>
+      <Animated.View entering={FadeIn.duration(240)}>
         <Card style={{ marginBottom: S.md }}>
           <Label>План на сегодня</Label>
           {plan.length === 0 ? (
@@ -122,7 +122,7 @@ export default function SpHome() {
         </Card>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(50).duration(240)}
+      <Animated.View entering={FadeIn.duration(240)}
         style={{ flexDirection: 'row', gap: S.md, marginBottom: S.md }}>
         <Card style={{ flex: 1 }}>
           <Label>Клиентов</Label>
@@ -153,7 +153,7 @@ export default function SpHome() {
         </Card>
       </Animated.View>
 
-      <Animated.View entering={FadeInDown.delay(90).duration(240)}
+      <Animated.View entering={FadeIn.duration(240)}
         style={{ flexDirection: 'row', gap: S.md, marginBottom: S.md }}>
         <Card style={{ flex: 1 }}>
           <Label>Отмечено за неделю</Label>
@@ -183,7 +183,7 @@ export default function SpHome() {
           title="Все на связи"
           note="Никто не пропал из приложения и не забросил отметки." />
       ) : d.attention.map((c, i) => (
-        <Animated.View key={c.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
+        <Animated.View key={c.id} entering={FadeIn.duration(220)}>
           <AttentionRow c={c} />
         </Animated.View>
       ))}

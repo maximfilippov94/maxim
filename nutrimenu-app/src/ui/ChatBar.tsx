@@ -8,9 +8,7 @@
  */
 import React, { useCallback, useState } from 'react';
 import { View, Text, TextInput, Pressable, ActivityIndicator } from 'react-native';
-import Animated, {
-  useAnimatedStyle, useSharedValue, withRepeat, withTiming, Easing,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming, Easing } from 'react-native-reanimated';
 import {
   useAudioRecorder, useAudioRecorderState, RecordingPresets,
   setAudioModeAsync, requestRecordingPermissionsAsync,

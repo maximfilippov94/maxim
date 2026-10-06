@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, Notice } from '../api';
 import { S, FONT } from '../theme';
@@ -126,7 +126,7 @@ export default function Notices({ role = 'client' }: { role?: 'client' | 'specia
           ) : <View style={{ height: S.md }} />}
 
           {list.map((n, i) => (
-            <Animated.View key={`${n.source ?? 'c'}-${n.id}`} entering={FadeInDown.delay(Math.min(i, 8) * 30).duration(220)}>
+            <Animated.View key={`${n.source ?? 'c'}-${n.id}`} entering={FadeIn.duration(220)}>
               <Card style={{ marginBottom: S.sm, flexDirection: 'row', gap: S.md }}>
                 <View style={{
                   width: 34, height: 34, borderRadius: 17, marginTop: 1,

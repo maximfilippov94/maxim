@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useFocusEffect } from 'expo-router';
 import { useApp } from '../../store';
 import { api, SpTemplate, SpClient } from '../../api';
@@ -79,7 +79,7 @@ export default function SpTemplates() {
           <Empty icon="doc.on.doc" title="Шаблонов пока нет"
             note="Соберите меню клиенту и сохраните его как шаблон — дальше он переносится одним нажатием." />
         ) : list.map((t, i) => (
-          <Animated.View key={t.id} entering={FadeInDown.delay(Math.min(i, 8) * 30).duration(220)}>
+          <Animated.View key={t.id} entering={FadeIn.duration(220)}>
             <Card style={{ marginTop: S.md }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
                 <View style={{ flex: 1 }}>

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useApp } from '../store';
 import { api, Specialist, CatalogSpecialist, SPEC_ROLES } from '../api';
@@ -206,7 +206,7 @@ export default function MySpecialist() {
         ) : null}
 
         {spec ? (
-          <Animated.View entering={FadeInDown.duration(240)} style={{ marginTop: S.md }}>
+          <Animated.View entering={FadeIn.duration(240)} style={{ marginTop: S.md }}>
             {/* Остаток за незавершённые услуги: он спишется сам, но знать
                 о нём человек должен заранее — как в вебе. */}
             {credit > 0 ? (
@@ -480,7 +480,7 @@ export default function MySpecialist() {
                   ? 'Смягчите отбор — например, снимите «Избранные».'
                   : 'Попросите у специалиста код приглашения.'} />
             ) : rows.map((s, i) => (
-              <Animated.View key={s.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
+              <Animated.View key={s.id} entering={FadeIn.duration(220)}>
                 <SpecCard s={s} busy={busy} fav={fav.includes(s.id)}
                   onFav={() => toggleFav(s.id)}
                   onOpen={() => router.push(s.slug

@@ -12,7 +12,7 @@ import { View, Text, ScrollView, ActivityIndicator, AccessibilityInfo } from 're
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, mediaUrl, WoSession, WoRecovery, WO_FEEL } from '../api';
 import { S, R, FONT } from '../theme';
@@ -78,7 +78,7 @@ export default function WorkoutDone() {
         paddingTop: insets.top + S.xxl, paddingHorizontal: S.lg,
         paddingBottom: insets.bottom + S.xxl,
       }}>
-      <Animated.View entering={FadeInDown.duration(300)} style={{ alignItems: 'center', marginBottom: S.xl }}>
+      <Animated.View entering={FadeIn.duration(300)} style={{ alignItems: 'center', marginBottom: S.xl }}>
         <View style={{
           width: 64, height: 64, borderRadius: 32, backgroundColor: p.primarySoft,
           alignItems: 'center', justifyContent: 'center', marginBottom: S.lg,

@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api } from '../../api';
 import { S, R, FONT } from '../../theme';
@@ -88,7 +88,7 @@ export default function SpRewards() {
           paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
         }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          <Animated.View entering={FadeInDown.duration(220)}>
+          <Animated.View entering={FadeIn.duration(220)}>
             <Card style={{ marginTop: S.md }}>
               <Muted style={{ lineHeight: 20 }}>
                 Клиенты копят баллы за отмеченные приёмы, записи веса и ваши
@@ -104,7 +104,7 @@ export default function SpRewards() {
             </Card>
           ) : list.map((r, i) => (
             <Animated.View key={r.id}
-              entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(200)}>
+              entering={FadeIn.duration(200)}>
               <Card style={{ marginTop: S.md, gap: S.sm, opacity: r.is_active ? 1 : 0.55 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
                   <View style={{ flex: 1, minWidth: 0 }}>

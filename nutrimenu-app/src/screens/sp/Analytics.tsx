@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../../store';
 import { api, SpDashboard, SpClient } from '../../api';
 import { S, FONT } from '../../theme';
@@ -64,7 +64,7 @@ export default function SpAnalytics() {
           </Card>
         </View>
 
-        <Animated.View entering={FadeInDown.delay(40).duration(240)}>
+        <Animated.View entering={FadeIn.duration(240)}>
           <Card style={{ marginTop: S.md }}>
             <Label>Приверженность меню</Label>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', marginTop: 3 }}>
@@ -88,7 +88,7 @@ export default function SpAnalytics() {
           </Card>
         </Animated.View>
 
-        <Animated.View entering={FadeInDown.delay(80).duration(240)}
+        <Animated.View entering={FadeIn.duration(240)}
           style={{ flexDirection: 'row', gap: S.md, marginTop: S.md }}>
           <Card style={{ flex: 1 }}>
             <Label>Отметок за неделю</Label>

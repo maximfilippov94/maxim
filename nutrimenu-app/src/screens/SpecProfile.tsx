@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator } from 
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, PublicSpecialist, CatalogSpecialist } from '../api';
 import { rub, plural, seenPhrase, svcUnit, specRate } from '../format';
@@ -119,7 +119,7 @@ export default function SpecProfile() {
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32, gap: S.lg,
       }} showsVerticalScrollIndicator={false}>
 
-        <Animated.View entering={FadeInDown.duration(240)}
+        <Animated.View entering={FadeIn.duration(240)}
           style={{ alignItems: 'center', gap: 6, paddingTop: S.md }}>
           <Face url={s.avatar_url} name={s.name} size={88} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm, marginTop: S.sm }}>

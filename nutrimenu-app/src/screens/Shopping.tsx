@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, ShoppingResponse, ShoppingItem } from '../api';
 import { S, FONT } from '../theme';
@@ -80,7 +80,7 @@ export default function Shopping() {
   const total = data.items.length;
 
   const head = (
-    <Animated.View entering={FadeInDown.duration(240)}>
+    <Animated.View entering={FadeIn.duration(240)}>
       <ListGroup style={{ marginTop: 8 }}>
         <View style={{ paddingHorizontal: 18, paddingVertical: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -139,7 +139,7 @@ export default function Shopping() {
           showsVerticalScrollIndicator={false}>
           {head}
           {cats.map(([cat, items], gi) => (
-            <Animated.View key={cat} entering={FadeInDown.delay(40 + gi * 40).duration(240)}
+            <Animated.View key={cat} entering={FadeIn.duration(240)}
               layout={LinearTransition.duration(220)}>
               <ListHead>{cat}</ListHead>
               <ListGroup>

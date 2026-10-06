@@ -9,7 +9,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, InfoResponse, InfoPost } from '../api';
 import { S, FONT } from '../theme';
@@ -65,7 +65,7 @@ export default function Info() {
             <Label>О сервисе</Label>
             <View style={{ marginTop: S.sm }}>
               {d.about.map((x, i) => (
-                <Animated.View key={x.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
+                <Animated.View key={x.id} entering={FadeIn.duration(220)}>
                   <Post item={x} dated={false} />
                 </Animated.View>
               ))}
@@ -82,7 +82,7 @@ export default function Info() {
             </View>
             <View style={{ marginTop: S.sm }}>
               {d.updates.map((x, i) => (
-                <Animated.View key={x.id} entering={FadeInDown.delay(Math.min(i, 6) * 40).duration(220)}>
+                <Animated.View key={x.id} entering={FadeIn.duration(220)}>
                   <Post item={x} dated />
                 </Animated.View>
               ))}

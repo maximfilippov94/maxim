@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TextInput, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../../store';
 import { api, SpClient } from '../../api';
@@ -141,7 +141,7 @@ export default function SpClients() {
         <Empty icon="person.2" title={q ? 'Никого не нашли' : 'Здесь пусто'}
           note={q ? 'Попробуйте другое имя.' : 'Пригласите клиента кодом из раздела «Ещё».'} />
       ) : shown.map((c, i) => (
-        <Animated.View key={c.id} entering={FadeInDown.delay(Math.min(i, 8) * 25).duration(220)}>
+        <Animated.View key={c.id} entering={FadeIn.duration(220)}>
           <Row c={c} />
         </Animated.View>
       ))}

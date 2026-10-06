@@ -3,9 +3,7 @@ import {
   View, Text, Pressable, ActivityIndicator, ScrollView,
   StyleSheet, ViewStyle, TextStyle,
 } from 'react-native';
-import Animated, {
-  useSharedValue, useAnimatedStyle, withTiming, Easing,
-} from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { S, R, FONT } from '../theme';
 import { haptic } from '../haptics';
