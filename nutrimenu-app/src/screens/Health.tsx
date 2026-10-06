@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../store';
 import {
@@ -140,7 +140,17 @@ export default function HealthScreen({ clientId, title }: {
             <>
               <Overview d={d} updated={updated} spec={spec}
                 onGo={(t: Tab, k?: string) => { setTab(t); if (k) setFocus(k); }} />
-              {!spec ? <ShareOut d={d} name={me?.user?.name ?? 'Клиент EQUA'} /> : null}
+              {!spec ? (
+                <>
+                  <ShareOut d={d} name={me?.user?.name ?? 'Клиент EQUA'} />
+                  {/* Вопрос по анализам задают не себе: из раздела
+                      здоровья в вебе есть прямой переход в переписку. */}
+                  <View style={{ marginTop: S.md }}>
+                    <SysButton label="Обсудить со специалистом" icon="bubble.left"
+                      onPress={() => { haptic.tap(); router.push('/client/chat'); }} />
+                  </View>
+                </>
+              ) : null}
             </>
           ) : null}
 

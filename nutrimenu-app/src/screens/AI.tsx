@@ -206,6 +206,17 @@ export default function AI() {
                 onPress={() => { haptic.tap(); router.push('/ai-chat'); }} />
               <SysButton label="Проверить, как идёт план" icon="chart.line.uptrend.xyaxis"
                 onPress={() => { haptic.tap(); router.push('/ai-review'); }} />
+              {/* Отсюда — сразу в то, что модель собрала. В вебе эти две
+                  кнопки стоят рядом с проверкой плана: человек пришёл
+                  посмотреть на результат, а не на описание набора. */}
+              {(d.plans ?? []).some(x => x.kind === 'menu') ? (
+                <SysButton label="Меню на сегодня" icon="fork.knife"
+                  onPress={() => { haptic.tap(); router.push('/client'); }} />
+              ) : null}
+              {(d.plans ?? []).some(x => x.kind !== 'menu') ? (
+                <SysButton label="Мои тренировки" icon="figure.strengthtraining.traditional"
+                  onPress={() => { haptic.tap(); router.push('/client/workouts'); }} />
+              ) : null}
             </View>
           </Animated.View>
         ) : null}

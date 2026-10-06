@@ -613,6 +613,21 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
     finally { setBusy(false); }
   }, [cid, load]);
 
+  /* Продлить меню на неделю вперёд. Сервер копирует состав и ставит
+     новую дату начала; старое меню остаётся как было. */
+  const duplicate = useCallback(async () => {
+    if (!menu) return;
+    setBusy(true);
+    try {
+      const start = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      await api(`/specialist/menus/${menu.id}/duplicate`, {
+        method: 'POST', body: { start_date: start },
+      });
+      haptic.success(); await load(true);
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось продлить'); }
+    finally { setBusy(false); }
+  }, [menu, load]);
+
   /* Скопировать вчерашний день — как в вебе: рацион редко меняют каждый
      день целиком, чаще правят одно-два блюда. */
   const copyPrev = useCallback(async () => {
@@ -776,6 +791,11 @@ function MenuTab({ cid, name }: { cid: number; name: string }) {
         ) : null}
         <SysButton label="Сохранить как шаблон" icon="doc.badge.plus"
           disabled={busy} onPress={saveTemplate} />
+        {/* Продлить меню на следующую неделю одним нажатием: рацион
+            редко собирают заново каждые семь дней. В вебе это
+            «Дублировать меню на неделю», в приложении не было вовсе. */}
+        <SysButton label="Дублировать на следующую неделю" icon="calendar.badge.plus"
+          disabled={busy} onPress={duplicate} />
         {menu.status !== 'published' ? (
           <SysButton label="Опубликовать меню" variant="prominent"
             disabled={busy} onPress={publish} />
