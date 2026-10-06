@@ -283,6 +283,12 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
                     <SText modifiers={[m.font({ size: 13 }), m.foregroundStyle(p.text3)]}>
                       {it.amount?.text ?? `${it.grams} г`}
                     </SText>
+                    {/* Домик виден в строке, как в вебе (`.shop-home`), а не
+                        только в свайпе. Жест знают не все, а подсказка внизу
+                        экрана прямо зовёт нажать значок — значка при этом на
+                        экране не было вовсе. Свайп остаётся вторым путём. */}
+                    <Button systemImage="house" onPress={() => onHome(it)}
+                      modifiers={[m.buttonStyle('borderless'), m.tint(p.text3)]} />
                   </HStack>
                 </SwipeActions>
               );
@@ -305,6 +311,15 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
                     {it.name}
                   </SText>
                   <Spacer />
+                  {/* Количество и видимая кнопка возврата — как в вебе
+                      (`.shop-row.home` с «Вернуть»). Убранное в кладовку
+                      человек возвращает редко и жест для этого не помнит. */}
+                  <SText modifiers={[m.font({ size: 13 }), m.foregroundStyle(p.text3)]}>
+                    {it.amount?.text ?? `${it.grams} г`}
+                  </SText>
+                  <Button label="Вернуть" onPress={() => onBack(it)}
+                    modifiers={[m.buttonStyle('borderless'), m.font({ size: 13 }),
+                      m.tint(p.accent)]} />
                 </HStack>
               </SwipeActions>
             ))}
