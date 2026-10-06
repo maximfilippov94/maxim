@@ -27,7 +27,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundImage": "./assets/adaptive-icon-bg.png",
-        "backgroundColor": "#159A6E"
+        "backgroundColor": "#D1FD00"
       },
       "permissions": [
         "CAMERA",
@@ -58,10 +58,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/adaptive-icon.png",
+          "image": "./assets/splash-icon.png",
           "imageWidth": 190,
           "resizeMode": "contain",
-          "backgroundColor": "#2E7D63",
+          "backgroundColor": "#121820",
           "dark": {
             "backgroundColor": "#121820"
           }
