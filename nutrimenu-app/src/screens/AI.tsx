@@ -15,12 +15,12 @@
  * кнопкой, которая ничего не делает, хуже, чем сказать.
  */
 import React, { useCallback, useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Switch } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Switch, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '../store';
-import { api, AiState, AiPlan, AI_PLAN_WHAT } from '../api';
+import { api, AiState, AiPlan } from '../api';
 import { S, R, FONT, CYCLE } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -30,6 +30,59 @@ import { SysButton, Empty } from '../ui/system';
 import { useToast } from '../ui/Toast';
 import { rub, plural } from '../format';
 import { haptic } from '../haptics';
+
+/**
+ * Наборы EQUA AI — тексты из веба (`META` в `clAI` и `pack` в
+ * `clAICheckout`), слово в слово.
+ *
+ * Короткая часть (kicker/title/desc) стоит в списке выбора, длинная
+ * (lead и что входит) — в шторке оформления. Раньше в приложении всё
+ * лежало на одном экране, и список возможностей был виден до того, как
+ * человек вообще выбрал набор: экран читался как «заполните анкету»,
+ * а не как «выберите, что подключить».
+ */
+const AI_PACK: Record<AiPlan, {
+  icon: string; kicker: string; title: string; desc: string;
+  eyebrow: string; head: string; lead: string; items: string[];
+}> = {
+  nutrition: {
+    icon: 'bowl', kicker: 'Питание',
+    title: 'Питание под ваш ритм',
+    desc: 'Меню, КБЖУ, покупки и замены',
+    eyebrow: 'AI · Питание',
+    head: '30 дней питания, которое подстраивается под вашу жизнь',
+    lead: 'Не просто меню. EQUA AI знает вашу цель, режим и предпочтения, следит за фактом и помогает не начинать заново после сложной недели.',
+    items: ['Персональное меню по неделям в течение 30 дней',
+      'КБЖУ, порции и понятные замены', 'Список покупок на каждую неделю',
+      'Еженедельный отчёт и адаптация плана', 'Чат с EQUA AI по вашему плану'],
+  },
+  workouts: {
+    icon: 'dumbbell', kicker: 'Тренировки',
+    title: 'Тренировки под ваш темп',
+    desc: 'Программа, нагрузка и прогрессия',
+    eyebrow: 'AI · Тренировки',
+    head: '30 дней тренировок с прогрессией под ваш реальный темп',
+    lead: 'Программа учитывает ваш уровень, график и оборудование, а затем смотрит на выполненные подходы, повторения, рабочие веса и самочувствие.',
+    items: ['Программа тренировок на 30 дней',
+      'Подходы, повторы, отдых и рабочая нагрузка', 'Учёт фактического выполнения',
+      'Прогрессия или разгрузка по данным недели', 'Чат с EQUA AI по вашей программе'],
+  },
+  both: {
+    icon: 'spark', kicker: 'Полный план',
+    title: 'Питание + тренировки',
+    desc: 'Единая система питания и движения',
+    eyebrow: 'EQUA AI · Полный план',
+    head: 'Питание и тренировки как одна персональная система на 30 дней',
+    lead: 'EQUA AI связывает рацион, движение и прогресс в одном сценарии и каждую неделю предлагает изменения по вашим фактическим данным.',
+    items: ['Питание по неделям в течение 30 дней', 'Персональная программа тренировок',
+      'Списки покупок и замены блюд', 'Еженедельная адаптация питания и нагрузки',
+      'Единый чат с EQUA AI по всему плану'],
+  },
+};
+
+/** Цена со скидкой нового клиента — как `aiOfferPrice` в вебе. */
+const offerPrice = (kop: number, percent: number) =>
+  percent ? Math.round(kop * (100 - percent) / 100) : kop;
 
 const dmy = (s?: string | null) => {
   if (!s) return '—';
@@ -47,6 +100,8 @@ export default function AI() {
   /* Промокод спрашиваем только при настоящей оплате: пока платежи
      выключены, набор выдаётся бесплатно, и скидка ни к чему. */
   const [code, setCode] = useState('');
+  /* Какой набор разбираем перед оплатой. */
+  const [checkout, setCheckout] = useState<AiPlan | null>(null);
   const [quote, setQuote] = useState<{ percent: number; total_kop: number;
     discount_kop: number; code: string } | null>(null);
   const [codeErr, setCodeErr] = useState<string | null>(null);
@@ -85,7 +140,11 @@ export default function AI() {
     }
   }, [code]);
 
-  const connect = useCallback(async (plan: AiPlan) => {
+  /* Выбор набора: сначала недостающая анкета, потом разбор условий, и
+     только после него оплата — тот же порядок, что `clAIBuy` в вебе.
+     Раньше нажатие сразу оформляло набор, а экран до этого показывал
+     анкету как первое действие. */
+  const connect = useCallback((plan: AiPlan) => {
     const need = missing(plan);
     if (need === 'nutrition') {
       haptic.tap();
@@ -97,6 +156,13 @@ export default function AI() {
       router.push({ pathname: '/ai-fitness', params: { plan } });
       return;
     }
+    haptic.tap();
+    setCode(''); setQuote(null); setCodeErr(null);
+    setCheckout(plan);
+  }, [missing]);
+
+  /* Оформление: подтверждение из шторки. */
+  const buy = useCallback(async (plan: AiPlan) => {
     setBusy(true); setErr(null);
     try {
       const r = await api<{ pay?: { confirmation_url?: string } }>('/client/ai',
@@ -119,8 +185,8 @@ export default function AI() {
       else if (/вопросы о тренировк/i.test(m)) router.push({ pathname: '/ai-fitness', params: { plan } });
       else if (/подтвердите/i.test(m)) router.push({ pathname: '/ai-intake', params: { plan } });
       else setErr(m || 'Не получилось подключить');
-    } finally { setBusy(false); }
-  }, [missing, load, toast, quote]);
+    } finally { setBusy(false); setCheckout(null); }
+  }, [load, toast, quote]);
 
   /* Разрешение учитывать цикл. Хранится в настройках цикла — тем же
      полем, что правит веб. */
@@ -311,88 +377,69 @@ export default function AI() {
                 </Muted>
               </View>
             ) : null}
-            <View style={{ paddingHorizontal: S.lg, gap: S.md }}>
+            <View style={{ paddingHorizontal: S.lg, gap: S.sm }}>
               {(cur && d.upgrade
                 ? [{ plan: d.upgrade.to, title: d.upgrade.title, price_kop: d.upgrade.price_kop }]
                 : d.tariffs
               ).map(t => {
-                const need = missing(t.plan);
+                const m = AI_PACK[t.plan] ?? AI_PACK.both;
                 const free = d.payments_mode === 'off' || t.price_kop === 0;
+                const off = d.welcome_offer?.eligible ? d.welcome_offer.percent : 0;
                 return (
-                  <Card key={t.plan}>
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.md }}>
-                      <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{t.title}</Text>
-                      <Text style={{ ...FONT.h3, color: p.text }}>
-                        {free ? 'бесплатно' : rub(t.price_kop)}
-                      </Text>
-                    </View>
-                    {cur && d.upgrade?.credit_kop ? (
-                      <Muted style={{ marginTop: 4 }}>
-                        зачтён остаток прежнего набора — {rub(d.upgrade.credit_kop)}
-                      </Muted>
-                    ) : null}
-                    <View style={{ marginTop: S.md, gap: 5 }}>
-                      {(AI_PLAN_WHAT[t.plan] ?? []).map(line => (
-                        <View key={line} style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-start' }}>
-                          <Icon name="check" size={13} color={p.accent} width={2.2} />
-                          <Text style={{ ...FONT.small, color: p.text2, flex: 1, lineHeight: 18 }}>
-                            {line}
+                  <Pressable key={t.plan}
+                    disabled={busy || conflict.length > 0}
+                    onPress={() => connect(t.plan)}>
+                    {({ pressed }) => (
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: S.md,
+                        backgroundColor: p.surface, borderRadius: R.lg, padding: S.lg,
+                        borderWidth: t.plan === 'both' ? 2 : 1,
+                        borderColor: t.plan === 'both' ? p.primary : p.border,
+                        opacity: conflict.length > 0 ? 0.5 : pressed ? 0.85 : 1,
+                      }}>
+                        <View style={{
+                          width: 42, height: 42, borderRadius: 21,
+                          alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: p.primarySoft,
+                        }}>
+                          <Icon name={m.icon} size={19} color={p.accent} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ ...FONT.caption, color: p.text3 }}>{m.kicker}</Text>
+                            {t.plan === 'both' ? (
+                              <Text style={{ ...FONT.caption, color: p.accent, fontWeight: '700' }}>
+                                Рекомендуем
+                              </Text>
+                            ) : null}
+                          </View>
+                          <Text style={{ ...FONT.h3, color: p.text }} numberOfLines={2}>
+                            {cur && d.upgrade ? t.title : m.title}
+                          </Text>
+                          <Text style={{ ...FONT.small, color: p.text2, marginTop: 1 }}
+                            numberOfLines={2}>{m.desc}</Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ ...FONT.h3, color: p.text }}>
+                            {free ? 'Бесплатно' : rub(offerPrice(t.price_kop, off))}
+                          </Text>
+                          <Text style={{ ...FONT.caption, color: p.text3 }}>
+                            {off && !free ? `−${off}%` : '30 дней'}
                           </Text>
                         </View>
-                      ))}
-                    </View>
-                    {/* Поле кода — внутри набора: скидка считается от его
-                        цены, и общее поле «на весь экран» давало бы цену,
-                        не относящуюся ни к одному из них. */}
-                    {!free ? (
-                      <View style={{ marginTop: S.md }}>
-                        <View style={{ flexDirection: 'row', gap: S.sm }}>
-                          <TextInput value={code}
-                            onChangeText={t => { setCode(t.toUpperCase()); setCodeErr(null); setQuote(null); }}
-                            placeholder="Промокод" placeholderTextColor={p.text3}
-                            autoCapitalize="characters" maxLength={24}
-                            style={{
-                              flex: 1, backgroundColor: p.inset, color: p.text,
-                              borderRadius: R.control, paddingHorizontal: S.lg,
-                              paddingVertical: 10, fontSize: 15, letterSpacing: 1,
-                            }} />
-                          <Pressable onPress={() => check(t.plan)} disabled={!code.trim()}
-                            style={({ pressed }) => ({
-                              paddingHorizontal: 16, justifyContent: 'center',
-                              borderRadius: R.control, borderWidth: 1, borderColor: p.btnLine,
-                              opacity: !code.trim() ? 0.4 : pressed ? 0.6 : 1,
-                            })}>
-                            <Text style={{ ...FONT.callout, color: p.text }}>Проверить</Text>
-                          </Pressable>
-                        </View>
-                        {quote ? (
-                          <Text style={{ ...FONT.small, color: p.accent, marginTop: 6 }}>
-                            Код принят: −{quote.percent}%, к оплате {rub(quote.total_kop)}
-                          </Text>
-                        ) : null}
-                        {codeErr ? (
-                          <Text style={{ ...FONT.small, color: p.danger, marginTop: 6 }}>{codeErr}</Text>
-                        ) : null}
+                        <Icon name="chevr" size={14} color={p.text3} width={2} />
                       </View>
-                    ) : null}
-
-                    <View style={{ marginTop: S.lg }}>
-                      <SysButton
-                        label={need === 'nutrition' ? 'Ответить про питание'
-                          : need === 'fitness' ? 'Ответить про тренировки'
-                          : free ? 'Подключить' : 'Оформить'}
-                        variant="prominent"
-                        disabled={busy || conflict.length > 0}
-                        onPress={() => connect(t.plan)} />
-                    </View>
-                    {need ? (
-                      <Muted style={{ marginTop: S.sm }}>
-                        Перед запуском нужны ответы — несколько вопросов о вас.
-                      </Muted>
-                    ) : null}
-                  </Card>
+                    )}
+                  </Pressable>
                 );
               })}
+
+              {/* Что это стоит — одной строкой под списком, как в вебе. */}
+              <Muted style={{ marginTop: S.sm }}>
+                {d.payments_mode === 'off'
+                  ? 'Сейчас EQUA AI доступен бесплатно. После подключения платёжного шлюза здесь появится стоимость.'
+                  : 'Оплата разовая на 30 дней. Автопродления нет.'}
+              </Muted>
             </View>
           </>
         ) : null}
@@ -428,6 +475,168 @@ export default function AI() {
             note="Сейчас EQUA AI нельзя подключить. Попробуйте позже." />
         ) : null}
       </ScrollView>
+
+      {/* Разбор набора перед оплатой — шторка `clAICheckout` веба: что
+          входит, срок доступа, цена, промокод и оговорки. До этого
+          человек нажимал «Подключить» и попадал прямо на оплату, не
+          увидев условий. */}
+      <AiCheckout
+        plan={checkout} state={d} busy={busy}
+        code={code} quote={quote} codeErr={codeErr}
+        onCode={t => { setCode(t.toUpperCase()); setCodeErr(null); setQuote(null); }}
+        onCheck={check}
+        onClose={() => setCheckout(null)}
+        onBuy={buy} />
     </View>
+  );
+}
+
+
+/** Шторка оформления набора: условия до оплаты, а не после. */
+function AiCheckout({ plan, state, busy, code, quote, codeErr, onCode, onCheck, onClose, onBuy }: {
+  plan: AiPlan | null;
+  state: AiState | null;
+  busy: boolean;
+  code: string;
+  quote: { percent: number; total_kop: number; discount_kop: number; code: string } | null;
+  codeErr: string | null;
+  onCode: (t: string) => void;
+  onCheck: (plan: AiPlan) => void;
+  onClose: () => void;
+  onBuy: (plan: AiPlan) => void;
+}) {
+  const { p } = useApp();
+  const insets = useSafeAreaInsets();
+  if (!plan || !state) return null;
+
+  const m = AI_PACK[plan] ?? AI_PACK.both;
+  const t = state.tariffs.find(x => x.plan === plan);
+  const kop = t?.price_kop ?? 0;
+  const free = state.payments_mode === 'off' || kop === 0;
+  const percent = state.welcome_offer?.eligible ? state.welcome_offer.percent : 0;
+  const now = quote ? quote.total_kop : offerPrice(kop, percent);
+
+  return (
+    <Modal transparent visible animationType="fade" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(9,16,18,0.6)' }} />
+      <Animated.View entering={SlideInDown.duration(280)} style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '90%',
+        backgroundColor: p.surface,
+        borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
+        paddingBottom: insets.bottom + S.lg,
+      }}>
+        <View style={{
+          width: 38, height: 4, borderRadius: 999, backgroundColor: p.border,
+          alignSelf: 'center', marginTop: 10, marginBottom: S.sm,
+        }} />
+
+        <ScrollView contentContainerStyle={{ paddingHorizontal: S.lg, paddingBottom: S.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>{m.eyebrow}</Text>
+              <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>{m.head}</Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10}
+              accessibilityRole="button" accessibilityLabel="Закрыть"
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, paddingTop: 4 })}>
+              <Icon name="close" size={18} color={p.text3} />
+            </Pressable>
+          </View>
+
+          <Text style={{ ...FONT.body, color: p.text2, marginTop: S.md, lineHeight: 22 }}>
+            {m.lead}
+          </Text>
+
+          <View style={{ marginTop: S.xl }}>
+            <Label>Что входит в план</Label>
+          </View>
+          <View style={{ gap: 7, marginTop: S.sm }}>
+            {m.items.map(x => (
+              <View key={x} style={{ flexDirection: 'row', gap: 9, alignItems: 'flex-start' }}>
+                <Icon name="check" size={14} color={p.accent} width={2.2} />
+                <Text style={{ ...FONT.small, color: p.text2, flex: 1, lineHeight: 19 }}>{x}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', marginTop: S.xl,
+            backgroundColor: p.inset, borderRadius: R.lg, padding: S.lg,
+          }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>Ваш доступ</Text>
+              <Text style={{ ...FONT.h3, color: p.text }}>30 дней</Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              {!free && (percent || quote) ? (
+                <Text style={{ ...FONT.small, color: p.text3,
+                  textDecorationLine: 'line-through' }}>{rub(kop)}</Text>
+              ) : null}
+              <Text style={{ ...FONT.h2, color: p.text }}>
+                {free ? 'Бесплатно' : rub(now)}
+              </Text>
+            </View>
+          </View>
+
+          {!free && percent ? (
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md,
+              backgroundColor: p.primarySoft, borderRadius: R.md, padding: S.md,
+            }}>
+              <Icon name="clock" size={15} color={p.accent} />
+              <Text style={{ ...FONT.small, color: p.text, flex: 1 }}>
+                Скидка {percent}% для нового клиента уже применена
+              </Text>
+            </View>
+          ) : null}
+
+          {!free ? (
+            <View style={{ marginTop: S.lg }}>
+              <Label>Промокод, если есть</Label>
+              <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
+                <TextInput value={code} onChangeText={onCode}
+                  placeholder="Например, START20" placeholderTextColor={p.text3}
+                  autoCapitalize="characters" maxLength={24}
+                  style={{
+                    flex: 1, backgroundColor: p.inset, color: p.text,
+                    borderRadius: R.control, paddingHorizontal: S.lg,
+                    paddingVertical: 11, fontSize: 15, letterSpacing: 1,
+                  }} />
+                <Pressable onPress={() => onCheck(plan)} disabled={!code.trim()}
+                  style={({ pressed }) => ({
+                    paddingHorizontal: 16, justifyContent: 'center',
+                    borderRadius: R.control, borderWidth: 1, borderColor: p.btnLine,
+                    opacity: !code.trim() ? 0.4 : pressed ? 0.6 : 1,
+                  })}>
+                  <Text style={{ ...FONT.callout, color: p.text }}>Применить</Text>
+                </Pressable>
+              </View>
+              {quote ? (
+                <Text style={{ ...FONT.small, color: p.accent, marginTop: 6 }}>
+                  Код принят: −{quote.percent}%, к оплате {rub(quote.total_kop)}
+                </Text>
+              ) : null}
+              {codeErr ? (
+                <Text style={{ ...FONT.small, color: p.danger, marginTop: 6 }}>{codeErr}</Text>
+              ) : null}
+            </View>
+          ) : null}
+
+          <View style={{ flexDirection: 'row', gap: 9, alignItems: 'flex-start', marginTop: S.lg }}>
+            <Icon name="check" size={14} color={p.text3} width={2} />
+            <Text style={{ ...FONT.small, color: p.text3, flex: 1, lineHeight: 19 }}>
+              Без автопродления. Все изменения плана сначала показываются вам.
+              EQUA AI и сопровождение живого специалиста одновременно не подключаются.
+            </Text>
+          </View>
+
+          <View style={{ marginTop: S.xl, gap: S.sm }}>
+            <SysButton label={free ? 'Создать мой план' : 'Перейти к оплате'}
+              variant="prominent" disabled={busy} onPress={() => onBuy(plan)} />
+            <SysButton label="Вернуться к вариантам" onPress={onClose} />
+          </View>
+        </ScrollView>
+      </Animated.View>
+    </Modal>
   );
 }

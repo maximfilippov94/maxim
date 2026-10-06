@@ -123,12 +123,13 @@ export default function More() {
             <ListRow icon="heart" label="Лента"
               onPress={() => router.push('/feed')} />
           )}
-          <ListRow icon="bell" label="Уведомления"
+          {/* Два пункта рядом: что уже пришло и что присылать впредь.
+              Второй называется как в вебе — «Уведомления и тихие часы»:
+              «Что присылать» было моей формулировкой, и рядом с соседним
+              «Уведомления» из неё не читалось, что это настройки. */}
+          <ListRow icon="bell" label="История уведомлений"
             onPress={() => router.push('/notifications')} />
-          {/* Лента — что уже пришло, настройки — что присылать впредь.
-              Второго в приложении не было, и человек, которому приходит
-              всё подряд, выключал уведомления целиком. */}
-          <ListRow icon="device" label="Что присылать"
+          <ListRow icon="device" label="Уведомления и тихие часы"
             onPress={() => router.push('/push-prefs')} />
           <ListRow icon="edit" label="Отчёт за неделю"
             onPress={() => router.push('/checkin')} />
