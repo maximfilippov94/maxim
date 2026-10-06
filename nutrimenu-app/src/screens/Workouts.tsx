@@ -28,7 +28,7 @@ import { S, R, FONT } from '../theme';
 import { Card, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { SysButton, Empty } from '../ui/system';
-import { plural } from '../format';
+import { plural, rub } from '../format';
 import { haptic } from '../haptics';
 
 /* Кривая и длительность — те же, что в вебе: один язык движения на два
@@ -173,10 +173,34 @@ export default function Workouts() {
         <Empty icon="figure.strengthtraining.traditional" title="Тренера пока нет"
           note={'Программу составляет тренер: подходы, веса и техника под вашу цель. '
             + 'Питание при этом остаётся у нутрициолога — одно другому не мешает.'} />
-        <View style={{ marginTop: S.lg }}>
+        <View style={{ marginTop: S.lg, gap: S.sm }}>
           <SysButton label="Найти тренера" variant="prominent"
             onPress={() => { haptic.tap(); router.push('/specialist'); }} />
+          {/* Код тренера и EQUA AI — те же два выхода, что в вебе: без
+              них человек без тренера упирается в одну кнопку. */}
+          <SysButton label="У меня есть код тренера" icon="tag"
+            onPress={() => { haptic.tap(); router.push('/specialist?code=1'); }} />
         </View>
+
+        <Pressable onPress={() => { haptic.tap(); router.push('/ai'); }}
+          style={({ pressed }) => ({ marginTop: S.lg, opacity: pressed ? 0.85 : 1 })}>
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+            <View style={{
+              width: 42, height: 42, borderRadius: R.control, backgroundColor: p.primarySoft,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Icon name="spark" size={19} color={p.accent} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ ...FONT.h3, color: p.text }}>EQUA AI</Text>
+              <Muted style={{ marginTop: 2 }}>
+                Программа на месяц под ваш инвентарь и время
+                {d.ai_workouts_kop ? ` · ${rub(Number(d.ai_workouts_kop))}` : ''}
+              </Muted>
+            </View>
+            <Icon name="chevr" size={16} color={p.text3} />
+          </Card>
+        </Pressable>
       </ScrollView>
     );
   }

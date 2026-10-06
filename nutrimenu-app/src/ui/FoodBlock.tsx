@@ -79,6 +79,14 @@ export function FoodRows({ entries, onChanged, first }: {
                 <Text style={{ ...FONT.small, color: p.text3, marginTop: 3 }}>
                   {round(it.grams)} г · {round(it.kcal)} ккал
                 </Text>
+                {/* Откуда числа. Продукт мог приехать из внешнего
+                    справочника, и в вебе источник подписан — у себя
+                    в дневнике человек вправе знать, чьим данным верит. */}
+                {it.source_url ? (
+                  <Text style={{ fontSize: 10, color: p.text3, marginTop: 2 }} numberOfLines={1}>
+                    Данные: {String(it.source_url).replace(/^https?:\/\//, '').split('/')[0]}
+                  </Text>
+                ) : null}
               </Pressable>
               <Pressable hitSlop={10} onPress={() => { haptic.tap(); drop(e, it); }}>
                 <Icon name="close" size={17} color={p.text3} />

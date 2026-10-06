@@ -243,6 +243,9 @@ export interface TodayResponse {
   plan_totals?: Totals;
   weight?: { last: number; delta: number } | null;
   water?: { ml: number; goal_ml: number } | null;
+  /** Сборка плана у EQUA AI и признак устаревшего меню */
+  ai_plan?: AiPlanState | null;
+  menu_stale?: boolean;
 }
 export interface Me {
   user: {
@@ -452,7 +455,17 @@ export interface WeekResponse {
   menu: { id: number; title: string; days_count: number; start_date: string } | null;
   items: (MealItem & { day_number: number })[];
   days: Record<string, Totals>;
+  ai_plan?: AiPlanState | null;
+  menu_stale?: boolean;
 }
+
+/**
+ * Состояние сборки плана у EQUA AI. `ok: false` — новая неделя не
+ * собралась, прежнее меню осталось как было. Сервер отдаёт это поле и в
+ * «Сегодня», и в «Неделе»; без него человек видит старый день и не
+ * понимает, почему.
+ */
+export interface AiPlanState { ok?: boolean; error?: string | null }
 
 export interface ChatMessage {
   id: number;
@@ -600,6 +613,8 @@ export const FOOD_MEALS: [FoodMeal, string][] = [
 export interface FoodEntryItem {
   id: number; ingredient_id: number | null; name: string; grams: number;
   kcal: number; protein: number; fat: number; carbs: number; fiber: number;
+  /** Откуда взяты данные о продукте — внешний справочник */
+  source_url?: string | null;
 }
 /** День дневника для кабинета специалиста. */
 export interface FoodDay {
@@ -1051,6 +1066,8 @@ export interface WoWeek {
   week_start: string; week: WoPlanItem[];
   today: WoPlanItem | null; next: WoPlanItem | null;
   has_trainer: boolean;
+  /** Цена набора тренировок у EQUA AI — для экрана без тренера */
+  ai_workouts_kop?: number | null;
 }
 export interface WoExercise {
   id: number; sort_order: number;

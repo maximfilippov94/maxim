@@ -14,6 +14,7 @@ import { RateSheet, shouldAskRating } from '../ui/RateSheet';
 import { HomeHead } from '../ui/HomeHead';
 import { Ring } from '../ui/Ring';
 import { PushNudge } from '../ui/PushNudge';
+import { PlanAlert } from '../ui/PlanAlert';
 import { Announce } from '../ui/Announce';
 import { round, kg, plural } from '../format';
 import { haptic } from '../haptics';
@@ -183,6 +184,14 @@ export default function Today() {
           прямо сейчас, а просьба включить уведомления подождёт. */}
       <Announce />
       <PushNudge />
+
+      {/* Плохие новости про план — выше всего остального: иначе человек
+          смотрит на вчерашние блюда и считает это поломкой. */}
+      <PlanAlert
+        plan={data?.ai_plan} stale={data?.menu_stale}
+        startDate={(data as any)?.menu?.start_date}
+        canRetry={!!(data as any)?.ai_access?.has_nutrition}
+        onRetry={() => load(true)} />
 
       {err && (
         <Card style={{ marginBottom: S.md }}>

@@ -10,6 +10,7 @@ import { Card, Label, Muted, Bar, Tile } from '../ui/base';
 import { Ring } from '../ui/Ring';
 import { Icon } from '../ui/Icon';
 import { ReplacePicker } from '../ui/ReplacePicker';
+import { PlanAlert } from '../ui/PlanAlert';
 import { Empty } from '../ui/system';
 import { round, plural, menuDate, dayTitle, dowShort, isToday } from '../format';
 import { haptic } from '../haptics';
@@ -66,6 +67,12 @@ export default function Week() {
 
       <Label>{menu ? menu.title : 'Меню'}</Label>
       <Text style={{ ...FONT.h1, color: p.text, marginTop: S.xs, marginBottom: S.lg }}>Неделя</Text>
+
+      {/* Та же полоса, что на «Сегодня»: сервер отдаёт состояние плана и
+          здесь, а неделю смотрят как раз когда меню выглядит странно. */}
+      <PlanAlert plan={d.ai_plan} stale={d.menu_stale}
+        startDate={menu?.start_date} canRetry={false}
+        onRetry={() => load(true)} />
 
       {!menu ? (
         <Empty icon="calendar" title="Меню ещё не назначено"
