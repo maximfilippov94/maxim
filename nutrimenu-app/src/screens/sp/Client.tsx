@@ -132,7 +132,7 @@ export default function SpClientScreen() {
           })}
         </View>
 
-        {tab === 'overview' ? <Overview c={c} sub={sub} /> : null}
+        {tab === 'overview' ? <Overview c={c} sub={sub} onChanged={load} /> : null}
         {tab === 'menu' ? <MenuTab cid={cid} name={c.name} /> : null}
         {tab === 'workouts' ? <WorkoutsTab cid={cid} /> : null}
         {tab === 'tasks' ? <TasksTab cid={cid} /> : null}
@@ -397,7 +397,9 @@ const EASE_WORDS: Record<number, string> = {
   1: 'очень сложно', 2: 'сложно', 3: 'нормально', 4: 'легко', 5: 'очень легко',
 };
 
-function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
+function Overview({ c, sub, onChanged }: {
+  c: SpClient; sub: Subscription | null; onChanged: () => void;
+}) {
   const { p } = useApp();
   const rows: [string, string][] = [
     ['Норма калорий', c.target_kcal ? `${c.target_kcal} ккал` : '—'],
@@ -434,6 +436,26 @@ function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
               </Text>
             ) : null}
           </View>
+
+          {/* Завершить услугу со своей стороны. В вебе это есть, в
+              приложении специалист мог только ждать, пока клиент
+              откажется сам. Деньги считает сервер: заработанные дни
+              остаются специалисту, неотработанная часть — клиенту. */}
+          <View style={{ marginTop: S.md }}>
+            <SysConfirm
+              label="Завершить услугу" tint={p.danger}
+              title="Завершить услугу?"
+              message={'Заработанные дни останутся вам, неотработанная часть вернётся клиенту '
+                + 'в зачёт следующей оплаты.'}
+              confirmLabel="Завершить"
+              onConfirm={async () => {
+                try {
+                  await api(`/specialist/subscriptions/${sub.id}/end`, { method: 'POST' });
+                  haptic.success(); onChanged();
+                } catch { haptic.error(); }
+              }}
+            />
+          </View>
         </Card>
       ) : null}
       <Card style={{ padding: 0, marginBottom: S.md }}>
@@ -458,6 +480,26 @@ function Overview({ c, sub }: { c: SpClient; sub: Subscription | null }) {
           </Text>
         </Card>
       ) : null}
+
+      {/* Завершить работу с клиентом. В приложении этого не было вовсе:
+          специалист мог только ждать, пока уйдёт сам клиент. Роль при
+          этом освобождается — к человеку сможет подключиться другой
+          специалист той же специальности. */}
+      <View style={{ marginTop: S.lg, alignItems: 'center' }}>
+        <SysConfirm
+          label="Завершить работу с клиентом" tint={p.text3}
+          title="Завершить работу?"
+          message={'Клиент потеряет доступ к вашему меню и чату, роль освободится. '
+            + 'Неотработанная часть оплаты вернётся ему в зачёт.'}
+          confirmLabel="Завершить"
+          onConfirm={async () => {
+            try {
+              await api(`/specialist/clients/${c.id}/end`, { method: 'POST' });
+              haptic.success(); router.back();
+            } catch { haptic.error(); }
+          }}
+        />
+      </View>
     </Animated.View>
   );
 }

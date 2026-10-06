@@ -985,8 +985,13 @@ export interface SpService {
   kind: string; price_kop: number; period_days?: number | null;
   /** Длительность разовой услуги в минутах — мера рядом с ценой. */
   duration_min?: number | null;
+  /** Что именно продаётся: по этому полю сервер решает, кто ведёт клиента */
+  service_type?: string | null;
+  service_type_label?: string | null;
   is_active: number; sort_order?: number;
 }
+/** Типы услуг, доступные роли специалиста, — сервер отдаёт их списком. */
+export interface SpServiceType { type: string; label: string }
 export interface SpSignal {
   id: number; name: string; unread: number;
   last_meal?: string | null; skips: number; last_weight?: string | null;

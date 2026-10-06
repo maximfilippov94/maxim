@@ -20,6 +20,9 @@ export default function SpChat() {
     <ChatView
       endpoint={`/specialist/messages?client_id=${cid}`}
       attachEndpoint="/specialist/attachment"
+      /* Признак «печатает» у специалиста не отправлялся вовсе: клиент
+         видел молчание, пока тот набирал ответ. Маршрут был. */
+      typingEndpoint="/specialist/chat-typing"
       extra={{ client_id: cid }}
       mineType="specialist"
       title={c?.name ?? 'Клиент'}

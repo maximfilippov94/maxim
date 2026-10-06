@@ -542,6 +542,13 @@ function Labs({ list, edit, postTo, spec, onAdd, onRemove, onError }: {
   /* Правка карточки документа: те же поля, что в форме, — в вебе это
      шторка «Настройки и доступ». Файл не меняется, меняется описание. */
   const [editing, setEditing] = useState<number | null>(null);
+  async function saveComment(l: Lab, comment: string) {
+    try {
+      await api(`/specialist/labs/${l.id}/comment`, { method: 'PATCH', body: { comment } });
+      setEditing(null); haptic.success(); onAdd();
+    } catch (e: any) { haptic.error(); onError(e?.message ?? 'Не отправилось'); }
+  }
+
   async function saveEdit(l: Lab, patch: Record<string, unknown>) {
     try {
       await api(`/client/health/labs/${l.id}`, { method: 'PATCH', body: patch });
@@ -552,10 +559,12 @@ function Labs({ list, edit, postTo, spec, onAdd, onRemove, onError }: {
   async function open(l: Lab) {
     if (!l.file_url) return;
     haptic.tap();
-    /* Отмечаем, что клиент документ открыл: специалист по этой отметке
-       видит, дошёл ли до него комментарий. Ответа не ждём — открытие
-       файла из-за статистики задерживаться не должно. */
-    if (!spec) api(`/client/health/labs/${l.id}/seen`, { method: 'POST', body: {} }).catch(() => {});
+    /* Отмечаем, кто документ открыл. У клиента — что он увидел
+       комментарий специалиста, у специалиста — что документ просмотрен
+       (в вебе это `hReviewLab`). Ответа не ждём: открытие файла не
+       должно ждать статистику. */
+    if (spec) api(`/specialist/labs/${l.id}/review`, { method: 'PATCH' }).catch(() => {});
+    else api(`/client/health/labs/${l.id}/seen`, { method: 'POST', body: {} }).catch(() => {});
     try {
       /* Снимок анализа показываем тут же: уходить в системный
          просмотрщик и возвращаться кнопкой «назад» ради одной картинки
@@ -656,7 +665,7 @@ function Labs({ list, edit, postTo, spec, onAdd, onRemove, onError }: {
 
             {/* «Настройки и доступ» — вид, название, дата, лаборатория,
                 комментарий и кому документ открыт. Файл не меняется. */}
-            {edit ? (
+            {edit && !spec ? (
               <Pressable onPress={() => { haptic.tap(); setEditing(v => (v === l.id ? null : l.id)); }}
                 style={({ pressed }) => ({ marginTop: S.sm, opacity: pressed ? 0.5 : 1 })}>
                 <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>
@@ -664,7 +673,21 @@ function Labs({ list, edit, postTo, spec, onAdd, onRemove, onError }: {
                 </Text>
               </Pressable>
             ) : null}
-            {editing === l.id ? <LabEdit l={l} onSave={patch => saveEdit(l, patch)} /> : null}
+            {editing === l.id && !spec ? <LabEdit l={l} onSave={patch => saveEdit(l, patch)} /> : null}
+
+            {/* Специалист документ не правит — он его комментирует.
+                Комментарий видит клиент в своей карточке документа. */}
+            {spec ? (
+              <Pressable onPress={() => { haptic.tap(); setEditing(v => (v === l.id ? null : l.id)); }}
+                style={({ pressed }) => ({ marginTop: S.sm, opacity: pressed ? 0.5 : 1 })}>
+                <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>
+                  {editing === l.id ? 'Свернуть' : l.specialist_comment ? 'Изменить комментарий' : 'Комментарий клиенту'}
+                </Text>
+              </Pressable>
+            ) : null}
+            {spec && editing === l.id ? (
+              <LabComment l={l} onSave={text => saveComment(l, text)} />
+            ) : null}
           </Card>
         </Animated.View>
       ))}
@@ -1196,6 +1219,25 @@ function LabEdit({ l, onSave }: { l: Lab; onSave: (patch: Record<string, unknown
           lab_name: lab.trim(), note: note.trim(),
           share_nutritionist: toNut, share_endocrinologist: toEnd,
         })} />
+    </View>
+  );
+}
+
+/** Комментарий специалиста к документу клиента. */
+function LabComment({ l, onSave }: { l: Lab; onSave: (text: string) => void }) {
+  const { p } = useApp();
+  const [text, setText] = useState(l.specialist_comment ?? '');
+  return (
+    <View style={{ marginTop: S.sm, gap: S.sm }}>
+      <TextInput value={text} onChangeText={setText} multiline
+        placeholder="Что важно учесть" placeholderTextColor={p.text3}
+        style={{
+          backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+          paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15,
+          minHeight: 96, textAlignVertical: 'top',
+        }} />
+      <SysButton label="Отправить клиенту" variant="prominent" height={44}
+        disabled={!text.trim()} onPress={() => onSave(text.trim())} />
     </View>
   );
 }

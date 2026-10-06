@@ -3,7 +3,7 @@ import { View, Text, TextInput, ScrollView, Pressable, Switch } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useApp } from '../../store';
-import { api, SpService, SERVICE_KIND } from '../../api';
+import { api, SpService, SpServiceType, SERVICE_KIND } from '../../api';
 import { S, R, FONT } from '../../theme';
 import { NavBar } from '../../ui/NavBar';
 import { Card, Label, Muted } from '../../ui/base';
@@ -34,8 +34,20 @@ export default function SpServices() {
   const [dur, setDur] = useState('');
   const [busy, setBusy] = useState(false);
 
+  /* Какие типы услуг эта роль вправе продавать — сервер отдаёт списком
+     вместе с услугами. Без выбора он угадывал тип по виду оплаты, а по
+     этому полю решается, кто ведёт клиента. */
+  const [types, setTypes] = useState<SpServiceType[]>([]);
+  const [type, setType] = useState('');
+
   const load = useCallback(async () => {
-    try { setList((await api<{ services: SpService[] }>('/specialist/services')).services ?? []); }
+    try {
+      const r = await api<{ services: SpService[]; service_types?: SpServiceType[] }>(
+        '/specialist/services');
+      setList(r.services ?? []);
+      setTypes(r.service_types ?? []);
+      setType(t => t || (r.service_types?.[0]?.type ?? ''));
+    }
     catch (e: any) { setErr(e.message); setList([]); }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -50,6 +62,7 @@ export default function SpServices() {
           title: title.trim(),
           description: desc.trim() || null,
           kind,
+          ...(type ? { service_type: type } : {}),
           price: price.replace(',', '.'),
           ...(kind === 'subscription'
             ? { period_days: Number(period) || 30 }
@@ -61,7 +74,7 @@ export default function SpServices() {
       await load();
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось добавить'); }
     finally { setBusy(false); }
-  }, [title, desc, price, kind, period, dur, load]);
+  }, [title, desc, price, kind, type, period, dur, load]);
 
   const toggle = useCallback(async (s: SpService) => {
     const next = s.is_active ? 0 : 1;
@@ -121,8 +134,34 @@ export default function SpServices() {
               <TextInput value={price} onChangeText={setPrice} keyboardType="decimal-pad"
                 placeholder="4500" placeholderTextColor={p.text3} style={field} />
 
+              {/* Что именно продаётся. Список приходит с сервера и зависит
+                  от роли: тренер не может продавать ведение питания. Без
+                  выбора сервер угадывал тип по виду оплаты. */}
+              {types.length > 1 ? (
+                <>
+                  <View style={{ height: S.md }} />
+                  <Label>Что это за услуга</Label>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.sm }}>
+                    {types.map(t => {
+                      const on = t.type === type;
+                      return (
+                        <Pressable key={t.type} onPress={() => { haptic.select(); setType(t.type); }}
+                          style={({ pressed }) => ({
+                            paddingHorizontal: 14, paddingVertical: 9, borderRadius: R.md,
+                            backgroundColor: on ? p.primary : p.inset,
+                            opacity: pressed && !on ? 0.7 : 1,
+                          })}>
+                          <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
+                            color: on ? p.onPrimary : p.text2 }}>{t.label}</Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
+
               <View style={{ height: S.md }} />
-              <Label>Тип</Label>
+              <Label>Оплата</Label>
               <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
                 {KINDS.map(([k, l]) => {
                   const on = k === kind;

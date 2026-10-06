@@ -13,10 +13,6 @@ import { uploadFile } from '../src/upload';
 import { haptic } from '../src/haptics';
 
 type Prof = 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
-const PROFS: [Prof, string][] = [
-  ['nutritionist', 'Нутрициолог'], ['trainer', 'Тренер'],
-  ['endocrinologist', 'Эндокринолог'], ['coach', 'Коуч'],
-];
 
 export default function SpProfileEdit() {
   const { p, refreshMe } = useApp();
@@ -59,7 +55,7 @@ export default function SpProfileEdit() {
     try {
       await api('/specialist/profile', {
         method: 'PATCH',
-        body: { name: name.trim(), phone: phone.trim() || null, avatar_url: avatar, profession: prof },
+        body: { name: name.trim(), phone: phone.trim() || null, avatar_url: avatar },
       });
       haptic.success();
       await refreshMe();
@@ -110,22 +106,23 @@ export default function SpProfileEdit() {
 
       <View style={{ height: S.lg }} />
       <Label>Профессия</Label>
-      <View style={{ flexDirection: 'row', gap: S.sm, marginTop: S.sm }}>
-        {PROFS.map(([k, l]) => {
-          const on = k === prof;
-          return (
-            <Pressable key={k} onPress={() => { haptic.select(); setProf(k); }}
-              style={({ pressed }) => ({
-                flex: 1, paddingVertical: 10, borderRadius: R.md, alignItems: 'center',
-                backgroundColor: on ? p.primary : p.inset,
-                opacity: pressed && !on ? 0.7 : 1,
-              })}>
-              <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
-                color: on ? p.onPrimary : p.text2 }}>{l}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {/* Профессию нельзя сменить этой формой: сервер её здесь не
+          читает вовсе — она меняется заявкой с документами, которую
+          проверяет владелец. Раньше тут стоял выбор из трёх кнопок, он
+          нажимался, сохранялся «успешно» и ничего не менял. */}
+      <Pressable onPress={() => { haptic.tap(); router.push('/sp-profession'); }}
+        style={({ pressed }) => ({
+          flexDirection: 'row', alignItems: 'center', gap: S.md, marginTop: S.sm,
+          paddingVertical: 14, paddingHorizontal: S.lg, borderRadius: R.md,
+          backgroundColor: pressed ? p.ov2 : p.inset,
+        })}>
+        <Text style={{ ...FONT.body, color: p.text, flex: 1 }}>{PROFESSION[prof]}</Text>
+        <Text style={{ ...FONT.small, fontWeight: '600', color: p.accent }}>Сменить</Text>
+        <Icon name="chevr" size={14} color={p.text3} />
+      </Pressable>
+      <Muted style={{ marginTop: S.sm }}>
+        Смена профессии проходит проверку: нужны документы по новой специальности.
+      </Muted>
 
       {pr.join_code ? (
         <Muted style={{ marginTop: S.lg }}>
