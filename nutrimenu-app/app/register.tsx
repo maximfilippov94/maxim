@@ -208,7 +208,7 @@ export default function Register() {
                         backgroundColor: on ? ON_PHOTO.primary : 'transparent',
                         borderWidth: on ? 0 : 1.5, borderColor: ON_PHOTO.fieldBorder,
                       }}>
-                        {on ? <Icon name="check" size={11} color="#FFFFFF" width={2.6} /> : null}
+                        {on ? <Icon name="check" size={11} color={ON_PHOTO.onPrimary} width={2.6} /> : null}
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={{ fontSize: 15,
@@ -256,7 +256,7 @@ function RoleCard({ icon, title, note, onPress }: {
             width: 46, height: 46, borderRadius: 23, backgroundColor: ON_PHOTO.primary,
             alignItems: 'center', justifyContent: 'center',
           }}>
-            <Icon name={icon} size={22} color="#FFFFFF" />
+            <Icon name={icon} size={22} color={ON_PHOTO.onPrimary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ ...FONT.h2, color: ON_PHOTO.text }}>{title}</Text>
@@ -286,7 +286,7 @@ function Chips({ items, value, onChange }: {
               opacity: pressed && !on ? 0.7 : 1,
             })}>
             <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
-              color: on ? '#FFFFFF' : ON_PHOTO.text2 }}>{l}</Text>
+              color: on ? ON_PHOTO.onPrimary : ON_PHOTO.text2 }}>{l}</Text>
           </Pressable>
         );
       })}

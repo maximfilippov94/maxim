@@ -315,7 +315,7 @@ export default function SpWorkoutBuild() {
                         borderWidth: added ? 0 : 1, borderColor: p.btnLine,
                       }}>
                       <Icon name={added ? 'check' : 'plus'} size={14}
-                        color={added ? p.primary : p.text2} width={2.2} />
+                        color={added ? p.accent : p.text2} width={2.2} />
                     </Pressable>
                   </View>
                 );

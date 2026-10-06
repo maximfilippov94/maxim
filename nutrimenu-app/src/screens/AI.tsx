@@ -188,7 +188,7 @@ export default function AI() {
                 paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: p.ov2,
               }}>
                 <Icon name="clock" size={16}
-                  color={cur.days_left <= 3 ? p.danger : cur.days_left <= 7 ? p.warn : p.primary}
+                  color={cur.days_left <= 3 ? p.danger : cur.days_left <= 7 ? p.warn : p.accent}
                   width={1.8} />
                 <Text style={{ ...FONT.body, fontWeight: '600', color: p.text }}>
                   {cur.days_left} {plural(cur.days_left, ['день', 'дня', 'дней'])} до {dmy(cur.expires_at)}

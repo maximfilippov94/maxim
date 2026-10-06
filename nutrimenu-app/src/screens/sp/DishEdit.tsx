@@ -490,7 +490,7 @@ function IngRow({ row, base, editable, onChange, onRemove }: {
           backgroundColor: p.inset, borderRadius: R.md, paddingHorizontal: S.lg,
         }}>
           <Icon name={picked ? 'check' : 'bowl'} size={15}
-            color={picked ? p.primary : p.text3} width={2} />
+            color={picked ? p.accent : p.text3} width={2} />
           <TextInput
             value={row.name} editable={editable}
             onChangeText={t => { onChange({ name: t, ingredient_id: 0 }); setOpen(true); }}

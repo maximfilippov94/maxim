@@ -134,7 +134,7 @@ export default function Notices({ role = 'client' }: { role?: 'client' | 'specia
                   backgroundColor: n.read_at ? p.inset : p.primarySoft,
                 }}>
                   <Icon name={KIND[n.type] ?? 'bell'} size={16}
-                    color={n.read_at ? p.text3 : p.primary} />
+                    color={n.read_at ? p.text3 : p.accent} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...FONT.h3, color: n.read_at ? p.text2 : p.text }}>

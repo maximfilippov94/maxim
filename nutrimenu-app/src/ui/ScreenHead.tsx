@@ -58,12 +58,14 @@ export function ScreenHead({ eyebrow, title, role }: {
             position: 'absolute', top: 6, right: 5, minWidth: 18, height: 18,
             borderRadius: 9, paddingHorizontal: 4,
             alignItems: 'center', justifyContent: 'center',
-            backgroundColor: p.danger,
+            /* Счётчик в вебе лаймовый с тёмной цифрой (.cbadge/.unread):
+               красный там означает отказ, а непрочитанное — не отказ. */
+            backgroundColor: p.primary,
             /* Кольцо цветом фона отделяет счётчик от колокольчика:
                иначе на тёмной теме цифра сливается с иконкой. */
             borderWidth: 2, borderColor: p.bg,
           }}>
-            <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: p.onPrimary }}>
               {unread > 99 ? '99+' : unread}
             </Text>
           </View>

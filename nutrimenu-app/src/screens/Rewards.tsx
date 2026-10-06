@@ -153,7 +153,7 @@ export default function Rewards() {
                 alignItems: 'center', justifyContent: 'center',
                 backgroundColor: a.unlocked ? p.primarySoft : p.inset,
               }}>
-                <Icon name={a.icon} size={19} color={a.unlocked ? p.primary : p.text3} />
+                <Icon name={a.icon} size={19} color={a.unlocked ? p.accent : p.text3} />
               </View>
               <Text numberOfLines={1} style={{
                 ...FONT.h3, color: a.unlocked ? p.text : p.text3, textAlign: 'center',

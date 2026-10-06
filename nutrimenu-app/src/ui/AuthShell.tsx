@@ -141,7 +141,10 @@ export function AuthButton({ title, onPress, loading, ghost }: {
         opacity: loading ? 0.6 : pressed ? 0.88 : 1,
         transform: [{ scale: pressed ? 0.99 : 1 }],
       })}>
-      <Text style={{ ...FONT.h3, fontSize: 16, color: '#FFFFFF' }}>{title}</Text>
+      {/* Поверх лаймовой заливки текст только чернилами: белый на лайме
+          даёт контраст 1.13 — надпись пропадает. */}
+      <Text style={{ ...FONT.h3, fontSize: 16,
+        color: ghost ? ON_PHOTO.text : ON_PHOTO.onPrimary }}>{title}</Text>
     </Pressable>
   );
 }
