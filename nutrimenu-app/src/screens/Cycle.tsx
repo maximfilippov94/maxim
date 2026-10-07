@@ -110,6 +110,10 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
   /* Окончание отмечают и задним числом: вспомнили через день-другой.
      В вебе для этого есть «Указать дату», здесь — тот же выбор. */
   const [endPick, setEndPick] = useState<Date | null>(null);
+  /* Дата начала, когда она не сегодняшняя: цикл замечают не в тот же
+     день, и в вебе (`clCycleStart`) первый день выбирают из календаря.
+     Без этого задним числом отметить было нечем. */
+  const [startPick, setStartPick] = useState<Date | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -148,13 +152,13 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
     return date >= from && date <= ymd(b);
   }, [c]);
 
-  const startPeriod = useCallback(async () => {
+  const startPeriod = useCallback(async (on?: string) => {
     setBusy(true);
     try {
       /* Поле даты — `date`: под именем `started_on` сервер его не видел
          и всегда брал сегодняшнее число. */
-      await api('/client/health/cycle/period/start', { method: 'POST', body: { date: today10() } });
-      haptic.success(); await load();
+      await api('/client/health/cycle/period/start', { method: 'POST', body: { date: on ?? today10() } });
+      haptic.success(); setStartPick(null); await load();
     } catch (e: any) { haptic.error(); toast(e?.message ?? 'Не сохранилось', { kind: 'err' }); }
     finally { setBusy(false); }
   }, [load, toast]);
@@ -319,6 +323,29 @@ export default function Cycle({ embedded }: { embedded?: boolean } = {}) {
                 disabled={busy}
                 onPress={() => (s.period_active ? endPeriod() : startPeriod())} />
             </View>
+            {!s.period_active ? (
+              startPick ? (
+                <View style={{ marginTop: S.sm, gap: S.sm }}>
+                  <Muted>Первый день</Muted>
+                  <SysDate value={startPick} onChange={setStartPick} max={new Date()} />
+                  <View style={{ flexDirection: 'row', gap: S.sm }}>
+                    <View style={{ flex: 1 }}>
+                      <SysButton label="Сохранить" variant="prominent" height={44} disabled={busy}
+                        onPress={() => startPeriod(ymd(startPick))} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <SysButton label="Отмена" variant="quiet" height={44}
+                        onPress={() => setStartPick(null)} />
+                    </View>
+                  </View>
+                </View>
+              ) : (
+                <View style={{ marginTop: S.sm }}>
+                  <SysButton label="Указать другую дату" variant="quiet" height={44}
+                    onPress={() => { haptic.tap(); setStartPick(new Date()); }} />
+                </View>
+              )
+            ) : null}
             {s.period_active ? (
               endPick ? (
                 <View style={{ marginTop: S.sm, gap: S.sm }}>

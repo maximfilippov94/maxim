@@ -1194,6 +1194,14 @@ export interface AiState {
              full_price_kop: number; credit_kop: number } | null;
   nutrition_ready: boolean;
   fitness_ready: boolean;
+  /* Ответы анкет. Сервер отдаёт их вместе с состоянием, веб показывает
+     по ним предварительный ориентир до оплаты. */
+  nutrition?: Record<string, any> | null;
+  fitness?: {
+    days_per_week?: number | null;
+    session_minutes?: number | null;
+    goal?: string | null;
+  } | null;
   specialist_conflict: { id: number; name: string; profession?: string; role?: string }[];
   has_model: boolean;
   welcome_offer: { eligible: boolean; percent: number; seconds_left: number };

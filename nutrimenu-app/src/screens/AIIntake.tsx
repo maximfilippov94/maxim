@@ -71,7 +71,11 @@ export default function AIIntake() {
       });
       haptic.success();
       toast('Разбор подтверждён');
-      router.replace({ pathname: '/ai', params: { plan } });
+      /* `preview` просит экран AI сразу показать предварительный
+         ориентир — шаг веба между подтверждением и оформлением.
+         Возвращать человека к списку наборов значит потерять его на
+         полпути: он подтвердил ответы и ждёт, что из них вышло. */
+      router.replace({ pathname: '/ai', params: { plan, preview: '1' } });
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Не подтвердилось');
     } finally { setBusy(false); }

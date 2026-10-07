@@ -18,7 +18,7 @@ import React, { useCallback, useState } from 'react';
 import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Switch, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useApp } from '../store';
 import { api, AiState, AiPlan } from '../api';
 import { S, R, FONT, CYCLE } from '../theme';
@@ -92,6 +92,7 @@ const dmy = (s?: string | null) => {
 
 export default function AI() {
   const { p } = useApp();
+  const params = useLocalSearchParams<{ plan?: string; preview?: string }>();
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const [d, setD] = useState<AiState | null>(null);
@@ -102,15 +103,29 @@ export default function AI() {
   const [code, setCode] = useState('');
   /* Какой набор разбираем перед оплатой. */
   const [checkout, setCheckout] = useState<AiPlan | null>(null);
+  /* Предварительный ориентир после подтверждения анкеты — шаг веба
+     (`clAIPreview`) между разбором ответов и оформлением. Без него
+     человек подтверждал анкету и возвращался к списку наборов, так и
+     не увидев, что из его ответов получилось. */
+  const [preview, setPreview] = useState<AiPlan | null>(null);
   const [quote, setQuote] = useState<{ percent: number; total_kop: number;
     discount_kop: number; code: string } | null>(null);
   const [codeErr, setCodeErr] = useState<string | null>(null);
 
   const load = useCallback(() => {
     api<AiState>('/client/ai')
-      .then(r => { setD(r); setErr(null); })
+      .then(r => {
+        setD(r); setErr(null);
+        /* Пришли с подтверждения анкеты — показываем ориентир сразу,
+           как только есть данные. Открываем здесь, а не отдельным
+           эффектом: лишний проход отрисовки ради одного флага не нужен. */
+        if (params.preview === '1') {
+          setPreview((params.plan as AiPlan) || 'both');
+          router.setParams({ preview: undefined });
+        }
+      })
       .catch(e => setErr(e?.message ?? 'Не открылось'));
-  }, []);
+  }, [params.preview, params.plan]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   /* Чего не хватает для этого набора: сначала анкеты, потом сверка того,
@@ -480,6 +495,11 @@ export default function AI() {
           входит, срок доступа, цена, промокод и оговорки. До этого
           человек нажимал «Подключить» и попадал прямо на оплату, не
           увидев условий. */}
+      <AiPreview
+        plan={preview} state={d}
+        onClose={() => setPreview(null)}
+        onNext={pl => { setPreview(null); setCode(''); setQuote(null); setCodeErr(null); setCheckout(pl); }} />
+
       <AiCheckout
         plan={checkout} state={d} busy={busy}
         code={code} quote={quote} codeErr={codeErr}
@@ -634,6 +654,130 @@ function AiCheckout({ plan, state, busy, code, quote, codeErr, onCode, onCheck, 
             <SysButton label={free ? 'Создать мой план' : 'Перейти к оплате'}
               variant="prominent" disabled={busy} onPress={() => onBuy(plan)} />
             <SysButton label="Вернуться к вариантам" onPress={onClose} />
+          </View>
+        </ScrollView>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+/** Предварительный ориентир: что получилось из ответов, до оплаты. */
+function AiPreview({ plan, state, onClose, onNext }: {
+  plan: AiPlan | null;
+  state: AiState | null;
+  onClose: () => void;
+  onNext: (plan: AiPlan) => void;
+}) {
+  const { p, me } = useApp();
+  const insets = useSafeAreaInsets();
+  if (!plan || !state) return null;
+
+  const u = me?.user;
+  const hasFood = plan !== 'workouts';
+  const hasGym = plan !== 'nutrition';
+  const f = state.fitness ?? {};
+  const title = plan === 'both' ? 'Ваша система готова к созданию'
+    : plan === 'nutrition' ? 'Основа вашего питания готова'
+    : 'Основа программы готова';
+
+  return (
+    <Modal transparent visible animationType="fade" onRequestClose={onClose}>
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(9,16,18,0.6)' }} />
+      <Animated.View entering={SlideInDown.duration(280)} style={{
+        position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '90%',
+        backgroundColor: p.surface,
+        borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
+        paddingBottom: insets.bottom + S.lg,
+      }}>
+        <View style={{
+          width: 38, height: 4, borderRadius: 999, backgroundColor: p.border,
+          alignSelf: 'center', marginTop: 10, marginBottom: S.sm,
+        }} />
+
+        <ScrollView contentContainerStyle={{ paddingHorizontal: S.lg, paddingBottom: S.lg }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>ПРЕДВАРИТЕЛЬНЫЙ РЕЗУЛЬТАТ</Text>
+              <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>{title}</Text>
+            </View>
+            <Pressable onPress={onClose} hitSlop={10}
+              accessibilityRole="button" accessibilityLabel="Закрыть"
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, paddingTop: 4 })}>
+              <Icon name="close" size={18} color={p.text3} />
+            </Pressable>
+          </View>
+
+          <Text style={{ ...FONT.body, color: p.text2, marginTop: S.md, lineHeight: 22 }}>
+            EQUA уже учла вашу цель, режим и ограничения. После оформления доступа AI
+            соберёт конкретные блюда{hasGym ? ' и тренировки' : ''} и покажет их до начала работы.
+          </Text>
+
+          {hasFood ? (
+            <View style={{
+              marginTop: S.lg, backgroundColor: p.inset,
+              borderRadius: R.lg, padding: S.lg,
+            }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>Ориентир на день</Text>
+              <Text style={{ ...FONT.num, color: p.text, marginTop: 2 }}>
+                {u?.target_kcal ?? 1800} ккал
+              </Text>
+              <View style={{ flexDirection: 'row', gap: S.lg, marginTop: S.md }}>
+                {([['Белки', u?.target_protein ?? 110, p.mp],
+                   ['Жиры', u?.target_fat ?? 60, p.mf],
+                   ['Углеводы', u?.target_carbs ?? 190, p.mc]] as const).map(([k, v, c]) => (
+                  <View key={k}>
+                    <Text style={{ ...FONT.caption, color: p.text3 }}>{k}</Text>
+                    <Text style={{ ...FONT.h3, color: c }}>{v} г</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {hasGym ? (
+            <View style={{
+              marginTop: S.md, backgroundColor: p.inset,
+              borderRadius: R.lg, padding: S.lg,
+            }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>Объём тренировок</Text>
+              <Text style={{ ...FONT.h3, color: p.text, marginTop: 2 }}>
+                {f.days_per_week ?? 3} {plural(Number(f.days_per_week ?? 3), ['день', 'дня', 'дней'])} в неделю
+              </Text>
+              <Muted style={{ marginTop: 2 }}>
+                по {f.session_minutes ?? 45} минут · {f.goal || u?.goal || 'под вашу цель'}
+              </Muted>
+            </View>
+          ) : null}
+
+          <View style={{ marginTop: S.lg }}>
+            <Label>Что произойдёт дальше</Label>
+            <View style={{ gap: 7, marginTop: S.sm }}>
+              {['Составим план из базы EQUA',
+                'Покажем порции, нагрузку и объяснение',
+                'Будем предлагать адаптацию по результатам'].map(x => (
+                <View key={x} style={{ flexDirection: 'row', gap: 9, alignItems: 'flex-start' }}>
+                  <Icon name="check" size={14} color={p.accent} width={2.2} />
+                  <Text style={{ ...FONT.small, color: p.text2, flex: 1, lineHeight: 19 }}>{x}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <Muted style={{ marginTop: S.lg, lineHeight: 18 }}>
+            Это предварительные ориентиры. Итоговый план не заменяет медицинскую
+            консультацию и меняется только с вашего согласия.
+          </Muted>
+
+          <View style={{ marginTop: S.xl, gap: S.sm }}>
+            <SysButton label="Продолжить" variant="prominent" onPress={() => onNext(plan)} />
+            <SysButton label="Поправить ответы"
+              onPress={() => {
+                onClose();
+                router.push({
+                  pathname: plan === 'workouts' ? '/ai-fitness' : '/ai-nutrition',
+                  params: { plan },
+                });
+              }} />
           </View>
         </ScrollView>
       </Animated.View>
