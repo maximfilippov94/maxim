@@ -93,6 +93,7 @@ function Root() {
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: p.bg } }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" />
+        <Stack.Screen name="start" />
         <Stack.Screen name="login" />
         <Stack.Screen name="client" />
         <Stack.Screen name="sp" />

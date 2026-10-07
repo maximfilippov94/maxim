@@ -126,7 +126,10 @@ export default function Register() {
         } catch { /* учётка уже создана — анкету можно поправить в профиле */ }
       }
       haptic.success();
-      router.replace(role === 'specialist' ? '/sp' : '/client');
+      /* Клиента ведём на выбор пути, как в вебе: без него новый человек
+         попадал на пустое «Сегодня» и не знал, что делать дальше.
+         Специалисту выбирать нечего — у него сразу кабинет. */
+      router.replace(role === 'specialist' ? '/sp' : '/start');
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Не удалось зарегистрироваться');
     } finally { setBusy(false); }
