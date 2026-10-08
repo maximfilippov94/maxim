@@ -45,26 +45,6 @@ export default function Barcode() {
      сервер и мигали ответами. */
   const seen = useRef<string | null>(null);
 
-  /* Какой объектив снимает.
-     По умолчанию expo-camera берёт одиночную широкоугольную камеру, а у
-     неё на новых iPhone ближний предел фокуса около двадцати сантиметров:
-     поднесённую пачку она не видит резко и «рыщет». Виртуальная камера
-     (две или три матрицы под одним именем) переключается на
-     ультраширокую сама и ловит вблизи сразу — это и есть «у них всё уже
-     в фокусе». Выбираем её, когда устройство такую отдаёт; на остальных
-     остаётся прежнее поведение. */
-  const cam = useRef<CameraView>(null);
-  const [lens, setLens] = useState<string | undefined>(undefined);
-  const pickLens = useCallback(async () => {
-    try {
-      const list = await cam.current?.getAvailableLensesAsync();
-      if (!list?.length) return;
-      const best = ['builtInTripleCamera', 'builtInDualWideCamera', 'builtInDualCamera']
-        .find(n => list.includes(n));
-      if (best) setLens(best);
-    } catch { /* нет такого на платформе — снимаем чем есть */ }
-  }, []);
-
   /* Код, который распознали или ввели руками, но не нашли в каталоге:
      по нему предлагаем завести продукт по этикетке — как в вебе. */
   const [missing, setMissing] = useState<string | null>(null);
@@ -170,12 +150,22 @@ export default function Barcode() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0C1118' }}>
+      {/* Снимаем широкой камерой, той самой «×1», и записываем это явно.
+          Было умолчание — та же широкая, но без записи; виртуальную
+          (`builtInTripleCamera`) я ставил сюда в расчёте на авто-макро и
+          убрал, не дождавшись проверки.
+
+          Ощущение «у нас ×2» даёт не объектив, а предпросмотр: кадр
+          камеры 4:3 растянут на весь экран, и по бокам срезано — на
+          iPhone 14 Pro видно 62% ширины кадра, что равно зуму ×1.63.
+          Задать пропорцию нельзя: `ratio` в expo-camera только для
+          Android. Сам сканер при этом читает полный кадр, а не видимую
+          часть. */}
       <CameraView
-        ref={cam}
         style={StyleSheet.absoluteFill}
         facing="back"
-        selectedLens={lens}
-        onCameraReady={pickLens}
+        selectedLens="builtInWideAngleCamera"
+        zoom={0}
         barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
         onBarcodeScanned={({ data }) => lookup(String(data))}
       />
