@@ -9,7 +9,7 @@ import { useApp } from '../store';
 import { api, readSex } from '../api';
 import { AiAccess } from '../ui/TodayBlocks';
 import { plural, kg } from '../format';
-import { ThemePref, S, FONT } from '../theme';
+import { ThemePref, S, R, FONT, LAYOUT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListRow, ListHead } from '../ui/List';
 import { Face } from '../ui/Face';
@@ -65,10 +65,12 @@ export default function More() {
             сайта, ищет пункт глазами там же и теми же словами. */}
         <ProfileCard />
 
-        <ListGroup>
-          <ListRow first icon="user" label="Профиль"
-            onPress={() => router.push('/profile')} />
-          <ListRow icon="weight" label="Прогресс и замеры"
+        {/* Строки «Профиль» здесь больше нет: карточка выше ведёт туда же,
+            и два входа в одно место подряд — лишний выбор на ровном
+            месте. Это расхождение с вебом сделано намеренно: там карточка
+            и строка сосуществуют. */}
+        <ListGroup style={{ marginTop: 8 }}>
+          <ListRow first icon="weight" label="Прогресс и замеры"
             onPress={() => router.push('/progress')} />
           <ListRow icon="heart" label="Моё здоровье"
             onPress={() => router.push('/health')} />
@@ -270,16 +272,21 @@ function ProfileCard() {
   const sub = facts || 'Заполнить профиль';
 
   return (
-    /* Полотно берём у `ListGroup`, а подсветку нажатия кладём поверх —
-       как в `ListRow`. Если красить фон целиком, на нажатии сквозь
-       полупрозрачную подсветку проступает цвет страницы, и карточка
-       моргает. */
-    <ListGroup style={{ marginTop: 8 }}>
+    /* В отличие от разделов ниже карточка — не строка списка, а предмет:
+       скруглённое полотно в общем боковом поле (20 — единственное на всё
+       приложение). Подсветку нажатия кладём внутрь, поверх полотна: если
+       красить фон целиком, сквозь полупрозрачную подсветку проступает
+       цвет страницы, и карточка моргает. */
+    <View style={{
+      marginTop: 12, marginBottom: 8,
+      marginHorizontal: LAYOUT.screenPad,
+      backgroundColor: p.surface, borderRadius: R.lg, overflow: 'hidden',
+    }}>
       <Pressable onPress={() => { haptic.tap(); router.push('/profile'); }}>
       {({ pressed }) => (
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 14,
-          paddingHorizontal: 18, paddingVertical: 16,
+          paddingHorizontal: 16, paddingVertical: 16,
           backgroundColor: pressed ? p.ov1 : 'transparent',
         }}>
           <Face url={u.avatar_url} name={u.name} size={52} />
@@ -300,6 +307,6 @@ function ProfileCard() {
         </View>
       )}
       </Pressable>
-    </ListGroup>
+    </View>
   );
 }
