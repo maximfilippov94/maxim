@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, PublicSpecialist, CatalogSpecialist } from '../api';
+import { api, mediaUrl, PublicSpecialist, CatalogSpecialist } from '../api';
 import { rub, plural, seenPhrase, svcUnit, specRate } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
@@ -347,7 +347,7 @@ function Field({ value, onChange, placeholder, multiline }: {
 function Thumb({ url }: { url: string }) {
   const { p } = useApp();
   return (
-    <Image source={{ uri: url }}
+    <Image source={{ uri: mediaUrl(url) ?? url }}
       style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: R.sm, backgroundColor: p.inset }}
       contentFit="cover" transition={160} cachePolicy="memory-disk" />
   );

@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { useApp } from '../store';
-import { api, Gamification, GamReward, ClientTask } from '../api';
+import { api, mediaUrl, Gamification, GamReward, ClientTask } from '../api';
 import { uploadForm } from '../upload';
 import { pickPhoto, shootPhoto } from '../photo';
 import { S, R, FONT } from '../theme';
@@ -188,8 +188,8 @@ export default function Rewards() {
                   </Muted>
                   {t.note ? <Muted numberOfLines={2}>{t.note}</Muted> : null}
                 </View>
-                {t.photo_url ? (
-                  <Image source={{ uri: t.photo_url }}
+                {mediaUrl(t.photo_url) ? (
+                  <Image source={{ uri: mediaUrl(t.photo_url)! }}
                     style={{ width: 40, height: 40, borderRadius: R.sm, backgroundColor: p.inset }}
                     contentFit="cover" />
                 ) : null}

@@ -13,16 +13,19 @@ import React, { useState } from 'react';
 import { View, ScrollView, LayoutChangeEvent, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { Image } from 'expo-image';
 import { useApp } from '../store';
+import { mediaUrl } from '../api';
 import { Icon } from './Icon';
 import { haptic } from '../haptics';
 
 export function PhotoSwipe({ shots, radius = 0, fallbackIcon = 'dumbbell' }: {
-  /** Готовые адреса кадров: один — просто снимок, два — листаются */
+  /** Кадры: один — просто снимок, два — листаются. Адрес достраиваем
+      сами, чтобы относительный путь с сервера не оставил серую область. */
   shots: string[];
   radius?: number;
   fallbackIcon?: string;
 }) {
   const { p } = useApp();
+  const pics = shots.map(u => mediaUrl(u)).filter(Boolean) as string[];
   const [w, setW] = useState(0);
   const [i, setI] = useState(0);
 
@@ -33,7 +36,7 @@ export function PhotoSwipe({ shots, radius = 0, fallbackIcon = 'dumbbell' }: {
     if (next !== i) { haptic.select(); setI(next); }
   };
 
-  if (!shots.length) {
+  if (!pics.length) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Icon name={fallbackIcon} size={44} color={p.text3} />
@@ -46,30 +49,30 @@ export function PhotoSwipe({ shots, radius = 0, fallbackIcon = 'dumbbell' }: {
       {/* Пока ширина не измерена, показываем первый кадр: пустая серая
           область на долю секунды читается как «фото не загрузилось». */}
       {w === 0 ? (
-        <Image source={{ uri: shots[0] }} style={{ width: '100%', height: '100%' }}
+        <Image source={{ uri: pics[0] }} style={{ width: '100%', height: '100%' }}
           contentFit="cover" transition={200} />
       ) : (
         <ScrollView
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          scrollEnabled={shots.length > 1}
+          scrollEnabled={pics.length > 1}
           onMomentumScrollEnd={onEnd}
           style={{ flex: 1 }}>
-          {shots.map(u => (
+          {pics.map(u => (
             <Image key={u} source={{ uri: u }} style={{ width: w, height: '100%' }}
               contentFit="cover" transition={200} cachePolicy="memory-disk" />
           ))}
         </ScrollView>
       )}
 
-      {shots.length > 1 ? (
+      {pics.length > 1 ? (
         <View style={{
           position: 'absolute', bottom: 10, alignSelf: 'center',
           flexDirection: 'row', gap: 7, paddingHorizontal: 10, paddingVertical: 6,
           borderRadius: 999, backgroundColor: 'rgba(9,16,22,0.52)',
         }} pointerEvents="none">
-          {shots.map((u, k) => (
+          {pics.map((u, k) => (
             <View key={u} style={{
               width: 7, height: 7, borderRadius: 4,
               backgroundColor: k === i ? '#fff' : 'rgba(255,255,255,0.42)',

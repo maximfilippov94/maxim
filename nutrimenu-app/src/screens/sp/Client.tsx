@@ -1076,8 +1076,8 @@ function TasksTab({ cid }: { cid: number }) {
                 </Text>
               ) : null}
             </View>
-            {t.photo_url ? (
-              <Image source={{ uri: t.photo_url }}
+            {mediaUrl(t.photo_url) ? (
+              <Image source={{ uri: mediaUrl(t.photo_url)! }}
                 style={{ width: 52, height: 52, borderRadius: R.md, backgroundColor: p.inset }}
                 contentFit="cover" />
             ) : null}
@@ -1224,7 +1224,7 @@ function ProgressTab({ cid }: { cid: number }) {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
             {d.photos.filter(ph => ph.photo_url).map(ph => (
               <View key={ph.id} style={{ width: '31%' }}>
-                <Image source={{ uri: ph.photo_url }}
+                <Image source={{ uri: mediaUrl(ph.photo_url)! }}
                   style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: R.md,
                     backgroundColor: p.inset }}
                   contentFit="cover" transition={200} />
