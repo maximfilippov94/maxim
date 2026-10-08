@@ -11,7 +11,8 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Animated, {
-  useSharedValue, useAnimatedStyle, withRepeat, withTiming, runOnUI, Easing,
+  useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, runOnUI,
+  FadeIn, Easing,
 } from 'react-native-reanimated';
 import {
   View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Linking, StyleSheet,
@@ -25,7 +26,7 @@ import { api, Food, MEAL_TITLES } from '../api';
 import { round } from '../format';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
-import { Card, Muted } from '../ui/base';
+import { Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { SysButton } from '../ui/system';
 import { haptic } from '../haptics';
@@ -118,6 +119,11 @@ export default function Barcode() {
      принимается именно здесь. */
   const holding = useRef(false);
   const lostAt = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /* Короткая вспышка в миг захвата — то самое «как будто сняли фото».
+     Говорит о случившемся быстрее любой подписи: глаз замечает смену
+     яркости раньше, чем успевает прочитать слово. */
+  const flash = useSharedValue(0);
+  const flashStyle = useAnimatedStyle(() => ({ opacity: flash.value }));
 
   /* Мутации разделяемых значений уводим на поток анимаций одним
      куском: и правило линтера о неизменяемости молчит, и четыре
@@ -163,10 +169,18 @@ export default function Barcode() {
        прилипла, а догоняет. */
     const first = !holding.current;
     holding.current = true;
+    if (first) {
+      runOnUI(() => {
+        'worklet';
+        flash.value = withSequence(
+          withTiming(0.4, { duration: 80 }),
+          withTiming(0, { duration: 260 }));
+      })();
+    }
     moveTo(x - pad, y - pad, w + pad * 2, h + pad * 2, first ? 200 : 60);
     if (lostAt.current) clearTimeout(lostAt.current);
     lostAt.current = setTimeout(release, 600);
-  }, [moveTo, release]);
+  }, [moveTo, release, flash]);
 
   useEffect(() => () => { if (lostAt.current) clearTimeout(lostAt.current); }, []);
 
@@ -241,27 +255,6 @@ export default function Barcode() {
 
   /* Товар найден — показываем, что именно, прежде чем класть в дневник:
      штрихкод мог прочитаться с соседней пачки. */
-  if (found) {
-    return (
-      <View style={{ flex: 1, backgroundColor: p.bg }}>
-        <NavBar title="Нашли" back onBack={() => { setFound(null); seen.current = null; }} />
-        <View style={{ padding: S.lg, gap: S.md }}>
-          <Card style={{ gap: 6 }}>
-            <Text style={{ ...FONT.h3, fontSize: 17, color: p.text }}>{found.name}</Text>
-            {found.brand ? <Muted>{found.brand}</Muted> : null}
-            <Text style={{ ...FONT.body, color: p.text2, marginTop: 4 }}>
-              {round(found.kcal)} ккал · Б {found.protein} Ж {found.fat} У {found.carbs} / 100 г
-            </Text>
-          </Card>
-          <SysButton label="Записать в дневник" variant="prominent"
-            onPress={() => { haptic.tap(); router.replace(`/food-log?meal=${meal}&code=${found.barcode ?? ''}`); }} />
-          <SysButton label="Сканировать другой"
-            onPress={() => { setFound(null); seen.current = null; }} />
-        </View>
-      </View>
-    );
-  }
-
   const mealTitle = MEAL_TITLES[meal ?? ''] ?? 'Приём пищи';
   const toSearch = () => { haptic.tap(); router.replace(`/food-log?meal=${meal ?? ''}`); };
 
@@ -337,6 +330,11 @@ export default function Barcode() {
           }, lineStyle]} />
         </View>
       </Animated.View>
+
+      {/* Вспышка захвата. Поверх кадра, но под содержимым: она про
+          камеру, а не про интерфейс. */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill,
+        { backgroundColor: '#fff' }, flashStyle]} />
 
       <ScrollView contentContainerStyle={{
         paddingTop: insets.top + S.md, paddingHorizontal: S.lg,
@@ -451,6 +449,41 @@ export default function Barcode() {
           Камера используется только для считывания кода
         </Text>
       </ScrollView>
+
+      {/* Нашли — показываем прямо здесь, не уводя с экрана. Раньше
+          приложение улетало на отдельную страницу, и рамка, только что
+          севшая на код, исчезала вместе с кадром. Теперь камера
+          работает дальше, рамка держит код, а карточка ложится снизу:
+          видно и что поймали, и на чём оно поймано. */}
+      {found ? (
+        <Animated.View entering={FadeIn.duration(180)} style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          paddingHorizontal: S.lg, paddingTop: S.lg,
+          paddingBottom: insets.bottom + S.lg, gap: S.md,
+          backgroundColor: 'rgba(12,17,24,0.94)',
+          borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
+        }}>
+          <View style={{ gap: 4 }}>
+            <Text style={{ ...FONT.label, color: 'rgba(255,255,255,0.62)' }}>НАШЛИ</Text>
+            <Text style={{ ...FONT.h3, fontSize: 18, color: '#fff' }}>{found.name}</Text>
+            {found.brand ? (
+              <Text style={{ ...FONT.small, color: 'rgba(255,255,255,0.72)' }}>
+                {found.brand}
+              </Text>
+            ) : null}
+            <Text style={{ ...FONT.body, color: 'rgba(255,255,255,0.86)', marginTop: 2 }}>
+              {round(found.kcal)} ккал · Б {found.protein} Ж {found.fat} У {found.carbs} / 100 г
+            </Text>
+          </View>
+          <SysButton label="Записать в дневник" variant="prominent"
+            onPress={() => {
+              haptic.tap();
+              router.replace(`/food-log?meal=${meal}&code=${found.barcode ?? ''}`);
+            }} />
+          <SysButton label="Сканировать другой" height={44}
+            onPress={() => { haptic.tap(); setFound(null); seen.current = null; }} />
+        </Animated.View>
+      ) : null}
     </View>
   );
 }
