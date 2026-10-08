@@ -66,8 +66,18 @@ printf 'значок:  %s\n' "$(node -p "require('./app.json').expo.icon" 2>/dev
 printf 'сервер:  %s\n' "$(grep -o "'https://[^']*'" src/api.ts 2>/dev/null | head -1)"
 
 line "Связь с боевым сервером"
-code=$(curl -s -o /dev/null -w '%{http_code}' -m 8 https://nutrimenu.ru/api/v1/config 2>/dev/null)
-printf 'nutrimenu.ru: %s\n' "${code:-нет ответа}"
+# /catalog — публичный GET без входа, его же зовёт само приложение.
+# Раньше здесь стоял /config, которого на сервере нет вовсе: адрес был
+# вписан наугад, и проверка каждый раз показывала 404 как поломку.
+code=$(curl -s -o /dev/null -w '%{http_code}' -m 8 https://nutrimenu.ru/api/v1/catalog 2>/dev/null)
+case "$code" in
+  200)      printf 'nutrimenu.ru: 200 — API отвечает\n' ;;
+  401|403)  printf 'nutrimenu.ru: %s — API жив, просит вход\n' "$code" ;;
+  404)      printf 'nutrimenu.ru: 404 — маршрута нет, проверить адрес в скрипте\n' ;;
+  5*)       printf 'nutrimenu.ru: %s — сервер отвечает ошибкой\n' "$code" ;;
+  ''|000)   printf 'nutrimenu.ru: нет ответа — проверить интернет\n' ;;
+  *)        printf 'nutrimenu.ru: %s\n' "$code" ;;
+esac
 
 line "Кэш"
 printf 'metro:   %s папок с кэшем\n' "$(ls -d "${TMPDIR}"metro-* 2>/dev/null | wc -l | tr -d ' ')"
