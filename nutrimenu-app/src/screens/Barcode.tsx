@@ -150,30 +150,6 @@ export default function Barcode() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0C1118' }}>
-      {/* Снимаем широкой камерой, той самой «×1», и записываем это явно.
-          Было умолчание — та же широкая, но без записи; виртуальную
-          (`builtInTripleCamera`) я ставил сюда в расчёте на авто-макро и
-          убрал, не дождавшись проверки.
-
-          Ощущение «у нас ×2» даёт не объектив, а предпросмотр: кадр
-          камеры 4:3 растянут на весь экран, и по бокам срезано — на
-          iPhone 14 Pro видно 62% ширины кадра, что равно зуму ×1.63.
-          Задать пропорцию нельзя: `ratio` в expo-camera только для
-          Android. Сам сканер при этом читает полный кадр, а не видимую
-          часть. */}
-      <CameraView
-        style={StyleSheet.absoluteFill}
-        facing="back"
-        selectedLens="builtInWideAngleCamera"
-        zoom={0}
-        barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
-        onBarcodeScanned={({ data }) => lookup(String(data))}
-      />
-      {/* Поверх кадра — тёмная подложка: белый текст на светлой кухне
-          иначе не читается. */}
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill,
-        { backgroundColor: 'rgba(12,17,24,0.45)' }]} />
-
       <ScrollView contentContainerStyle={{
         paddingTop: insets.top + S.md, paddingHorizontal: S.lg,
         paddingBottom: insets.bottom + S.xl,
@@ -220,12 +196,70 @@ export default function Barcode() {
           </Text>
         </View>
 
+        {/* Окно камеры 3:4 — ровно та пропорция, в которой снимает
+            матрица. Раньше кадр занимал весь экран, и показывалась лишь
+            часть: превью у iOS всегда `resizeAspectFill`, то есть
+            вписывается по высоте, а по бокам обрезается. На iPhone 14 Pro
+            видно было 62% ширины кадра — как зум ×1.63. Человек видел
+            узкое окно, отводил пачку дальше, и код становился мельче,
+            хотя распознавание всё это время читало полный кадр.
+
+            Теперь окно само той же пропорции, что и кадр: заполнение
+            совпадает с вписыванием, и видно ровно то, что видит камера. */}
+        <View style={{
+          width: '100%', aspectRatio: 3 / 4, marginTop: S.lg,
+          borderRadius: R.xl, overflow: 'hidden', backgroundColor: '#000',
+        }}>
+          <CameraView
+            style={StyleSheet.absoluteFill}
+            facing="back"
+            /* Широкая камера, та самая «×1», записана явно: раньше то же
+               получалось умолчанием, но из кода этого видно не было. */
+            selectedLens="builtInWideAngleCamera"
+            zoom={0}
+            barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
+            onBarcodeScanned={({ data }) => lookup(String(data))}
+          />
+
+          {/* Рамка прицела: четыре уголка и бегущая линия — как в вебе */}
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { padding: S.lg }]}>
+            <View style={StyleSheet.absoluteFill}>
+              {([['tl', { top: S.lg, left: S.lg }], ['tr', { top: S.lg, right: S.lg }],
+                 ['bl', { bottom: S.lg, left: S.lg }], ['br', { bottom: S.lg, right: S.lg }]] as const)
+                .map(([k, pos]) => (
+                  <View key={k} style={{
+                    position: 'absolute', width: 54, height: 54, ...pos,
+                    borderColor: p.primary,
+                    borderTopWidth: k[0] === 't' ? 4 : 0,
+                    borderBottomWidth: k[0] === 'b' ? 4 : 0,
+                    borderLeftWidth: k[1] === 'l' ? 4 : 0,
+                    borderRightWidth: k[1] === 'r' ? 4 : 0,
+                    borderRadius: 6,
+                  }} />
+                ))}
+            </View>
+            {/* Линия ходит вверх-вниз, как в вебе (`scan-sweep`): 2,3 с
+                туда-обратно, со свечением. Неподвижная полоса читается
+                как часть рамки, а движение говорит, что камера работает
+                и ждёт код. «Уменьшение движения» в настройках телефона
+                останавливает её — об этом заботится ReducedMotionConfig
+                на корне приложения. */}
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+              <Animated.View style={[{
+                height: 2, backgroundColor: p.primary, marginHorizontal: 28,
+                shadowColor: p.primary, shadowOpacity: 0.6,
+                shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+              }, sweep]} />
+            </View>
+          </View>
+        </View>
+
         {/* Состояние распознавания словами: человек должен понимать,
             ждёт камера код или уже ищет товар. */}
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start',
-          marginTop: S.lg, paddingVertical: 9, paddingHorizontal: 14,
-          borderRadius: R.pill, backgroundColor: 'rgba(12,17,24,0.72)',
+          marginTop: S.md, paddingVertical: 9, paddingHorizontal: 14,
+          borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.08)',
         }}>
           <View style={{
             width: 9, height: 9, borderRadius: 5,
@@ -233,42 +267,6 @@ export default function Barcode() {
           }} />
           <Text style={{ ...FONT.body, color: '#fff' }}>
             {busy ? 'Ищем продукт…' : 'Автопоиск включён'}
-          </Text>
-        </View>
-
-        {/* Рамка прицела: четыре уголка и линия — как в вебе */}
-        <View style={{ height: 230, marginTop: S.lg, justifyContent: 'center' }}>
-          <View style={StyleSheet.absoluteFill}>
-            {([['tl', { top: 0, left: 0 }], ['tr', { top: 0, right: 0 }],
-               ['bl', { bottom: 0, left: 0 }], ['br', { bottom: 0, right: 0 }]] as const)
-              .map(([k, pos]) => (
-                <View key={k} style={{
-                  position: 'absolute', width: 54, height: 54, ...pos,
-                  borderColor: p.primary,
-                  borderTopWidth: k[0] === 't' ? 4 : 0,
-                  borderBottomWidth: k[0] === 'b' ? 4 : 0,
-                  borderLeftWidth: k[1] === 'l' ? 4 : 0,
-                  borderRightWidth: k[1] === 'r' ? 4 : 0,
-                  borderRadius: 6,
-                }} />
-              ))}
-          </View>
-          {/* Линия ходит вверх-вниз, как в вебе (`scan-sweep`): 2,3 с
-              туда-обратно, со свечением. Неподвижная полоса читается
-              как часть рамки, а движение говорит, что камера работает
-              и ждёт код. «Уменьшение движения» в настройках телефона
-              останавливает её — об этом заботится ReducedMotionConfig
-              на корне приложения. */}
-          <Animated.View style={[{
-            height: 2, backgroundColor: p.primary, marginHorizontal: 28,
-            shadowColor: p.primary, shadowOpacity: 0.6,
-            shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
-          }, sweep]} />
-          <Text style={{
-            position: 'absolute', left: 12, right: 12, bottom: 0,
-            textAlign: 'center', fontSize: 11, color: '#fff',
-          }}>
-            Распознавание начнётся автоматически
           </Text>
         </View>
 
