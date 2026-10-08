@@ -45,6 +45,26 @@ export default function Barcode() {
      сервер и мигали ответами. */
   const seen = useRef<string | null>(null);
 
+  /* Какой объектив снимает.
+     По умолчанию expo-camera берёт одиночную широкоугольную камеру, а у
+     неё на новых iPhone ближний предел фокуса около двадцати сантиметров:
+     поднесённую пачку она не видит резко и «рыщет». Виртуальная камера
+     (две или три матрицы под одним именем) переключается на
+     ультраширокую сама и ловит вблизи сразу — это и есть «у них всё уже
+     в фокусе». Выбираем её, когда устройство такую отдаёт; на остальных
+     остаётся прежнее поведение. */
+  const cam = useRef<CameraView>(null);
+  const [lens, setLens] = useState<string | undefined>(undefined);
+  const pickLens = useCallback(async () => {
+    try {
+      const list = await cam.current?.getAvailableLensesAsync();
+      if (!list?.length) return;
+      const best = ['builtInTripleCamera', 'builtInDualWideCamera', 'builtInDualCamera']
+        .find(n => list.includes(n));
+      if (best) setLens(best);
+    } catch { /* нет такого на платформе — снимаем чем есть */ }
+  }, []);
+
   /* Код, который распознали или ввели руками, но не нашли в каталоге:
      по нему предлагаем завести продукт по этикетке — как в вебе. */
   const [missing, setMissing] = useState<string | null>(null);
@@ -151,8 +171,11 @@ export default function Barcode() {
   return (
     <View style={{ flex: 1, backgroundColor: '#0C1118' }}>
       <CameraView
+        ref={cam}
         style={StyleSheet.absoluteFill}
         facing="back"
+        selectedLens={lens}
+        onCameraReady={pickLens}
         barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
         onBarcodeScanned={({ data }) => lookup(String(data))}
       />
