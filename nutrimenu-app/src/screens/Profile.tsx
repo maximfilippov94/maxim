@@ -85,12 +85,23 @@ export default function Profile() {
      ни здесь, ни в вебе у клиента — там его меняет лишь специалист. А
      от пола зависит и силуэт на экране воды, и показ раздела цикла, так
      что ошибка в одном поле меняла два экрана. Сохраняем через
-     /client/onboarding: этот маршрут пишет sex прямо в карточку. */
+     /client/onboarding: этот маршрут пишет sex прямо в карточку.
+
+     Прежние ответы анкеты дочитываем и отправляем вместе с полом:
+     сервер кладёт присланное на место старых целиком, и одно поле
+     стёрло бы и цель, и рост, и нелюбимые продукты. Карточку клиента
+     это не затронуло бы — она обновляется по полям, — но анкета
+     осталась бы от одного слова «m». */
   const setSexTo = useCallback(async (next: 'm' | 'f') => {
     if (readSex(u?.sex) === next) return;
     haptic.select(); setMsg(null);
     try {
-      await api('/client/onboarding', { method: 'POST', body: { answers: { sex: next } } });
+      const was = await api<{ answers?: Record<string, unknown> }>('/client/onboarding')
+        .catch(() => null);
+      await api('/client/onboarding', {
+        method: 'POST',
+        body: { answers: { ...(was?.answers ?? {}), sex: next } },
+      });
       await refreshMe();
     } catch (e: any) {
       haptic.error(); setMsg(e?.message ?? 'Не удалось сохранить пол');
