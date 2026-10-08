@@ -225,6 +225,15 @@ export default function Barcode() {
         facing="back"
         selectedLens={lens}
         onCameraReady={pickLens}
+        /* Разрешение кадра, из которого читает сканер. По умолчанию
+           expo-camera ставит `high` (`CameraView.swift:84`), а это на
+           iPhone 1280×720. Штрихкоду этого мало: он из узких полосок,
+           и на мелкой этикетке они в такой кадр просто не разрешаются
+           — приходится подносить ближе, а ближе камера уже не
+           фокусируется. QR в банковском сканере крупный и читается
+           даже в 720p, отсюда и разница в ощущениях.
+           1920×1080 даёт втрое больше точек на ту же этикетку. */
+        pictureSize="1920x1080"
         barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
         onBarcodeScanned={r => { hold(r.bounds); lookup(String(r.data)); }}
       />
