@@ -6,12 +6,14 @@ import { SegmentedControl } from '@expo/ui/community/segmented-control';
 import { hasExpoUI, hasSymbols, hasMeshGradient, isExpoGo } from '../native';
 import { hasLiquidGlass } from '../ui/Glass';
 import { useApp } from '../store';
-import { api } from '../api';
+import { api, readSex } from '../api';
 import { AiAccess } from '../ui/TodayBlocks';
-import { plural } from '../format';
+import { plural, kg } from '../format';
 import { ThemePref, S, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListRow, ListHead } from '../ui/List';
+import { Face } from '../ui/Face';
+import { Icon } from '../ui/Icon';
 import { haptic } from '../haptics';
 import { openLegal } from '../ui/legal';
 import { confirmDeleteAccount } from '../ui/deleteAccount';
@@ -61,7 +63,9 @@ export default function More() {
         {/* Разделы — во всю ширину, без полей: список, а не набор карточек.
             Порядок и названия те же, что в вебе: человек, перешедший с
             сайта, ищет пункт глазами там же и теми же словами. */}
-        <ListGroup style={{ marginTop: 8 }}>
+        <ProfileCard />
+
+        <ListGroup>
           <ListRow first icon="user" label="Профиль"
             onPress={() => router.push('/profile')} />
           <ListRow icon="weight" label="Прогресс и замеры"
@@ -228,5 +232,74 @@ export default function More() {
         </ListGroup>
       </ScrollView>
     </View>
+  );
+}
+
+
+/**
+ * Карточка владельца профиля над списком разделов.
+ *
+ * В вебе она есть (`more-profile-card`), в приложении список начинался
+ * сразу со строки «Профиль» — экран «Ещё» открывался безымянным.
+ *
+ * Подпись от веба отличается осознанно: там под именем стоит «Клиент»,
+ * потому что тот же код обслуживает и специалиста, а полей тарифа
+ * сервер не отдаёт вовсе. Сообщать человеку в его собственном
+ * приложении, что он клиент, незачем — показываем то, от чего зависят
+ * расчёты: возраст, рост и вес. Все три приходят тем же ответом `/me`,
+ * что имя и фото, поэтому с цифрами на «Сегодня» они не разойдутся.
+ *
+ * Пол в строку не ставим: рядом с цифрами он ничего не добавляет. Зато
+ * когда он не указан, об этом сказано прямо — от него зависят силуэт на
+ * «Воде» и раздел цикла, а поправить можно тут же, в профиле.
+ */
+function ProfileCard() {
+  const { p, me } = useApp();
+  const u = me?.user;
+  if (!u) return null;
+
+  const years = u.birth_year ? new Date().getFullYear() - u.birth_year : null;
+  const facts = [
+    years ? `${years} ${plural(years, ['год', 'года', 'лет'])}` : null,
+    u.height_cm ? `${u.height_cm} см` : null,
+    u.weight_kg ? `${kg(u.weight_kg)} кг` : null,
+  ].filter(Boolean).join(' · ');
+
+  const noSex = !readSex(u.sex);
+  /* Нечего показать — зовём заполнить, а не оставляем пустое место. */
+  const sub = facts || 'Заполнить профиль';
+
+  return (
+    /* Полотно берём у `ListGroup`, а подсветку нажатия кладём поверх —
+       как в `ListRow`. Если красить фон целиком, на нажатии сквозь
+       полупрозрачную подсветку проступает цвет страницы, и карточка
+       моргает. */
+    <ListGroup style={{ marginTop: 8 }}>
+      <Pressable onPress={() => { haptic.tap(); router.push('/profile'); }}>
+      {({ pressed }) => (
+        <View style={{
+          flexDirection: 'row', alignItems: 'center', gap: 14,
+          paddingHorizontal: 18, paddingVertical: 16,
+          backgroundColor: pressed ? p.ov1 : 'transparent',
+        }}>
+          <Face url={u.avatar_url} name={u.name} size={52} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text numberOfLines={1} style={{ fontSize: 18, fontWeight: '600', color: p.text }}>
+              {u.name || 'Профиль'}
+            </Text>
+            <Text numberOfLines={1} style={{ ...FONT.small, color: p.text3, marginTop: 3 }}>
+              {sub}
+            </Text>
+            {noSex ? (
+              <Text numberOfLines={1} style={{ ...FONT.small, color: p.warn, marginTop: 2 }}>
+                Пол не указан
+              </Text>
+            ) : null}
+          </View>
+          <Icon name="chevr" size={15} color={p.text3} width={2} />
+        </View>
+      )}
+      </Pressable>
+    </ListGroup>
   );
 }
