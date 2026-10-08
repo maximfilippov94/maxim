@@ -5,6 +5,13 @@ import { useApp } from '../../src/store';
 /**
  * Вкладки кабинета специалиста — те же системные, что у клиента:
  * панель рисует UIKit, поэтому стекло, размытие и линза настоящие.
+ *
+ * Значки — наши, из `src/ui/Icon.tsx`, отпечатанные в PNG скриптом
+ * `tools/tab-icons.mjs`. Системного символа нашей толщины не бывает: в
+ * типах `NativeTabs` лежит только имя символа, вес задать нечем, и
+ * рядом с нашим тонким контуром они читались тяжело. Заодно домик в
+ * панели перестал отличаться от домика в списке «Ещё» — это был разный
+ * рисунок. Режим `template`: цвет кладёт система, из `iconColor`.
  */
 export default function SpTabs() {
   const { p, unread } = useApp();
@@ -18,28 +25,33 @@ export default function SpTabs() {
       iconColor={{ default: p.text3, selected: sel }}
       labelStyle={{ default: { color: p.text3 }, selected: { color: sel } }}>
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon sf="house" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/home.png')} />
         <NativeTabs.Trigger.Label>Главная</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="clients">
-        <NativeTabs.Trigger.Icon sf="person.2" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/users.png')} />
         <NativeTabs.Trigger.Label>Клиенты</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       {/* Третья вкладка — то, с чем специалист работает каждый день:
           у тренера программы, у остальных база блюд. Как в вебе. */}
       <NativeTabs.Trigger name="work">
-        <NativeTabs.Trigger.Icon sf="square.grid.2x2" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/grid.png')} />
         <NativeTabs.Trigger.Label>Работа</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="chats">
-        <NativeTabs.Trigger.Icon sf="bubble.left" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/chat.png')} />
         <NativeTabs.Trigger.Label>Чат</NativeTabs.Trigger.Label>
         {/* Сколько сообщений ждут ответа. Число приходит вместе со списком
             клиентов — его считают «Клиенты» и «Чаты» при загрузке. */}
         {unread ? <NativeTabs.Trigger.Badge>{String(unread)}</NativeTabs.Trigger.Badge> : null}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="more">
-        <NativeTabs.Trigger.Icon sf="ellipsis" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/kebab.png')} />
         <NativeTabs.Trigger.Label>Ещё</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>

@@ -11,6 +11,13 @@ import { useApp } from '../../src/store';
  *
  * Плата за это — перелистывание страниц пальцем. У системной панели его
  * нет: у Apple и в Телеграме вкладки тоже переключаются только нажатием.
+ *
+ * Значки — наши, из `src/ui/Icon.tsx`, отпечатанные в PNG скриптом
+ * `tools/tab-icons.mjs`. Системного символа нашей толщины не бывает: в
+ * типах `NativeTabs` лежит только имя символа, вес задать нечем, и
+ * рядом с нашим тонким контуром они читались тяжело. Заодно домик в
+ * панели перестал отличаться от домика в списке «Ещё» — это был разный
+ * рисунок. Режим `template`: цвет кладёт система, из `iconColor`.
  */
 export default function ClientTabs() {
   const { p } = useApp();
@@ -33,11 +40,13 @@ export default function ClientTabs() {
       }}>
 
       <NativeTabs.Trigger name="index">
-        <NativeTabs.Trigger.Icon sf="house" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/home.png')} />
         <NativeTabs.Trigger.Label>Сегодня</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="week">
-        <NativeTabs.Trigger.Icon sf="calendar" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/cal.png')} />
         <NativeTabs.Trigger.Label>Неделя</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       {/* Порядок тот же, что в вебе: чат третий, тренировки четвёртые.
@@ -45,15 +54,18 @@ export default function ClientTabs() {
           сильнее, чем любая из возможных расстановок по отдельности:
           человек открывает приложение после сайта и промахивается. */}
       <NativeTabs.Trigger name="chat">
-        <NativeTabs.Trigger.Icon sf="bubble.left" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/chat.png')} />
         <NativeTabs.Trigger.Label>Чат</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="workouts">
-        <NativeTabs.Trigger.Icon sf="dumbbell" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/dumbbell.png')} />
         <NativeTabs.Trigger.Label>Тренировки</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="more">
-        <NativeTabs.Trigger.Icon sf="ellipsis" />
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/kebab.png')} />
         <NativeTabs.Trigger.Label>Ещё</NativeTabs.Trigger.Label>
       </NativeTabs.Trigger>
     </NativeTabs>
