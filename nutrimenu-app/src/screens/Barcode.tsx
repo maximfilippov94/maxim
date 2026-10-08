@@ -10,9 +10,12 @@
  * запомненным штрихкодом.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withTiming, Easing } from 'react-native-reanimated';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withRepeat, withTiming, runOnUI, Easing,
+} from 'react-native-reanimated';
 import {
   View, Text, TextInput, Pressable, ScrollView, ActivityIndicator, Linking, StyleSheet,
+  useWindowDimensions,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,30 +66,12 @@ export default function Barcode() {
       withTiming(1, { duration: 2300, easing: Easing.inOut(Easing.ease) }),
       -1, true);
   }, [sweepAt]);
-  const sweep = useAnimatedStyle(() => ({
-    transform: [{ translateY: -30 + sweepAt.value * 60 }],
-    opacity: 0.55 + sweepAt.value * 0.45,
-  }));
-
-  /* Рамка, которая цепляется за найденный код — как в банковских
-     сканерах QR. Камера отдаёт границы кода уже в точках слоя превью:
-     нативная часть прогоняет их через `transformedMetadataObject`
-     (`MetaDataDelegate.swift:37`), так что пересчитывать ничего не надо
-     — числа сразу в той системе координат, в которой мы рисуем.
-
-     Держим их в разделяемых значениях, а не в состоянии: кадры идут
-     десятками в секунду, и каждый вызвал бы перерисовку всего экрана.
-     Так рамка живёт на своём потоке и не трогает React. */
   /* Какой объектив снимает — ради фокуса вблизи.
      Широкоугольная камера на новых iPhone резко видит примерно с
      двадцати сантиметров: поднесённый вплотную штрихкод остаётся
      размытым, сколько ни жди. Виртуальная камера — это несколько
      матриц под одним именем, и система сама переключается на
-     ультраширокую, когда объект близко; это и есть макро.
-
-     Выбираем её, когда устройство такую отдаёт, иначе остаётся
-     прежняя. Ставил это раньше и убрал, не дождавшись проверки, —
-     теперь понятно, что без неё вблизи фокуса не будет. */
+     ультраширокую, когда объект близко; это и есть макро. */
   const cam = useRef<CameraView>(null);
   const [lens, setLens] = useState<string | undefined>(undefined);
   const pickLens = useCallback(async () => {
@@ -99,9 +84,68 @@ export default function Barcode() {
     } catch { /* нет такого на платформе — снимаем чем есть */ }
   }, []);
 
-  const box = useSharedValue({ x: 0, y: 0, w: 0, h: 0 });
-  const boxOn = useSharedValue(0);
+  /* Одна рамка на всё: она же прицел, она же захват.
+     Раньше их было две — неподвижные уголки в середине и отдельная
+     рамка, вспыхивавшая на коде. Человек видел два разных предмета
+     там, где смысл один: «ищу здесь» и «нашёл вот это» — это одна
+     рамка в двух состояниях, как в банковских сканерах.
+
+     Границы кода камера отдаёт уже в точках слоя превью: нативная
+     часть прогоняет их через `transformedMetadataObject`
+     (`MetaDataDelegate.swift:37`). Слой — во весь экран, значит это
+     прямо координаты экрана, пересчитывать нечего.
+
+     Значения разделяемые, а не состояние: кадры идут десятками в
+     секунду, и каждый вызвал бы перерисовку всего экрана. */
+  const { width: winW, height: winH } = useWindowDimensions();
+  /* Дежурное место рамки — там же, где прицел стоял раньше: по центру
+     и выше середины, чтобы её не закрывала клавиатура ручного ввода.
+     Пропорция под штрихкод: он шире, чем выше. */
+  const idleW = Math.min(300, winW * 0.78);
+  const idleH = idleW * 0.62;
+  const idleX = (winW - idleW) / 2;
+  const idleY = winH * 0.34;
+
+  const fx = useSharedValue(idleX);
+  const fy = useSharedValue(idleY);
+  const fw = useSharedValue(idleW);
+  const fh = useSharedValue(idleH);
+  /* Держим ли код: от этого гаснет бегущая линия — когда код найден,
+     искать больше нечего, и линия превращается в украшение. */
+  const held = useSharedValue(0);
+  /* То же самое, но на стороне JS: значения с потока анимаций читать
+     отсюда ненадёжно, а решение «первый это захват или продолжение»
+     принимается именно здесь. */
+  const holding = useRef(false);
   const lostAt = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Мутации разделяемых значений уводим на поток анимаций одним
+     куском: и правило линтера о неизменяемости молчит, и четыре
+     значения меняются в одном кадре, а не по очереди. */
+  const moveTo = useCallback((x: number, y: number, w: number, h: number, ms: number) => {
+    runOnUI((nx: number, ny: number, nw: number, nh: number, d: number) => {
+      'worklet';
+      const o = { duration: d, easing: Easing.out(Easing.quad) };
+      fx.value = withTiming(nx, o);
+      fy.value = withTiming(ny, o);
+      fw.value = withTiming(nw, o);
+      fh.value = withTiming(nh, o);
+      held.value = withTiming(1, { duration: 140 });
+    })(x, y, w, h, ms);
+  }, [fx, fy, fw, fh, held]);
+
+  const release = useCallback(() => {
+    holding.current = false;
+    runOnUI((nx: number, ny: number, nw: number, nh: number) => {
+      'worklet';
+      const o = { duration: 260, easing: Easing.out(Easing.quad) };
+      fx.value = withTiming(nx, o);
+      fy.value = withTiming(ny, o);
+      fw.value = withTiming(nw, o);
+      fh.value = withTiming(nh, o);
+      held.value = withTiming(0, { duration: 200 });
+    })(idleX, idleY, idleW, idleH);
+  }, [fx, fy, fw, fh, held, idleX, idleY, idleW, idleH]);
 
   const hold = useCallback((b?: { origin?: { x: number; y: number };
                                   size?: { width: number; height: number } }) => {
@@ -110,26 +154,30 @@ export default function Barcode() {
     /* Границы бывают пустыми: документация честно предупреждает, что
        для части типов там либо ноль, либо область самого сканера. */
     if (x == null || y == null || !w || !h) return;
-    /* Положение ставим разом и без сглаживания: код в кадре дрожит, и
-       рамка должна дрожать вместе с ним, иначе она не «прилипла», а
-       догоняет. Плавно меняется только видимость. */
-    box.value = { x, y, w, h };
-    boxOn.value = withTiming(1, { duration: 120 });
-    /* Код ушёл из кадра — событий больше нет, и рамку надо убрать
-       самим: иначе она застынет там, где кода давно нет. */
+    /* Рамке есть куда сесть, но садиться вплотную к полоскам тесно —
+       оставляем вокруг кода немного воздуха. */
+    const pad = 10;
+    /* Первый раз — переезд за две десятых секунды, он и читается как
+       «села на код». Дальше код дрожит в кадре вместе с рукой, и
+       рамка должна дрожать с ним: почти мгновенно, иначе она не
+       прилипла, а догоняет. */
+    const first = !holding.current;
+    holding.current = true;
+    moveTo(x - pad, y - pad, w + pad * 2, h + pad * 2, first ? 200 : 60);
     if (lostAt.current) clearTimeout(lostAt.current);
-    lostAt.current = setTimeout(() => {
-      boxOn.value = withTiming(0, { duration: 220 });
-    }, 500);
-  }, [box, boxOn]);
+    lostAt.current = setTimeout(release, 600);
+  }, [moveTo, release]);
 
   useEffect(() => () => { if (lostAt.current) clearTimeout(lostAt.current); }, []);
 
-  const boxStyle = useAnimatedStyle(() => ({
+  const frameStyle = useAnimatedStyle(() => ({
     position: 'absolute',
-    left: box.value.x, top: box.value.y,
-    width: box.value.w, height: box.value.h,
-    opacity: boxOn.value,
+    left: fx.value, top: fy.value, width: fw.value, height: fh.value,
+  }));
+  /* Линия живёт, пока рамка ищет, и гаснет, когда села на код. */
+  const lineStyle = useAnimatedStyle(() => ({
+    opacity: (1 - held.value) * (0.55 + sweepAt.value * 0.45),
+    transform: [{ translateY: -30 + sweepAt.value * 60 }],
   }));
 
   const lookup = useCallback(async (code: string) => {
@@ -254,17 +302,41 @@ export default function Barcode() {
       <View pointerEvents="none" style={[StyleSheet.absoluteFill,
         { backgroundColor: 'rgba(12,17,24,0.45)' }]} />
 
-      {/* Рамка, прилипшая к найденному коду. Прямоугольная и тонкая:
-          штрихкод — узкая полоска, и скруглённые углы на такой высоте
-          превращали рамку в овал. Координаты приходят в точках слоя
-          превью, а он теперь во весь экран — значит это и есть
-          координаты экрана. */}
-      <Animated.View pointerEvents="none" style={[boxStyle, {
-        borderWidth: 2.5, borderColor: p.primary, borderRadius: 3,
-        backgroundColor: 'rgba(223,255,58,0.14)',
-        shadowColor: p.primary, shadowOpacity: 0.8,
-        shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
-      }]} />
+      {/* Та самая единственная рамка: четыре уголка и бегущая линия.
+          Пока кода нет — стоит в дежурном месте и ищет; нашла —
+          переезжает на код и обводит его. Лежит в абсолютном слое над
+          кадром, а не в потоке экрана: иначе ей некуда было бы ехать —
+          поток прокручивается вместе с текстом, а код живёт в
+          координатах кадра. */}
+      <Animated.View pointerEvents="none" style={frameStyle}>
+        {([['tl', { top: 0, left: 0 }], ['tr', { top: 0, right: 0 }],
+           ['bl', { bottom: 0, left: 0 }], ['br', { bottom: 0, right: 0 }]] as const)
+          .map(([k, pos]) => (
+            <View key={k} style={{
+              position: 'absolute', width: 26, height: 26, ...pos,
+              borderColor: p.primary,
+              borderTopWidth: k[0] === 't' ? 3 : 0,
+              borderBottomWidth: k[0] === 'b' ? 3 : 0,
+              borderLeftWidth: k[1] === 'l' ? 3 : 0,
+              borderRightWidth: k[1] === 'r' ? 3 : 0,
+              borderRadius: 4,
+            }} />
+          ))}
+        {/* Линия ходит вверх-вниз, как в вебе (`scan-sweep`): 2,3 с
+            туда-обратно, со свечением. Неподвижная полоса читалась бы
+            как часть рамки, а движение говорит, что камера работает и
+            ждёт код; когда код найден, линия гаснет — искать больше
+            нечего. «Уменьшение движения» в настройках телефона
+            останавливает её: об этом заботится ReducedMotionConfig
+            на корне приложения. */}
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Animated.View style={[{
+            height: 2, backgroundColor: p.primary, marginHorizontal: 18,
+            shadowColor: p.primary, shadowOpacity: 0.6,
+            shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+          }, lineStyle]} />
+        </View>
+      </Animated.View>
 
       <ScrollView contentContainerStyle={{
         paddingTop: insets.top + S.md, paddingHorizontal: S.lg,
@@ -312,56 +384,13 @@ export default function Barcode() {
           </Text>
         </View>
 
-        {/* Рамка прицела: четыре уголка и бегущая линия — как в вебе.
-            Лежит в потоке экрана, а кадр идёт фоном во всю высоту. */}
-        <View style={{ height: 230, marginTop: S.lg, justifyContent: 'center' }}>
-          <View style={StyleSheet.absoluteFill}>
-            {([['tl', { top: 0, left: 0 }], ['tr', { top: 0, right: 0 }],
-               ['bl', { bottom: 0, left: 0 }], ['br', { bottom: 0, right: 0 }]] as const)
-              .map(([k, pos]) => (
-                <View key={k} style={{
-                  position: 'absolute', width: 54, height: 54, ...pos,
-                  borderColor: p.primary,
-                  borderTopWidth: k[0] === 't' ? 4 : 0,
-                  borderBottomWidth: k[0] === 'b' ? 4 : 0,
-                  borderLeftWidth: k[1] === 'l' ? 4 : 0,
-                  borderRightWidth: k[1] === 'r' ? 4 : 0,
-                  borderRadius: 6,
-                }} />
-              ))}
-          </View>
-          {/* Линия ходит вверх-вниз, как в вебе (`scan-sweep`): 2,3 с
-              туда-обратно, со свечением. Неподвижная полоса читается
-              как часть рамки, а движение говорит, что камера работает
-              и ждёт код. «Уменьшение движения» в настройках телефона
-              останавливает её — об этом заботится ReducedMotionConfig
-              на корне приложения. */}
-          <Animated.View style={[{
-            height: 2, backgroundColor: p.primary, marginHorizontal: 28,
-            shadowColor: p.primary, shadowOpacity: 0.6,
-            shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
-          }, sweep]} />
-          <Text style={{
-            position: 'absolute', left: 12, right: 12, bottom: 0,
-            textAlign: 'center', fontSize: 11, color: '#fff',
-          }}>
+        {/* Место, которое занимала рамка прицела: сама рамка теперь
+            живёт над кадром и переезжает к коду, а здесь остаётся
+            пустота ровно её высоты — чтобы текст ниже не наезжал. */}
+        <View pointerEvents="none" style={{ height: 230, marginTop: S.lg,
+          justifyContent: 'flex-end' }}>
+          <Text style={{ textAlign: 'center', fontSize: 11, color: '#fff' }}>
             Распознавание начнётся автоматически
-          </Text>
-        </View>
-
-        {/* Состояние распознавания словами: человек должен понимать,
-            ждёт камера код или уже ищет товар. */}
-        <View style={{
-          flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start',
-          marginTop: S.md, paddingVertical: 9, paddingHorizontal: 14,
-          borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.08)',
-        }}>
-          <View style={{
-            width: 9, height: 9, borderRadius: 5,
-            backgroundColor: busy ? p.warn : p.primary,
-          }} />
-          <Text style={{ ...FONT.body, color: '#fff' }}>
-            {busy ? 'Ищем продукт…' : 'Автопоиск включён'}
           </Text>
         </View>
 
