@@ -102,8 +102,12 @@ export function ReplacePicker({ itemId, open, onClose, onDone }: {
   return (
     <Modal transparent visible={open} animationType="fade" onRequestClose={onClose}>
       <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(9,16,18,0.6)' }} />
+      {/* Половина экрана снизу: со списком из одного-двух блюд шторка
+          вырастала всего на треть, и видно было одну карточку — выбирать
+          не из чего, хотя варианты есть ниже. Потолок прежний, 88%. */}
       <Animated.View entering={SlideInDown.duration(280)} style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '88%',
+        position: 'absolute', left: 0, right: 0, bottom: 0,
+        minHeight: '55%', maxHeight: '88%',
         backgroundColor: p.surface,
         borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
         paddingBottom: insets.bottom + S.lg,
@@ -143,7 +147,9 @@ export function ReplacePicker({ itemId, open, onClose, onDone }: {
           </View>
         ) : (
           <>
-            <ScrollView style={{ maxHeight: 420 }}
+            {/* Список забирает всё, что осталось от шапки и кнопки:
+                с жёсткой высотой он оставлял пустое место под собой. */}
+            <ScrollView style={{ flex: 1 }}
               contentContainerStyle={{ paddingHorizontal: S.lg, gap: S.sm }}
               showsVerticalScrollIndicator={false}>
               {list.map(d => {
