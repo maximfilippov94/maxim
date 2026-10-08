@@ -252,7 +252,7 @@ export function TodayPlanSource({
       ]}
     >
       <View style={[styles.icon, { backgroundColor: p.primarySoft }]}>
-        <Icon name="sparkles" size={19} color={p.accent} />
+        <Icon name="spark" size={19} color={p.accent} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[FONT.caption, { color: p.text3 }]}>{ai?.title || 'EQUA AI'}</Text>
