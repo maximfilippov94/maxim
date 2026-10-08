@@ -56,8 +56,11 @@ function Steps({ onAdd }: { onAdd: (ml: number) => void }) {
   return (
     <Host style={{ height: 108 }} colorScheme={p.name === 'light' ? 'light' : 'dark'}
       /* Акцент приложения передаём внутрь: иначе система красит кнопки
-         своим синим, а не нашим цветом. */
-      seedColor={p.primary}>
+         своим синим. Именно `accent`, а не лайм: стеклянная кнопка
+         красит им надпись, и лайм на светлом фоне даёт контраст 1.04 —
+         надписи «+100» попросту не видно. В тёмной теме accent — тот же
+         лайм, в светлой — чернила. */
+      seedColor={p.accent}>
       <VStack spacing={10} modifiers={[frame({ maxWidth: 9999 })]}>
         <HStack spacing={10}>
           {STEPS.map(ml => (

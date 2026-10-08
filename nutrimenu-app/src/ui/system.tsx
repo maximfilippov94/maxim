@@ -127,7 +127,7 @@ export function Empty({ icon, title, note, height = 240 }: {
        переносы дальше расставляет система. */
     return (
       <Host style={{ width: '100%', minHeight: height }}
-        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
+        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.accent}>
         <ContentUnavailableView title={title} systemImage={icon} description={note} />
       </Host>
     );
@@ -175,7 +175,7 @@ export function SysSlider({ value, min, max, step = 10, onChange, onCommit, tint
        Ширину задаём мы, длину дорожки система берёт от неё. */
     return (
       <Host style={{ width: '100%', height: 40 }}
-        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={tint ?? p.primary}>
+        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={tint ?? p.accent}>
         <Slider
           value={value} min={min} max={max} step={step}
           onValueChange={(v: number) => onChange(Math.round(v))}
@@ -251,7 +251,7 @@ export function SysConfirm({ label, title, message, confirmLabel, onConfirm, tin
     const { Host, ConfirmationDialog, Button, Text: SText } = require('@expo/ui/swift-ui');
     const m = require('@expo/ui/swift-ui/modifiers');
     return (
-      <Host matchContents colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
+      <Host matchContents colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.accent}>
         <ConfirmationDialog title={title} isPresented={open}
           onIsPresentedChange={(v: boolean) => setOpen(v)}>
           <ConfirmationDialog.Trigger>
@@ -302,7 +302,7 @@ export function SysDate({ value, onChange, max, min }: {
     const m = require('@expo/ui/swift-ui/modifiers');
     return (
       <Host style={{ width: '100%', height: 40 }}
-        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
+        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.accent}>
         <DatePicker
           title=""
           selection={value}

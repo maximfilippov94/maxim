@@ -186,7 +186,7 @@ function Attach({ onPick }: { onPick: (from: AttachSource) => void }) {
        подписи система рисует меню пустым кружком. */
     return (
       <Host style={{ width: 50, height: 50 }}
-        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
+        colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.accent}>
         <Menu
           label={<SImage systemName="paperclip" size={21} />}
           modifiers={[m.buttonStyle('glass'), m.buttonBorderShape('circle'),

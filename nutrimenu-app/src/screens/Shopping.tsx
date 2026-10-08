@@ -245,7 +245,7 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
 
   return (
     <Host style={{ flex: 1 }}
-      colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.primary}>
+      colorScheme={p.name === 'light' ? 'light' : 'dark'} seedColor={p.accent}>
       <List
         modifiers={[m.listStyle('insetGrouped'), m.scrollContentBackground('hidden')]}>
         {cats.map(([cat, items]) => (

@@ -170,3 +170,32 @@ console.log('пар с контрастом ниже 4.5: ' + problems.length + 
 for (const p of problems) {
   console.log(`${p.r}  ${p.file}:${p.line}  [${p.pal}]  фон ${p.bg}  текст ${p.fg}`);
 }
+
+/* ── seedColor: цвет, которым SwiftUI красит свои подписи и значки ──
+   `Host` из @expo/ui отдаёт его системным компонентам, и те красят им
+   надпись стеклянной кнопки, значок пустого состояния, дорожку
+   ползунка, галочки списка. Лайм (`primary`) на светлом полотне даёт
+   контраст 1.04 — кнопки «+100» на экране воды не было видно вовсе,
+   и нашлось это глазами владельца, а не здесь.
+   `accent` для того и заведён: в тёмной теме тот же лайм, в светлой —
+   чернила. Исключение — `danger` и цвета графиков: они свои. */
+{
+  const bad = [];
+  for (const f of [...files(path.join(ROOT, 'src')), ...files(path.join(ROOT, 'app'))]) {
+    const src = fs.readFileSync(f, 'utf8');
+    src.split('\n').forEach((ln, i) => {
+      const m = ln.match(/seedColor=\{([^}]+)\}/);
+      if (!m) return;
+      const v = m[1];
+      if (/p\.primary/.test(v)) {
+        bad.push(`${path.relative(ROOT, f)}:${i + 1}  seedColor={${v}}`);
+      }
+    });
+  }
+  if (bad.length) {
+    console.log('\nseedColor лаймом — в светлой теме не видно (' + bad.length + '):');
+    for (const b of bad) console.log('  ' + b);
+  } else {
+    console.log('\nseedColor: лайма нет ни в одном месте.');
+  }
+}
