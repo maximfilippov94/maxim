@@ -23,7 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInRight, FadeOutLeft } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useApp } from '../store';
-import { api } from '../api';
+import { api, readSex } from '../api';
 import { S, R, FONT } from '../theme';
 import { Logo } from '../ui/Logo';
 import { Icon } from '../ui/Icon';
@@ -50,7 +50,7 @@ const DISLIKES = ['Рыба', 'Мясо', 'Молочное', 'Глютен', '�
 /** Нормы КБЖУ. Та же формула, что в вебе, — цифры должны совпадать. */
 function targets(sex: string, age: number, h: number, w: number,
                  activity: string, goal: string) {
-  let kcal = 10 * w + 6.25 * h - 5 * age + (sex === 'm' ? 5 : -161);
+  let kcal = 10 * w + 6.25 * h - 5 * age + (readSex(sex) === 'm' ? 5 : -161);
   kcal *= ({ low: 1.3, medium: 1.5, high: 1.7 } as Record<string, number>)[activity] ?? 1.5;
   if (goal === 'Снижение веса') kcal *= 0.85;
   else if (goal === 'Набор мышечной массы') kcal *= 1.1;

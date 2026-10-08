@@ -20,8 +20,7 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import {
   api, Health, Allergy, Med, Lab, Recommendation,
-  ALLERGY_KINDS, MED_KINDS, REC_KINDS, HEALTH_DOC_KINDS,
-} from '../api';
+  ALLERGY_KINDS, MED_KINDS, REC_KINDS, HEALTH_DOC_KINDS, readSex } from '../api';
 import { openPrivateFile, fetchPrivateFile, looksLikeImage } from '../openPrivateFile';
 import { ImageViewer } from '../ui/ImageViewer';
 import { uploadForm } from '../upload';
@@ -97,9 +96,7 @@ export default function HealthScreen({ clientId, title }: {
   /* Цикл показываем женщинам и всем, у кого раздел уже включён — то же
      правило, что в вебе (`showCycle`). Специалисту вкладка не нужна:
      цикл он смотрит в карточке клиента, если клиент открыл доступ. */
-  const showCycle = !spec && (!me?.user?.sex
-    || String(me.user.sex).toLowerCase().startsWith('f')
-    || !!d.cycle?.enabled);
+  const showCycle = !spec && (readSex(me?.user?.sex) !== 'm' || !!d.cycle?.enabled);
 
   const tabs: [Tab, string][] = [
     ['overview', 'Обзор'],

@@ -260,6 +260,25 @@ export interface TodayResponse {
   ai_plan?: AiPlanState | null;
   menu_stale?: boolean;
 }
+/**
+ * Пол из профиля — одним способом на всё приложение.
+ *
+ * Сравнение `sex === 'm'` ломалось на любом другом написании: 'M',
+ * 'male', кириллическая 'М'. Поле заполняется при регистрации, а в
+ * старых записях и через кабинет специалиста попадало как придётся, и
+ * тогда мужчине доставался женский силуэт.
+ *
+ * Пустое поле остаётся пустым: решение «показывать ли цикл» и «какой
+ * силуэт» принимают экраны, и неизвестный пол — это не женский.
+ */
+export function readSex(v?: string | null): 'm' | 'f' | null {
+  const x = String(v ?? '').trim().toLowerCase();
+  if (!x) return null;
+  if (x.startsWith('m') || x.startsWith('м')) return 'm';
+  if (x.startsWith('f') || x.startsWith('w') || x.startsWith('ж')) return 'f';
+  return null;
+}
+
 export interface Me {
   user: {
     id: number; name: string; email?: string;

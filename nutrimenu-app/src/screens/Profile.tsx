@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
-import { api, mediaUrl, Preferences, parseList } from '../api';
+import { api, mediaUrl, Preferences, parseList, readSex } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -80,6 +80,22 @@ export default function Profile() {
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, []);
+
+  /* Пол задавался только при регистрации, и поправить его было негде:
+     ни здесь, ни в вебе у клиента — там его меняет лишь специалист. А
+     от пола зависит и силуэт на экране воды, и показ раздела цикла, так
+     что ошибка в одном поле меняла два экрана. Сохраняем через
+     /client/onboarding: этот маршрут пишет sex прямо в карточку. */
+  const setSexTo = useCallback(async (next: 'm' | 'f') => {
+    if (readSex(u?.sex) === next) return;
+    haptic.select(); setMsg(null);
+    try {
+      await api('/client/onboarding', { method: 'POST', body: { answers: { sex: next } } });
+      await refreshMe();
+    } catch (e: any) {
+      haptic.error(); setMsg(e?.message ?? 'Не удалось сохранить пол');
+    }
+  }, [u?.sex, refreshMe]);
 
   const save = useCallback(async () => {
     setBusy(true); setMsg(null);
@@ -188,6 +204,41 @@ export default function Profile() {
               <Text style={{ fontSize: 15, color: p.text }} numberOfLines={1}>{v}</Text>
             </View>
           ))}
+
+          {/* Пол — не строка, а выбор: он здесь единственное, что человек
+              может поправить сам, и прятать его за словом «—» незачем. */}
+          <View style={{
+            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+            paddingVertical: 10, paddingHorizontal: S.lg,
+            borderTopWidth: 1, borderTopColor: p.borderSoft,
+          }}>
+            <Text style={{ fontSize: 15, color: p.text2 }}>Пол</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {([['f', 'Женский'], ['m', 'Мужской']] as ['m' | 'f', string][]).map(([k, l]) => {
+                const on = readSex(u?.sex) === k;
+                return (
+                  <Pressable key={k} onPress={() => setSexTo(k)}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 13, paddingVertical: 7, borderRadius: R.pill,
+                      backgroundColor: on ? p.primarySoft : 'transparent',
+                      borderWidth: 1, borderColor: on ? p.primary : p.btnLine,
+                      opacity: pressed && !on ? 0.6 : 1,
+                    })}>
+                    <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
+                      color: on ? p.accent : p.text2 }}>{l}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+          {!readSex(u?.sex) ? (
+            <View style={{ paddingHorizontal: S.lg, paddingBottom: 12 }}>
+              <Muted>
+                Пока пол не указан, приложение показывает женский силуэт воды и
+                раздел цикла.
+              </Muted>
+            </View>
+          ) : null}
         </Card>
 
         <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.md }}>

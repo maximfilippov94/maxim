@@ -1,5 +1,6 @@
 import React from 'react';
 import Svg, { Defs, Mask, Image as SvgImage, Rect, Path, G } from 'react-native-svg';
+import { readSex } from '../api';
 import Animated, { useAnimatedProps, useDerivedValue, withRepeat, withTiming, Easing, SharedValue } from 'react-native-reanimated';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -32,7 +33,10 @@ export function Silhouette({ fill, sex, water, base, height = 340 }: {
   base: string;
   height?: number;
 }) {
-  const fig = sex === 'm' ? FIG.m : FIG.f;
+  /* Мужской силуэт при любом написании «мужской», женский — при любом
+     «женский». Неизвестный пол рисуем женским, как в вебе
+     (`String(A.user.sex)||'f'`): третьей фигуры нет. */
+  const fig = readSex(sex) === 'm' ? FIG.m : FIG.f;
   const W = Math.round(H * fig.ratio);
 
   /* Фаза бега волны: один проход слева направо, бесконечно */
