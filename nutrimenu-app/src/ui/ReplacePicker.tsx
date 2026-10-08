@@ -15,7 +15,7 @@
  * случайное касание не должно его переписывать.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, Modal, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Modal, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 import Animated, { SlideInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -101,135 +101,141 @@ export function ReplacePicker({ itemId, open, onClose, onDone }: {
 
   return (
     <Modal transparent visible={open} animationType="fade" onRequestClose={onClose}>
-      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(9,16,18,0.6)' }} />
-      {/* Половина экрана снизу: со списком из одного-двух блюд шторка
-          вырастала всего на треть, и видно было одну карточку — выбирать
-          не из чего, хотя варианты есть ниже. Потолок прежний, 88%. */}
-      <Animated.View entering={SlideInDown.duration(280)} style={{
-        position: 'absolute', left: 0, right: 0, bottom: 0,
-        minHeight: '55%', maxHeight: '88%',
-        backgroundColor: p.surface,
-        borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
-        paddingBottom: insets.bottom + S.lg,
-      }}>
-        <View style={{
-          width: 38, height: 4, borderRadius: 999, backgroundColor: p.border,
-          alignSelf: 'center', marginTop: 10, marginBottom: S.sm,
-        }} />
-
-        <View style={{
-          flexDirection: 'row', alignItems: 'flex-start', gap: S.md,
-          paddingHorizontal: S.lg, paddingBottom: S.md,
+      {/* Шторка лежит в колонке во весь экран, прижатая книзу, а не висит
+          absolute. Высота родителя тогда известна, и доли (55% и 88%)
+          считаются от неё: у absolute-узла размер идёт от содержимого, и
+          список с кнопкой уходили за нижний край экрана — до конца было
+          не долистать, кнопки замены не было видно вовсе. */}
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Pressable onPress={onClose}
+          style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9,16,18,0.6)' }]} />
+        <Animated.View entering={SlideInDown.duration(280)} style={{
+          minHeight: '55%', maxHeight: '88%',
+          backgroundColor: p.surface,
+          borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
+          paddingBottom: insets.bottom + S.lg,
         }}>
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Text style={{ ...FONT.caption, color: p.text3 }}>Замена без пересборки дня</Text>
-            <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>Чем заменить</Text>
-            <Text style={{ ...FONT.small, color: p.text3, marginTop: 4, lineHeight: 18 }}>
-              {src === 'specialist'
-                ? 'Варианты, которые разрешил специалист'
-                : 'Подобрали блюда с близкими КБЖУ'}
-            </Text>
-          </View>
-          <Pressable onPress={onClose} hitSlop={10}
-            accessibilityRole="button" accessibilityLabel="Закрыть"
-            style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, paddingTop: 4 })}>
-            <Icon name="close" size={18} color={p.text3} />
-          </Pressable>
-        </View>
+          <View style={{
+            width: 38, height: 4, borderRadius: 999, backgroundColor: p.border,
+            alignSelf: 'center', marginTop: 10, marginBottom: S.sm,
+          }} />
 
-        {list === null ? (
-          <ActivityIndicator color={p.accent} style={{ marginVertical: S.xxl }} />
-        ) : list.length === 0 ? (
-          <View style={{ paddingHorizontal: S.lg, paddingBottom: S.lg }}>
-            <Text style={{ ...FONT.body, color: p.text2 }}>
-              {err ?? 'Подходящих блюд для этого приёма не нашлось.'}
-            </Text>
-          </View>
-        ) : (
-          <>
-            {/* Список забирает всё, что осталось от шапки и кнопки:
-                с жёсткой высотой он оставлял пустое место под собой. */}
-            <ScrollView style={{ flex: 1 }}
-              contentContainerStyle={{ paddingHorizontal: S.lg, gap: S.sm }}
-              showsVerticalScrollIndicator={false}>
-              {list.map(d => {
-                const on = pick === d.id;
-                const photo = mediaUrl(d.photo_thumb_url || d.photo_url || null);
-                return (
-                  <Pressable key={d.id} onPress={() => { haptic.select(); setPick(d.id); }}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: on }}
-                    style={({ pressed }) => ({
-                      flexDirection: 'row', alignItems: 'center', gap: S.md,
-                      padding: 10, borderRadius: R.md, overflow: 'hidden',
-                      borderWidth: 1.5, borderColor: on ? p.primary : p.border,
-                      backgroundColor: pressed ? p.ov1 : on ? p.primarySofter : 'transparent',
-                    })}>
-                    {/* Кадр 4:3, как и в строке дня: снимок во всю высоту
-                        карточки срезал бы бока у горизонтального фото. */}
-                    {photo ? (
-                      <Image source={{ uri: photo }}
-                        style={{ width: 112, height: 84, borderRadius: R.control, backgroundColor: p.inset }}
-                        contentFit="cover" transition={200} cachePolicy="memory-disk" />
-                    ) : (
-                      <View style={{
-                        width: 112, height: 84, borderRadius: R.control, backgroundColor: p.inset,
-                        alignItems: 'center', justifyContent: 'center',
-                      }}>
-                        <Icon name="bowl" size={20} color={p.text3} />
-                      </View>
-                    )}
-
-                    <View style={{ flex: 1, minWidth: 0, paddingVertical: 11, paddingRight: 11 }}>
-                      <Text numberOfLines={2} style={{
-                        fontSize: 15, fontWeight: '600', lineHeight: 19, color: p.text,
-                      }}>{d.name}</Text>
-                      <Text style={{ ...FONT.small, color: p.text2, marginTop: 4 }}>
-                        {round(d.portion_g)} г · {round(d.kcal)} ккал
-                      </Text>
-                      <Text style={{ fontSize: 11, color: p.text3, marginTop: 3 }}>
-                        Б {round(d.protein)} г   Ж {round(d.fat)} г   У {round(d.carbs)} г
-                      </Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
-                        <Diff n={d.kcal_diff} lim={15}
-                          text={Math.abs(d.kcal_diff) <= 15
-                            ? 'калории те же' : `${signed(d.kcal_diff)} ккал`} />
-                        <Diff n={d.protein_diff} lim={9} text={`Б ${signed(d.protein_diff)}`} />
-                        <Diff n={d.fat_diff} lim={9} text={`Ж ${signed(d.fat_diff)}`} />
-                        <Diff n={d.carbs_diff} lim={14} text={`У ${signed(d.carbs_diff)}`} />
-                      </View>
-                    </View>
-
-                    {on ? (
-                      <View style={{
-                        position: 'absolute', top: 8, right: 8,
-                        width: 22, height: 22, borderRadius: 11,
-                        alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: p.primary,
-                      }}>
-                        <Icon name="check" size={13} color={p.onPrimary} width={2.6} />
-                      </View>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: S.sm }}>
-              {err ? (
-                <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text>
-              ) : (
-                <Text style={{ ...FONT.small, color: p.text3, lineHeight: 18 }}>
-                  Калорийность приёма сохраняется максимально близко.
-                  Меню изменится только после подтверждения.
-                </Text>
-              )}
-              <SysButton label="Подтвердить замену" variant="prominent"
-                disabled={busy || !pick} onPress={apply} />
+          <View style={{
+            flexDirection: 'row', alignItems: 'flex-start', gap: S.md,
+            paddingHorizontal: S.lg, paddingBottom: S.md,
+          }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>Замена без пересборки дня</Text>
+              <Text style={{ ...FONT.h2, color: p.text, marginTop: 2 }}>Чем заменить</Text>
+              <Text style={{ ...FONT.small, color: p.text3, marginTop: 4, lineHeight: 18 }}>
+                {src === 'specialist'
+                  ? 'Варианты, которые разрешил специалист'
+                  : 'Подобрали блюда с близкими КБЖУ'}
+              </Text>
             </View>
-          </>
-        )}
-      </Animated.View>
+            <Pressable onPress={onClose} hitSlop={10}
+              accessibilityRole="button" accessibilityLabel="Закрыть"
+              style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1, paddingTop: 4 })}>
+              <Icon name="close" size={18} color={p.text3} />
+            </Pressable>
+          </View>
+
+          {list === null ? (
+            <ActivityIndicator color={p.accent} style={{ marginVertical: S.xxl }} />
+          ) : list.length === 0 ? (
+            <View style={{ paddingHorizontal: S.lg, paddingBottom: S.lg }}>
+              <Text style={{ ...FONT.body, color: p.text2 }}>
+                {err ?? 'Подходящих блюд для этого приёма не нашлось.'}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Растёт на свободном месте и ужимается, когда его нет.
+                  Именно ужимается: с `flex: 1` отсчёт идёт от нулевой
+                  основы, список занимал высоту всего содержимого и
+                  выдавливал кнопку за край шторки. */}
+              <ScrollView style={{ flexGrow: 1, flexShrink: 1 }}
+                contentContainerStyle={{ paddingHorizontal: S.lg, gap: S.sm }}
+                showsVerticalScrollIndicator={false}>
+                {list.map(d => {
+                  const on = pick === d.id;
+                  const photo = mediaUrl(d.photo_thumb_url || d.photo_url || null);
+                  return (
+                    <Pressable key={d.id} onPress={() => { haptic.select(); setPick(d.id); }}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: on }}
+                      style={({ pressed }) => ({
+                        flexDirection: 'row', alignItems: 'center', gap: S.md,
+                        padding: 10, borderRadius: R.md, overflow: 'hidden',
+                        borderWidth: 1.5, borderColor: on ? p.primary : p.border,
+                        backgroundColor: pressed ? p.ov1 : on ? p.primarySofter : 'transparent',
+                      })}>
+                      {/* Кадр 4:3, как и в строке дня: снимок во всю высоту
+                          карточки срезал бы бока у горизонтального фото. */}
+                      {photo ? (
+                        <Image source={{ uri: photo }}
+                          style={{ width: 112, height: 84, borderRadius: R.control, backgroundColor: p.inset }}
+                          contentFit="cover" transition={200} cachePolicy="memory-disk" />
+                      ) : (
+                        <View style={{
+                          width: 112, height: 84, borderRadius: R.control, backgroundColor: p.inset,
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <Icon name="bowl" size={20} color={p.text3} />
+                        </View>
+                      )}
+
+                      <View style={{ flex: 1, minWidth: 0, paddingVertical: 11, paddingRight: 11 }}>
+                        <Text numberOfLines={2} style={{
+                          fontSize: 15, fontWeight: '600', lineHeight: 19, color: p.text,
+                        }}>{d.name}</Text>
+                        <Text style={{ ...FONT.small, color: p.text2, marginTop: 4 }}>
+                          {round(d.portion_g)} г · {round(d.kcal)} ккал
+                        </Text>
+                        <Text style={{ fontSize: 11, color: p.text3, marginTop: 3 }}>
+                          Б {round(d.protein)} г   Ж {round(d.fat)} г   У {round(d.carbs)} г
+                        </Text>
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 7 }}>
+                          <Diff n={d.kcal_diff} lim={15}
+                            text={Math.abs(d.kcal_diff) <= 15
+                              ? 'калории те же' : `${signed(d.kcal_diff)} ккал`} />
+                          <Diff n={d.protein_diff} lim={9} text={`Б ${signed(d.protein_diff)}`} />
+                          <Diff n={d.fat_diff} lim={9} text={`Ж ${signed(d.fat_diff)}`} />
+                          <Diff n={d.carbs_diff} lim={14} text={`У ${signed(d.carbs_diff)}`} />
+                        </View>
+                      </View>
+
+                      {on ? (
+                        <View style={{
+                          position: 'absolute', top: 8, right: 8,
+                          width: 22, height: 22, borderRadius: 11,
+                          alignItems: 'center', justifyContent: 'center',
+                          backgroundColor: p.primary,
+                        }}>
+                          <Icon name="check" size={13} color={p.onPrimary} width={2.6} />
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: S.sm }}>
+                {err ? (
+                  <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text>
+                ) : (
+                  <Text style={{ ...FONT.small, color: p.text3, lineHeight: 18 }}>
+                    Калорийность приёма сохраняется максимально близко.
+                    Меню изменится только после подтверждения.
+                  </Text>
+                )}
+                <SysButton label="Подтвердить замену" variant="prominent"
+                  disabled={busy || !pick} onPress={apply} />
+              </View>
+            </>
+          )}
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
