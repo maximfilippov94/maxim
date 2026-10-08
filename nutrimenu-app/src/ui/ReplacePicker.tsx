@@ -102,15 +102,20 @@ export function ReplacePicker({ itemId, open, onClose, onDone }: {
   return (
     <Modal transparent visible={open} animationType="fade" onRequestClose={onClose}>
       {/* Шторка лежит в колонке во весь экран, прижатая книзу, а не висит
-          absolute. Высота родителя тогда известна, и доли (55% и 88%)
-          считаются от неё: у absolute-узла размер идёт от содержимого, и
-          список с кнопкой уходили за нижний край экрана — до конца было
-          не долистать, кнопки замены не было видно вовсе. */}
+          absolute: высота родителя тогда известна, и доля считается от
+          неё. У absolute-узла размер шёл от содержимого, и список с
+          кнопкой уходили за нижний край — до конца было не долистать.
+
+          Высота ровная, а не «от столько до столько»: с вилкой
+          ScrollView некуда расти (своей высоты у прокрутки нет), шторка
+          садилась на нижнюю границу, и карточка на краю обрезалась.
+          92% — почти весь экран; оставшаяся полоска показывает, что это
+          шторка, и по ней же её закрывают. */}
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable onPress={onClose}
           style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9,16,18,0.6)' }]} />
         <Animated.View entering={SlideInDown.duration(280)} style={{
-          minHeight: '55%', maxHeight: '88%',
+          height: '92%',
           backgroundColor: p.surface,
           borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
           paddingBottom: insets.bottom + S.lg,
