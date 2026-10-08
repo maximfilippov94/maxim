@@ -16,6 +16,10 @@
         "NSPhotoLibraryUsageDescription": "Доступ к фото нужен, чтобы прикреплять снимки к сообщениям и прогрессу.",
         "UIBackgroundModes": [
           "remote-notification"
+        ],
+        "CFBundleDevelopmentRegion": "ru",
+        "CFBundleLocalizations": [
+          "ru"
         ]
       },
       "config": {
