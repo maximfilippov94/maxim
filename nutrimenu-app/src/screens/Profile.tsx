@@ -11,6 +11,7 @@ import { Card, Label, Muted } from '../ui/base';
 import { Icon } from '../ui/Icon';
 import { SysButton } from '../ui/system';
 import { kg } from '../format';
+import { targets } from '../targets';
 import { haptic } from '../haptics';
 import { pickPhoto } from '../photo';
 import { uploadForm } from '../upload';
@@ -21,6 +22,13 @@ const ACTIVITY: Record<string, string> = {
   low: 'низкий', light: 'лёгкий', medium: 'средний',
   high: 'высокий', athlete: 'спортсмен',
 };
+
+/* Варианты — те же, что в анкете при регистрации: человек заполнял их
+   там, правит здесь, и разные наборы читались бы как потерянный ответ.
+   Ключ уходит на сервер, он же показывается — так и в вебе. */
+const GOALS = ['Снижение веса', 'Поддержание', 'Набор массы',
+  'Набор мышечной массы', 'Здоровье ЖКТ'];
+const ACTS = ['low', 'medium', 'high'];
 
 /** Список через запятую — так его вводят и в вебе. */
 const join = (a: string[]) => a.join(', ');
@@ -40,7 +48,30 @@ export default function Profile() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
-  const age = u?.birth_year ? new Date().getFullYear() - u.birth_year : null;
+
+  /* Данные профиля правятся здесь же. Храним не копию полей, а только
+     правки поверх них: что человек тронул, то и живёт в черновике,
+     остальное читается прямо из профиля. Копия потребовала бы заливки
+     при загрузке, а заливка — сторожа, чтобы ответ сервера не затирал
+     набранное на полуслове. */
+  const [draft, setDraft] = useState<{
+    goal?: string; weight?: string; height?: string;
+    years?: string; act?: string; sex?: 'm' | 'f';
+  }>({});
+  const edit = useCallback(<K extends 'goal' | 'weight' | 'height' | 'years' | 'act' | 'sex'>(
+    k: K, v: NonNullable<typeof draft[K]>,
+  ) => {
+    setDraft(d => ({ ...d, [k]: v }));
+    setMsg(null);
+  }, []);
+
+  const goal = draft.goal ?? u?.goal ?? '';
+  const weight = draft.weight ?? (u?.weight_kg != null ? kg(u.weight_kg) : '');
+  const height = draft.height ?? (u?.height_cm != null ? String(u.height_cm) : '');
+  const years = draft.years
+    ?? (u?.birth_year ? String(new Date().getFullYear() - u.birth_year) : '');
+  const act = draft.act ?? u?.activity_level ?? '';
+  const sex = draft.sex ?? readSex(u?.sex);
 
   /* Снимок профиля меняется отсюда: в вебе он кликабелен, в приложении
      его можно было только посмотреть. Сервер сам ужимает картинку до
@@ -81,36 +112,56 @@ export default function Profile() {
     }).catch(() => setLoaded(true));
   }, []);
 
-  /* Пол задавался только при регистрации, и поправить его было негде:
-     ни здесь, ни в вебе у клиента — там его меняет лишь специалист. А
-     от пола зависит и силуэт на экране воды, и показ раздела цикла, так
-     что ошибка в одном поле меняла два экрана. Сохраняем через
-     /client/onboarding: этот маршрут пишет sex прямо в карточку.
-
-     Прежние ответы анкеты дочитываем и отправляем вместе с полом:
-     сервер кладёт присланное на место старых целиком, и одно поле
-     стёрло бы и цель, и рост, и нелюбимые продукты. Карточку клиента
-     это не затронуло бы — она обновляется по полям, — но анкета
-     осталась бы от одного слова «m». */
-  const setSexTo = useCallback(async (next: 'm' | 'f') => {
-    if (readSex(u?.sex) === next) return;
-    haptic.select(); setMsg(null);
-    try {
-      const was = await api<{ answers?: Record<string, unknown> }>('/client/onboarding')
-        .catch(() => null);
-      await api('/client/onboarding', {
-        method: 'POST',
-        body: { answers: { ...(was?.answers ?? {}), sex: next } },
-      });
-      await refreshMe();
-    } catch (e: any) {
-      haptic.error(); setMsg(e?.message ?? 'Не удалось сохранить пол');
+  /* Число из поля: запятая и пробелы допускаются, пустое — это «не
+     указано», а не ноль. Границы широкие нарочно: отсекаем опечатку в
+     разряде, а не спорим с человеком о его теле. */
+  const num = (v: string, lo: number, hi: number, name: string) => {
+    const t = v.replace(',', '.').trim();
+    if (!t) return { ok: true as const, value: null };
+    const n = Number(t);
+    if (!Number.isFinite(n) || n < lo || n > hi) {
+      return { ok: false as const, why: `${name}: ожидается от ${lo} до ${hi}` };
     }
-  }, [u?.sex, refreshMe]);
+    return { ok: true as const, value: n };
+  };
 
   const save = useCallback(async () => {
+    const w = num(weight, 30, 400, 'Вес');
+    const h = num(height, 100, 250, 'Рост');
+    const y = num(years, 10, 110, 'Возраст');
+    const bad = [w, h, y].find(r => !r.ok);
+    if (bad && !bad.ok) { haptic.error(); setMsg(bad.why); return; }
+
     setBusy(true); setMsg(null);
     try {
+      /* Данные профиля идут тем же маршрутом, что и анкета: он пишет их
+         прямо в карточку клиента. Прежние ответы дочитываем и шлём
+         вместе — сервер кладёт присланное на место старых целиком. */
+      const was = await api<{ answers?: Record<string, unknown> }>('/client/onboarding')
+        .catch(() => null);
+      const answers: Record<string, unknown> = { ...(was?.answers ?? {}) };
+      if (goal) answers.goal = goal;
+      if (act) answers.activity_level = act;
+      if (sex) answers.sex = sex;
+      if (w.ok && w.value != null) answers.weight_kg = w.value;
+      if (h.ok && h.value != null) answers.height_cm = h.value;
+      if (y.ok && y.value != null) answers.age = y.value;
+
+      /* Нормы КБЖУ считает приложение: маршрут анкеты записывает ровно
+         присланное и ничего не пересчитывает. Без этого правка роста
+         или цели не меняла бы норму вовсе — считалось бы по прежним
+         данным, ради которых сюда и пришли. Пересчитываем, только когда
+         известно всё: по неполным данным формула соврёт сильнее, чем
+         устаревшая, но честно посчитанная норма. */
+      const nw = w.ok ? w.value : null;
+      const nh = h.ok ? h.value : null;
+      const ny = y.ok ? y.value : null;
+      if (sex && goal && act && nw != null && nh != null && ny != null) {
+        Object.assign(answers, targets(sex, ny, nh, nw, act, goal));
+      }
+
+      await api('/client/onboarding', { method: 'POST', body: { answers } });
+
       await api('/client/preferences', {
         method: 'PATCH',
         body: {
@@ -120,11 +171,13 @@ export default function Profile() {
       });
       haptic.success();
       setMsg('Сохранено');
+      setDraft({});
       await refreshMe();
     } catch (e: any) {
       haptic.error(); setMsg(e?.message ?? 'Не удалось сохранить');
     } finally { setBusy(false); }
-  }, [likes, dislikes, excluded, swaps, notes, refreshMe]);
+  }, [goal, act, sex, weight, height, years,
+      likes, dislikes, excluded, swaps, notes, refreshMe]);
 
   if (!loaded) return <Loading title="Профиль" />;
 
@@ -195,54 +248,23 @@ export default function Profile() {
           </Card>
         </Animated.View>
 
-        {/* Те же пять строк, что в вебе («Мои данные»): цель, вес, рост,
-            возраст, активность. Норма калорий и специалист отсюда ушли —
-            первая стоит на «Сегодня», второй в «Моих специалистах». */}
+        {/* «Мои данные» — те же пять полей, что в вебе, но их можно
+            поправить. Раньше они были только для чтения: ошибся в росте
+            при регистрации — и норма калорий считалась по нему до конца
+            времён, потому что менять его умеет лишь специалист в карточке
+            клиента. Маршрут анкеты принимает ровно эти поля, серверной
+            работы не потребовалось. */}
         <Card style={{ padding: 0, marginBottom: S.md }}>
-          {([
-            ['Цель', u?.goal || '—'],
-            ['Текущий вес', u?.weight_kg ? `${kg(u.weight_kg)} кг` : '—'],
-            ['Рост', u?.height_cm ? `${u.height_cm} см` : '—'],
-            ['Возраст', age ? String(age) : '—'],
-            ['Уровень активности', ACTIVITY[u?.activity_level ?? ''] ?? (u?.activity_level || '—')],
-          ] as [string, string][]).map(([l, v], i) => (
-            <View key={l} style={{
-              flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-              paddingVertical: 12, paddingHorizontal: S.lg,
-              borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
-            }}>
-              <Text style={{ fontSize: 15, color: p.text2 }}>{l}</Text>
-              <Text style={{ fontSize: 15, color: p.text }} numberOfLines={1}>{v}</Text>
-            </View>
-          ))}
+          <Row label="Цель" first>
+            <Chips items={GOALS.map(g => [g, g] as [string, string])}
+              value={goal} onChange={v => edit('goal', v)} />
+          </Row>
 
-          {/* Пол — не строка, а выбор: он здесь единственное, что человек
-              может поправить сам, и прятать его за словом «—» незачем. */}
-          <View style={{
-            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-            paddingVertical: 10, paddingHorizontal: S.lg,
-            borderTopWidth: 1, borderTopColor: p.borderSoft,
-          }}>
-            <Text style={{ fontSize: 15, color: p.text2 }}>Пол</Text>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {([['f', 'Женский'], ['m', 'Мужской']] as ['m' | 'f', string][]).map(([k, l]) => {
-                const on = readSex(u?.sex) === k;
-                return (
-                  <Pressable key={k} onPress={() => setSexTo(k)}
-                    style={({ pressed }) => ({
-                      paddingHorizontal: 13, paddingVertical: 7, borderRadius: R.pill,
-                      backgroundColor: on ? p.primarySoft : 'transparent',
-                      borderWidth: 1, borderColor: on ? p.primary : p.btnLine,
-                      opacity: pressed && !on ? 0.6 : 1,
-                    })}>
-                    <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
-                      color: on ? p.accent : p.text2 }}>{l}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
-          {!readSex(u?.sex) ? (
+          <Row label="Пол">
+            <Chips items={[['f', 'Женский'], ['m', 'Мужской']]}
+              value={sex} onChange={v => edit('sex', v as 'm' | 'f')} />
+          </Row>
+          {!sex ? (
             <View style={{ paddingHorizontal: S.lg, paddingBottom: 12 }}>
               <Muted>
                 Пока пол не указан, приложение показывает женский силуэт воды и
@@ -250,6 +272,28 @@ export default function Profile() {
               </Muted>
             </View>
           ) : null}
+
+          {/* Три числа в ряд: порознь каждое занимало бы целую строку, а
+              вместе читаются как одна мерка. */}
+          <View style={{
+            flexDirection: 'row', gap: S.sm,
+            paddingHorizontal: S.lg, paddingVertical: 12,
+            borderTopWidth: 1, borderTopColor: p.borderSoft,
+          }}>
+            <Num label="Вес, кг" value={weight} onChange={v => edit('weight', v)} />
+            <Num label="Рост, см" value={height} onChange={v => edit('height', v)} />
+            <Num label="Возраст" value={years} onChange={v => edit('years', v)} />
+          </View>
+
+          {/* Если в карточке лежит значение из старой анкеты («лёгкий»,
+              «спортсмен»), показываем и его: иначе выбранного варианта
+              не видно вовсе, и человек решит, что поле пустое. */}
+          <Row label="Активность">
+            <Chips
+              items={[...new Set([...ACTS, ...(act ? [act] : [])])]
+                .map(k => [k, ACTIVITY[k] ?? k] as [string, string])}
+              value={act} onChange={v => edit('act', v)} />
+          </Row>
         </Card>
 
         <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.md }}>
@@ -281,6 +325,84 @@ export default function Profile() {
 
         <SysButton label="Сохранить" variant="prominent" disabled={busy} onPress={save} />
       </ScrollView>
+    </View>
+  );
+}
+
+/** Строка данных: слева название, справа — то, чем его меняют. */
+function Row({ label, children, first }: {
+  label: string; children: React.ReactNode; first?: boolean;
+}) {
+  const { p } = useApp();
+  return (
+    <View style={{
+      flexDirection: 'row', alignItems: 'center', gap: S.md,
+      paddingVertical: 10, paddingHorizontal: S.lg,
+      borderTopWidth: first ? 0 : 1, borderTopColor: p.borderSoft,
+    }}>
+      <Text style={{ fontSize: 15, color: p.text2 }}>{label}</Text>
+      <View style={{ flex: 1, alignItems: 'flex-end' }}>{children}</View>
+    </View>
+  );
+}
+
+/**
+ * Набор вариантов. Переносится на следующую строку, а не прокручивается
+ * вбок: «Набор мышечной массы» в ряд с остальными не встаёт ни на одном
+ * телефоне, а спрятанный за краем вариант всё равно что отсутствует.
+ */
+function Chips({ items, value, onChange }: {
+  items: [string, string][];
+  value: string | null;
+  onChange: (v: string) => void;
+}) {
+  const { p } = useApp();
+  return (
+    <View style={{
+      flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end',
+    }}>
+      {items.map(([k, l]) => {
+        const on = value === k;
+        return (
+          <Pressable key={k} onPress={() => { haptic.select(); onChange(k); }}
+            accessibilityRole="button" accessibilityState={{ selected: on }}
+            style={({ pressed }) => ({
+              paddingHorizontal: 13, paddingVertical: 7, borderRadius: R.pill,
+              backgroundColor: on ? p.primarySoft : 'transparent',
+              borderWidth: 1, borderColor: on ? p.primary : p.btnLine,
+              opacity: pressed && !on ? 0.6 : 1,
+            })}>
+            <Text style={{
+              fontSize: 14, fontWeight: on ? '600' : '400',
+              color: on ? p.accent : p.text2,
+            }}>{l}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/** Число с подписью — вес, рост, возраст. */
+function Num({ label, value, onChange }: {
+  label: string; value: string; onChange: (v: string) => void;
+}) {
+  const { p } = useApp();
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={{ ...FONT.caption, color: p.text3, marginBottom: 5 }}>{label}</Text>
+      <TextInput
+        value={value}
+        onChangeText={t => onChange(t.replace(/[^\d.,]/g, ''))}
+        keyboardType="decimal-pad"
+        maxLength={5}
+        placeholder="—"
+        placeholderTextColor={p.text3}
+        style={{
+          backgroundColor: p.inset, color: p.text, borderRadius: R.control,
+          paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, textAlign: 'center',
+        }}
+      />
     </View>
   );
 }
