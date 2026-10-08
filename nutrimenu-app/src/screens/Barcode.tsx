@@ -63,6 +63,48 @@ export default function Barcode() {
     opacity: 0.55 + sweepAt.value * 0.45,
   }));
 
+  /* Рамка, которая цепляется за найденный код — как в банковских
+     сканерах QR. Камера отдаёт границы кода уже в точках слоя превью:
+     нативная часть прогоняет их через `transformedMetadataObject`
+     (`MetaDataDelegate.swift:37`), так что пересчитывать ничего не надо
+     — числа сразу в той системе координат, в которой мы рисуем.
+
+     Держим их в разделяемых значениях, а не в состоянии: кадры идут
+     десятками в секунду, и каждый вызвал бы перерисовку всего экрана.
+     Так рамка живёт на своём потоке и не трогает React. */
+  const box = useSharedValue({ x: 0, y: 0, w: 0, h: 0 });
+  const boxOn = useSharedValue(0);
+  const lostAt = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const hold = useCallback((b?: { origin?: { x: number; y: number };
+                                  size?: { width: number; height: number } }) => {
+    const x = b?.origin?.x, y = b?.origin?.y;
+    const w = b?.size?.width, h = b?.size?.height;
+    /* Границы бывают пустыми: документация честно предупреждает, что
+       для части типов там либо ноль, либо область самого сканера. */
+    if (x == null || y == null || !w || !h) return;
+    /* Положение ставим разом и без сглаживания: код в кадре дрожит, и
+       рамка должна дрожать вместе с ним, иначе она не «прилипла», а
+       догоняет. Плавно меняется только видимость. */
+    box.value = { x, y, w, h };
+    boxOn.value = withTiming(1, { duration: 120 });
+    /* Код ушёл из кадра — событий больше нет, и рамку надо убрать
+       самим: иначе она застынет там, где кода давно нет. */
+    if (lostAt.current) clearTimeout(lostAt.current);
+    lostAt.current = setTimeout(() => {
+      boxOn.value = withTiming(0, { duration: 220 });
+    }, 500);
+  }, [box, boxOn]);
+
+  useEffect(() => () => { if (lostAt.current) clearTimeout(lostAt.current); }, []);
+
+  const boxStyle = useAnimatedStyle(() => ({
+    position: 'absolute',
+    left: box.value.x, top: box.value.y,
+    width: box.value.w, height: box.value.h,
+    opacity: boxOn.value,
+  }));
+
   const lookup = useCallback(async (code: string) => {
     const c = String(code ?? '').replace(/\D+/g, '');
     /* Восемь цифр — короче штрихкодов не бывает. Проверяем до запроса,
@@ -218,8 +260,18 @@ export default function Barcode() {
             selectedLens="builtInWideAngleCamera"
             zoom={0}
             barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
-            onBarcodeScanned={({ data }) => lookup(String(data))}
+            onBarcodeScanned={r => { hold(r.bounds); lookup(String(r.data)); }}
           />
+
+          {/* Рамка, прилипшая к найденному коду. Лежит над прицелом, но
+              под ним по смыслу: прицел говорит «ищу здесь», эта —
+              «нашёл вот это». */}
+          <Animated.View pointerEvents="none" style={[boxStyle, {
+            borderWidth: 3, borderColor: p.primary, borderRadius: 10,
+            backgroundColor: 'rgba(223,255,58,0.18)',
+            shadowColor: p.primary, shadowOpacity: 0.7,
+            shadowRadius: 10, shadowOffset: { width: 0, height: 0 },
+          }]} />
 
           {/* Рамка прицела: четыре уголка и бегущая линия — как в вебе */}
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { padding: S.lg }]}>
