@@ -223,17 +223,26 @@ export function ReplacePicker({ itemId, open, onClose, onDone }: {
                     </Pressable>
                   );
                 })}
+
+                {/* Предупреждение едет вместе со списком, как в вебе:
+                    закреплённым внизу оно отнимало сорок точек у каждого
+                    экрана, а прочитать его хватает одного раза. */}
+                <Text style={{
+                  ...FONT.small, color: p.text3, lineHeight: 18,
+                  marginTop: S.xs, marginBottom: S.sm,
+                }}>
+                  Калорийность приёма сохраняется максимально близко.
+                  Меню изменится только после подтверждения.
+                </Text>
               </ScrollView>
 
+              {/* Снизу закреплена одна кнопка. Ошибка тоже здесь, а не в
+                  прокрутке: «эта замена недоступна» надо увидеть сразу
+                  после нажатия, а не долистав до конца. */}
               <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: S.sm }}>
                 {err ? (
                   <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text>
-                ) : (
-                  <Text style={{ ...FONT.small, color: p.text3, lineHeight: 18 }}>
-                    Калорийность приёма сохраняется максимально близко.
-                    Меню изменится только после подтверждения.
-                  </Text>
-                )}
+                ) : null}
                 <SysButton label="Подтвердить замену" variant="prominent"
                   disabled={busy || !pick} onPress={apply} />
               </View>

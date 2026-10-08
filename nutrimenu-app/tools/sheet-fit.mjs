@@ -45,9 +45,9 @@ function fixed(scale, bottom) {
     + 2 + line(22 * scale)                       // «Чем заменить»
     + 4 + line(14 * scale, 18 * scale)           // пояснение, одна строка
     + 12;                                        // paddingBottom S.md
+  /* Подпись про калорийность уехала в конец прокрутки — снизу
+     закреплена одна кнопка (и строка ошибки, когда она есть). */
   const foot = 12                                // paddingTop S.md
-    + 2 * line(14 * scale, 18 * scale)           // подпись в две строки
-    + 8                                          // gap S.sm
     + Math.max(52, 52 * scale);                  // кнопка
   const safe = bottom + 16;                      // paddingBottom insets + S.lg
   return { grip, head, foot, safe, all: grip + head + foot + safe };
