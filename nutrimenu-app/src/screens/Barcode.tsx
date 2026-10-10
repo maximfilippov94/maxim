@@ -58,6 +58,7 @@ export default function Barcode() {
      по нему предлагаем завести продукт по этикетке — как в вебе. */
   const [missing, setMissing] = useState<string | null>(null);
   const [typed, setTyped] = useState('');
+  const scanningLocked = !!missing || !!found || busy;
 
   /* Движение линии прицела. Значения из веба: 2,3 секунды на проход,
      от −30 до +30 точек, прозрачность от 0,55 до единицы. */
@@ -203,7 +204,7 @@ export default function Barcode() {
       setErr('В штрихкоде должно быть не меньше 8 цифр.');
       return;
     }
-    if (seen.current === c || busy) return;
+    if (seen.current === c || busy || missing || found) return;
     seen.current = c;
     setBusy(true); setErr(null); setMissing(null);
     haptic.tap();
@@ -217,10 +218,9 @@ export default function Barcode() {
          названию или завести по этикетке. Остальные сбои — ошибка. */
       if (e?.status === 404) setMissing(c);
       else setErr(e?.message ?? 'Не удалось найти продукт');
-      /* Даём отсканировать ещё раз — вдруг просто смазало. */
-      setTimeout(() => { seen.current = null; }, 1500);
+      /* Не сбрасываем захваченный код по таймеру: решение принимает пользователь. */
     } finally { setBusy(false); }
-  }, [busy]);
+  }, [busy, missing, found]);
 
   if (!perm) {
     return (
@@ -270,6 +270,7 @@ export default function Barcode() {
         style={StyleSheet.absoluteFill}
         facing="back"
         selectedLens={lens}
+        active={!scanningLocked}
         onCameraReady={pickLens}
         /* Разрешение кадра, из которого читает сканер. По умолчанию
            expo-camera ставит `high` (`CameraView.swift:84`), а это на
@@ -288,7 +289,7 @@ export default function Barcode() {
            Выходит, вся эта возня — про iOS. */
         pictureSize="1920x1080"
         barcodeScannerSettings={{ barcodeTypes: [...TYPES] }}
-        onBarcodeScanned={r => { hold(r.bounds); lookup(String(r.data)); }}
+        onBarcodeScanned={scanningLocked ? undefined : r => { hold(r.bounds); lookup(String(r.data)); }}
       />
       {/* Поверх кадра — тёмная подложка: белый текст на светлой кухне
           иначе не читается. */}
@@ -416,27 +417,6 @@ export default function Barcode() {
           <Text style={{ ...FONT.small, color: '#FFB4AE', marginTop: S.sm }}>{err}</Text>
         ) : null}
 
-        {/* Кода нет в каталоге — две дороги, как в вебе */}
-        {missing ? (
-          <View style={{
-            marginTop: S.md, padding: S.lg, borderRadius: R.lg,
-            backgroundColor: 'rgba(12,17,24,0.72)', gap: S.sm,
-          }}>
-            <Text style={{ ...FONT.h3, color: '#fff' }}>Штрихкод распознан</Text>
-            <Text style={{ ...FONT.small, color: 'rgba(255,255,255,0.72)' }}>
-              Товар {missing} пока не найден в каталоге.
-            </Text>
-            <View style={{ gap: S.sm, marginTop: S.xs }}>
-              <SysButton label="Найти по названию" height={44} onPress={toSearch} />
-              <SysButton label="Добавить по этикетке" height={44}
-                onPress={() => {
-                  haptic.tap();
-                  router.replace(`/food-log?meal=${meal ?? ''}&code=${missing}`);
-                }} />
-            </View>
-          </View>
-        ) : null}
-
         <View style={{ marginTop: S.lg }}>
           <SysButton label="Найти продукт" variant="prominent"
             disabled={busy} onPress={() => lookup(typed)} />
@@ -449,6 +429,31 @@ export default function Barcode() {
           Камера используется только для считывания кода
         </Text>
       </ScrollView>
+
+      {/* Постоянная панель: код уже считан, камера больше не ищет. */}
+      {missing ? (
+        <Animated.View entering={FadeIn.duration(180)} style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          paddingHorizontal: S.lg, paddingTop: S.lg,
+          paddingBottom: insets.bottom + S.lg, gap: S.md,
+          backgroundColor: 'rgba(12,17,24,0.97)',
+          borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl,
+        }}>
+          <Text style={{ ...FONT.label, color: p.primary }}>ШТРИХКОД СЧИТАН</Text>
+          <Text style={{ ...FONT.h3, color: '#fff' }}>Продукт не найден</Text>
+          <Text style={{ ...FONT.body, color: 'rgba(255,255,255,0.76)' }}>
+            Код {missing} не найден в каталоге. Можно найти продукт по названию или добавить новый.
+          </Text>
+          <SysButton label="Найти по названию" variant="prominent" onPress={toSearch} />
+          <SysButton label="Добавить продукт" height={44} onPress={() => {
+            haptic.tap();
+            router.replace(`/food-log?meal=${meal ?? ''}&code=${missing}`);
+          }} />
+          <SysButton label="Сканировать другой" height={44} onPress={() => {
+            haptic.tap(); setMissing(null); setErr(null); seen.current = null; release();
+          }} />
+        </Animated.View>
+      ) : null}
 
       {/* Нашли — показываем прямо здесь, не уводя с экрана. Раньше
           приложение улетало на отдельную страницу, и рамка, только что
@@ -481,7 +486,7 @@ export default function Barcode() {
               router.replace(`/food-log?meal=${meal}&code=${found.barcode ?? ''}`);
             }} />
           <SysButton label="Сканировать другой" height={44}
-            onPress={() => { haptic.tap(); setFound(null); seen.current = null; }} />
+            onPress={() => { haptic.tap(); setFound(null); seen.current = null; release(); }} />
         </Animated.View>
       ) : null}
     </View>
