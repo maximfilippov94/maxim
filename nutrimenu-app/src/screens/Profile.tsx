@@ -255,10 +255,10 @@ export default function Profile() {
             клиента. Маршрут анкеты принимает ровно эти поля, серверной
             работы не потребовалось. */}
         <Card style={{ padding: 0, marginBottom: S.md }}>
-          <Row label="Цель" first>
-            <Chips items={GOALS.map(g => [g, g] as [string, string])}
-              value={goal} onChange={v => edit('goal', v)} />
-          </Row>
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.md }}>
+            <Text style={{ fontSize: 15, color: p.text2, marginBottom: S.sm }}>Цель</Text>
+            <GoalGrid value={goal} onChange={v => edit('goal', v)} />
+          </View>
 
           <Row label="Пол">
             <Chips items={[['f', 'Женский'], ['m', 'Мужской']]}
@@ -325,6 +325,35 @@ export default function Profile() {
 
         <SysButton label="Сохранить" variant="prominent" disabled={busy} onPress={save} />
       </ScrollView>
+    </View>
+  );
+}
+
+
+function GoalGrid({ value, onChange }: { value: string | null; onChange: (v: string) => void }) {
+  const { p } = useApp();
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
+      {GOALS.map(label => {
+        const on = value === label;
+        return (
+          <Pressable key={label} onPress={() => { haptic.select(); onChange(label); }}
+            accessibilityRole="radio" accessibilityState={{ selected: on }}
+            style={({ pressed }) => ({
+              width: '48%', minHeight: 54, borderRadius: R.md,
+              paddingHorizontal: 12, paddingVertical: 10,
+              justifyContent: 'center',
+              backgroundColor: on ? p.primarySoft : p.inset,
+              borderWidth: 1, borderColor: on ? p.primary : p.border,
+              opacity: pressed ? 0.75 : 1,
+            })}>
+            <Text style={{ fontSize: 14, lineHeight: 18, fontWeight: on ? '700' : '500',
+              color: on ? p.accent : p.text2 }}>
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
