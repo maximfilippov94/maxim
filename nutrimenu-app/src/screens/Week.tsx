@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useApp } from '../store';
@@ -107,6 +107,12 @@ export default function Week() {
                       color: on ? p.onPrimary : p.text }}>
                       {dt.getDate()}
                     </Text>
+                    {now ? (
+                      <View style={{
+                        width: 4, height: 4, borderRadius: 2, marginTop: 4,
+                        backgroundColor: on ? p.onPrimary : p.primary,
+                      }} />
+                    ) : <View style={{ height: 8 }} />}
                   </Pressable>
                 );
               })}
@@ -121,12 +127,7 @@ export default function Week() {
                 {dayTitle(menu.start_date, day, true)}
               </Text>
             </View>
-            {isToday(menuDate(menu.start_date, day)) ? (
-              <View style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill,
-                borderWidth: StyleSheet.hairlineWidth, borderColor: p.border }}>
-                <Text style={{ fontSize: 12, color: p.text2 }}>Сегодня</Text>
-              </View>
-            ) : null}
+
           </View>
 
           {tot ? (
@@ -176,8 +177,13 @@ export default function Week() {
                       </Text>
                     </View>
                     <View style={{ marginTop: 10 }}>
-                      <Bar value={tgt ? cur / tgt : 0} color={macroCol(cur, tgt)} height={5} />
+                      <Bar value={tgt ? Math.min(1, cur / tgt) : 0} color={macroCol(cur, tgt)} height={5} />
                     </View>
+                    {tgt && cur > tgt ? (
+                      <Text style={{ fontSize: 10, color: p.warn, marginTop: 6 }}>
+                        +{round(cur - tgt)} г выше цели
+                      </Text>
+                    ) : null}
                   </Tile>
                 ))}
               </View>
