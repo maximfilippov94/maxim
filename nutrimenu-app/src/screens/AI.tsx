@@ -15,7 +15,7 @@
  * кнопкой, которая ничего не делает, хуже, чем сказать.
  */
 import React, { useCallback, useState } from 'react';
-import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert, Switch, Modal } from 'react-native';
+import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Switch, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -226,7 +226,7 @@ export default function AI() {
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось изменить доступ'); }
   }, [load]);
 
-  const openWebPaymentTest = useCallback(async () => {
+  const openBilling = useCallback(async () => {
     haptic.tap();
     setErr(null);
     try {
@@ -244,24 +244,6 @@ export default function AI() {
       setErr(e?.message ?? 'Не удалось открыть веб-кабинет');
     }
   }, [load]);
-
-  const cancel = useCallback(() => {
-    Alert.alert('Отключить EQUA AI?',
-      'Доступ останется до конца оплаченного срока, продления не будет.', [
-      { text: 'Оставить', style: 'cancel' },
-      {
-        text: 'Отключить', style: 'destructive',
-        onPress: async () => {
-          try {
-            await api('/client/ai/cancel', { method: 'POST', body: {} });
-            haptic.success(); toast('Продление отключено'); load();
-          } catch (e: any) {
-            haptic.error(); setErr(e?.message ?? 'Не получилось');
-          }
-        },
-      },
-    ]);
-  }, [load, toast]);
 
   if (!d) {
     return (
@@ -317,8 +299,6 @@ export default function AI() {
                 onPress={() => { haptic.tap(); router.push('/ai-chat'); }} />
               <SysButton label="Проверить, как идёт план" icon="chart.line.uptrend.xyaxis"
                 onPress={() => { haptic.tap(); router.push('/ai-review'); }} />
-              <SysButton label="Управление подпиской" icon="coin"
-                onPress={openWebPaymentTest} />
               {/* Отсюда — сразу в то, что модель собрала. В вебе эти две
                   кнопки стоят рядом с проверкой плана: человек пришёл
                   посмотреть на результат, а не на описание набора. */}
@@ -332,6 +312,21 @@ export default function AI() {
               ) : null}
             </View>
           </Animated.View>
+        ) : null}
+
+        {cur ? (
+          <>
+            <ListHead>Подписка</ListHead>
+            <ListGroup>
+              <ListRow
+                first
+                icon="coin"
+                label="EQUA AI"
+                value={cur.title + ' · до ' + dmy(cur.expires_at)}
+                onPress={openBilling}
+              />
+            </ListGroup>
+          </>
         ) : null}
 
         {/* ------------------------------------------- что собрано моделью */}
@@ -487,18 +482,7 @@ export default function AI() {
                   ? 'Сейчас EQUA AI доступен бесплатно. После подключения платёжного шлюза здесь появится стоимость.'
                   : 'Оплата разовая на 30 дней. Автопродления нет.'}
               </Muted>
-              {__DEV__ ? (
-                <View style={{ marginTop: S.md }}>
-                  <SysButton
-                    label="Проверить веб-оплату"
-                    icon="device"
-                    onPress={openWebPaymentTest}
-                  />
-                  <Muted style={{ marginTop: 6 }}>
-                    Тестовый режим: откроется страница управления подпиской EQUA AI.
-                  </Muted>
-                </View>
-              ) : null}
+
             </View>
           </>
         ) : null}
@@ -520,12 +504,6 @@ export default function AI() {
               Модель сейчас недоступна — план собирается по правилам сервиса,
               без неё. Это временно.
             </Muted>
-          </View>
-        ) : null}
-
-        {cur ? (
-          <View style={{ paddingHorizontal: S.lg, paddingTop: S.xl }}>
-            <SysButton label="Отключить продление" variant="destructive" onPress={cancel} />
           </View>
         ) : null}
 
