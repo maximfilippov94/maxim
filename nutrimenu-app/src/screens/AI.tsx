@@ -768,3 +768,51 @@ function AiPreview({ plan, state, onClose, onNext }: {
 
           {hasGym ? (
             <View style={{
+              marginTop: S.md, backgroundColor: p.inset,
+              borderRadius: R.lg, padding: S.lg,
+            }}>
+              <Text style={{ ...FONT.caption, color: p.text3 }}>Объём тренировок</Text>
+              <Text style={{ ...FONT.h3, color: p.text, marginTop: 2 }}>
+                {f.days_per_week ?? 3} {plural(Number(f.days_per_week ?? 3), ['день', 'дня', 'дней'])} в неделю
+              </Text>
+              <Muted style={{ marginTop: 2 }}>
+                по {f.session_minutes ?? 45} минут · {f.goal || u?.goal || 'под вашу цель'}
+              </Muted>
+            </View>
+          ) : null}
+
+          <View style={{ marginTop: S.lg }}>
+            <Label>Что произойдёт дальше</Label>
+            <View style={{ gap: 7, marginTop: S.sm }}>
+              {['Составим план из базы EQUA',
+                'Покажем порции, нагрузку и объяснение',
+                'Будем предлагать адаптацию по результатам'].map(x => (
+                <View key={x} style={{ flexDirection: 'row', gap: 9, alignItems: 'flex-start' }}>
+                  <Icon name="check" size={14} color={p.accent} width={2.2} />
+                  <Text style={{ ...FONT.small, color: p.text2, flex: 1, lineHeight: 19 }}>{x}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          <Muted style={{ marginTop: S.lg, lineHeight: 18 }}>
+            Это предварительные ориентиры. Итоговый план не заменяет медицинскую
+            консультацию и меняется только с вашего согласия.
+          </Muted>
+
+          <View style={{ marginTop: S.xl, gap: S.sm }}>
+            <SysButton label="Продолжить" variant="prominent" onPress={() => onNext(plan)} />
+            <SysButton label="Поправить ответы"
+              onPress={() => {
+                onClose();
+                router.push({
+                  pathname: plan === 'workouts' ? '/ai-fitness' : '/ai-nutrition',
+                  params: { plan },
+                });
+              }} />
+          </View>
+        </ScrollView>
+      </Animated.View>
+    </Modal>
+  );
+}
