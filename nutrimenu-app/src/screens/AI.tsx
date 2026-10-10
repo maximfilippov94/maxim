@@ -112,6 +112,7 @@ export default function AI() {
   const [quote, setQuote] = useState<{ percent: number; total_kop: number;
     discount_kop: number; code: string } | null>(null);
   const [codeErr, setCodeErr] = useState<string | null>(null);
+  const [planDetailsOpen, setPlanDetailsOpen] = useState(false);
 
   const load = useCallback(() => {
     api<AiState>('/client/ai')
@@ -329,38 +330,47 @@ export default function AI() {
           </>
         ) : null}
 
-        {/* ------------------------------------------- что собрано моделью */}
+        {/* План остаётся компактным: подробное объяснение раскрывается
+            только по запросу, а не занимает половину экрана всегда. */}
         {cur && d.plans?.length ? (
           <>
-            <ListHead>Что собрано</ListHead>
+            <ListHead>План</ListHead>
             <ListGroup>
               {d.plans.map((x, i) => (
                 <ListRow key={`${x.kind}-${i}`} first={i === 0}
-                  label={x.kind === 'menu' ? 'Меню' : 'Программа тренировок'}
+                  label={x.kind === 'menu' ? 'Меню' : 'Тренировки'}
                   value={x.period_from ? `${dmy(x.period_from)} — ${dmy(x.period_to)}` : dmy(x.created_at)} />
               ))}
+              {(d.plans ?? []).some(x => x.note) ? (
+                <ListRow
+                  label="Почему такой план"
+                  value={planDetailsOpen ? 'Скрыть' : 'Подробнее'}
+                  onPress={() => {
+                    haptic.tap();
+                    setPlanDetailsOpen(v => !v);
+                  }}
+                />
+              ) : null}
             </ListGroup>
-          </>
-        ) : null}
 
-        {/* Чем модель руководствовалась. Сервер отдаёт это в `note`
-            каждого плана, и в вебе объяснение стоит прямо под составом —
-            в приложении его не было, и план выглядел взявшимся ниоткуда. */}
-        {cur && (d.plans ?? []).some(x => x.note) ? (
-          <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: S.sm }}>
-            {(d.plans ?? []).filter(x => x.note).map((x, i) => (
-              <Card key={`note-${i}`}>
-                <Label>
-                  {x.kind === 'menu' ? 'Почему такое меню' : 'Почему такая программа'}
-                </Label>
-                <Text style={{ ...FONT.body, color: p.text2, marginTop: 6, lineHeight: 20 }}>
-                  {x.kind === 'menu'
-                    ? String(x.note).replace(/^Меню на месяц/u, 'Текущее меню')
-                    : x.note}
-                </Text>
-              </Card>
-            ))}
-          </View>
+            {planDetailsOpen ? (
+              <Animated.View entering={FadeIn.duration(180)}
+                style={{ paddingHorizontal: S.lg, paddingTop: S.md, gap: S.sm }}>
+                {(d.plans ?? []).filter(x => x.note).map((x, i) => (
+                  <Card key={`note-${i}`}>
+                    <Label>
+                      {x.kind === 'menu' ? 'Почему такое меню' : 'Почему такие тренировки'}
+                    </Label>
+                    <Text style={{ ...FONT.body, color: p.text2, marginTop: 6, lineHeight: 20 }}>
+                      {x.kind === 'menu'
+                        ? String(x.note).replace(/^Меню на месяц/u, 'Текущее меню')
+                        : x.note}
+                    </Text>
+                  </Card>
+                ))}
+              </Animated.View>
+            ) : null}
+          </>
         ) : null}
 
         {/* Учитывать ли цикл в адаптации — решает клиент. Это его данные,
@@ -758,51 +768,3 @@ function AiPreview({ plan, state, onClose, onNext }: {
 
           {hasGym ? (
             <View style={{
-              marginTop: S.md, backgroundColor: p.inset,
-              borderRadius: R.lg, padding: S.lg,
-            }}>
-              <Text style={{ ...FONT.caption, color: p.text3 }}>Объём тренировок</Text>
-              <Text style={{ ...FONT.h3, color: p.text, marginTop: 2 }}>
-                {f.days_per_week ?? 3} {plural(Number(f.days_per_week ?? 3), ['день', 'дня', 'дней'])} в неделю
-              </Text>
-              <Muted style={{ marginTop: 2 }}>
-                по {f.session_minutes ?? 45} минут · {f.goal || u?.goal || 'под вашу цель'}
-              </Muted>
-            </View>
-          ) : null}
-
-          <View style={{ marginTop: S.lg }}>
-            <Label>Что произойдёт дальше</Label>
-            <View style={{ gap: 7, marginTop: S.sm }}>
-              {['Составим план из базы EQUA',
-                'Покажем порции, нагрузку и объяснение',
-                'Будем предлагать адаптацию по результатам'].map(x => (
-                <View key={x} style={{ flexDirection: 'row', gap: 9, alignItems: 'flex-start' }}>
-                  <Icon name="check" size={14} color={p.accent} width={2.2} />
-                  <Text style={{ ...FONT.small, color: p.text2, flex: 1, lineHeight: 19 }}>{x}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <Muted style={{ marginTop: S.lg, lineHeight: 18 }}>
-            Это предварительные ориентиры. Итоговый план не заменяет медицинскую
-            консультацию и меняется только с вашего согласия.
-          </Muted>
-
-          <View style={{ marginTop: S.xl, gap: S.sm }}>
-            <SysButton label="Продолжить" variant="prominent" onPress={() => onNext(plan)} />
-            <SysButton label="Поправить ответы"
-              onPress={() => {
-                onClose();
-                router.push({
-                  pathname: plan === 'workouts' ? '/ai-fitness' : '/ai-nutrition',
-                  params: { plan },
-                });
-              }} />
-          </View>
-        </ScrollView>
-      </Animated.View>
-    </Modal>
-  );
-}
