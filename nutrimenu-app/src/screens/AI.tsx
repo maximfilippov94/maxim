@@ -485,7 +485,7 @@ export default function AI() {
                   ? 'Сейчас EQUA AI доступен бесплатно. После подключения платёжного шлюза здесь появится стоимость.'
                   : 'Оплата разовая на 30 дней. Автопродления нет.'}
               </Muted>
-              {__DEV__ && d.payments_mode === 'off' ? (
+              {__DEV__ ? (
                 <View style={{ marginTop: S.md }}>
                   <SysButton
                     label="Проверить веб-оплату"
@@ -493,7 +493,7 @@ export default function AI() {
                     onPress={openWebPaymentTest}
                   />
                   <Muted style={{ marginTop: 6 }}>
-                    Тестовый режим: откроется веб-версия EQUA в системной браузерной шторке.
+                    Тестовый режим: откроется ваш авторизованный веб-кабинет EQUA в системной браузерной шторке.
                   </Muted>
                 </View>
               ) : null}
