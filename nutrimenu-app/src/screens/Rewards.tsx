@@ -147,18 +147,31 @@ export default function Rewards() {
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginBottom: S.md }}>
           {g.achievements.map(a => (
-            <Card key={a.key} style={{ width: '47.5%', alignItems: 'center', paddingVertical: S.lg }}>
+            <Card key={a.key} style={{
+              width: '47.5%', alignItems: 'center', paddingVertical: S.lg,
+              borderWidth: 1,
+              borderColor: a.unlocked ? p.primary : p.border,
+              opacity: a.unlocked ? 1 : 0.58,
+            }}>
               <View style={{
-                width: 40, height: 40, borderRadius: 20, marginBottom: S.sm,
+                width: 44, height: 44, borderRadius: 22, marginBottom: S.sm,
                 alignItems: 'center', justifyContent: 'center',
                 backgroundColor: a.unlocked ? p.primarySoft : p.inset,
               }}>
-                <Icon name={a.icon} size={19} color={a.unlocked ? p.accent : p.text3} />
+                <Icon name={a.icon} size={20} color={a.unlocked ? p.accent : p.text3} />
               </View>
-              <Text numberOfLines={1} style={{
-                ...FONT.h3, color: a.unlocked ? p.text : p.text3, textAlign: 'center',
+              <Text numberOfLines={2} style={{
+                ...FONT.h3, color: a.unlocked ? p.text : p.text3,
+                textAlign: 'center', lineHeight: 20,
               }}>{a.label}</Text>
-              <Muted style={{ textAlign: 'center', marginTop: 2 }}>{a.hint}</Muted>
+              <Muted style={{ textAlign: 'center', marginTop: 4 }} numberOfLines={2}>{a.hint}</Muted>
+              <Text style={{
+                ...FONT.caption, marginTop: 8,
+                color: a.unlocked ? p.accent : p.text3,
+                fontWeight: '700',
+              }}>
+                {a.unlocked ? 'Получено' : 'Не открыто'}
+              </Text>
             </Card>
           ))}
         </View>
