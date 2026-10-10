@@ -144,8 +144,8 @@ function WaterGauge({ current, goal, pct, female }: {
           <SvgImage href={silhouette} x="0" y="0" width="235" height="420"
             preserveAspectRatio="xMidYMid meet" opacity={0.38} />
           <G mask="url(#body-water-mask)">
-            <AnimatedRect x="0" width="235" fill={p.mc} animatedProps={water} />
-            <Path d="M0 0 H235" fill="none" />
+            <AnimatedPath fill={p.mc} animatedProps={water} />
+            
           </G>
         </Svg>
       </View>
