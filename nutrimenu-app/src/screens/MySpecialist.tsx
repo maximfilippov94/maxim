@@ -196,7 +196,7 @@ export default function MySpecialist() {
 
   return (
     <View style={{ flex: 1, backgroundColor: p.bg }}>
-      <NavBar title={spec ? 'Мои специалисты' : 'Каталог'} back />
+      <NavBar title={spec ? 'Мои специалисты' : TITLES[prof]} back />
       <ScrollView contentContainerStyle={{
         paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
       }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -297,11 +297,9 @@ export default function MySpecialist() {
           <>
             {/* Счётчик над заголовком, как в каталоге на сайте: сначала
                 сколько нашлось, потом кого именно показываем. */}
-            <Text style={{ ...FONT.small, fontWeight: '600', color: p.text3, marginTop: S.md }}>
+            <Text style={{ ...FONT.small, fontWeight: '600', color: p.text3,
+              marginTop: S.md, marginBottom: S.md }}>
               {rows.length} {plural(rows.length, NOUNS[prof])}
-            </Text>
-            <Text style={{ ...FONT.h1, fontSize: 28, color: p.text, marginTop: 2, marginBottom: S.md }}>
-              {TITLES[prof]}
             </Text>
 
             {/* Скидка новым клиентам: заметная строка с обратным отсчётом,
@@ -474,11 +472,17 @@ export default function MySpecialist() {
             ) : null}
 
             {rows.length === 0 ? (
-              <Empty icon="person.crop.circle.badge.questionmark"
-                title={list.length ? 'Никого не нашлось' : 'Каталог пуст'}
-                note={list.length
-                  ? 'Смягчите отбор — например, снимите «Избранные».'
-                  : 'Попросите у специалиста код приглашения.'} />
+              <View style={{ marginTop: S.lg, alignItems: 'center' }}>
+                <Empty icon="person.crop.circle.badge.questionmark"
+                  title={list.length ? 'По этим параметрам никого нет' : 'Специалисты скоро появятся'}
+                  note={list.length
+                    ? 'Измените фильтры или сбросьте часть условий.'
+                    : 'Если у вас уже есть специалист, подключитесь по его коду приглашения.'} />
+                <View style={{ width: '100%', marginTop: S.md }}>
+                  <SysButton label="Ввести код специалиста" icon="tag"
+                    onPress={() => { haptic.tap(); setCodeOpen(true); }} />
+                </View>
+              </View>
             ) : rows.map((s, i) => (
               <Animated.View key={s.id} entering={FadeIn.duration(220)}>
                 <SpecCard s={s} busy={busy} fav={fav.includes(s.id)}
