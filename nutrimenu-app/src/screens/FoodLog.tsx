@@ -245,7 +245,13 @@ export default function FoodLog() {
                       {round(f.kcal)} ккал · Б {f.protein} Ж {f.fat} У {f.carbs} / 100 г
                     </Muted>
                   </View>
-                  <Icon name="plus" size={18} color={p.accent} />
+                  <View style={{
+                    width: 30, height: 30, borderRadius: 15,
+                    alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: p.primarySoft,
+                  }}>
+                    <Icon name="plus" size={15} color={p.accent} width={2} />
+                  </View>
                 </Pressable>
               </Animated.View>
             ))}
