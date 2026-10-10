@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import Animated, { FadeIn, useSharedValue, useAnimatedProps, withTiming, Easing, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
+import Svg, { Defs, Mask, Image as SvgImage, Rect, Path, G } from 'react-native-svg';
+import { readSex } from '../api';
 import { useApp } from '../store';
 import { api, WaterResponse } from '../api';
 import { S, R, FONT } from '../theme';
@@ -77,37 +79,56 @@ function Steps({ onAdd }: { onAdd: (ml: number) => void }) {
 }
 
 
-function WaterGauge({ current, goal, pct }: { current: number; goal: number; pct: number }) {
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
+
+/** Original male/female silhouette assets act as alpha masks. Water rises
+ * inside the actual body outline rather than a generic rectangular vessel. */
+function WaterGauge({ current, goal, pct, female }: {
+  current: number; goal: number; pct: number; female: boolean;
+}) {
   const { p } = useApp();
   const level = Math.max(0, Math.min(100, pct));
+  const progress = useSharedValue(level);
+  const amount = useSharedValue(current);
+  const [displayAmount, setDisplayAmount] = useState(current);
+  const [displayPct, setDisplayPct] = useState(Math.round(level));
+  useEffect(() => {
+    progress.value = withTiming(level, { duration: 950, easing: Easing.out(Easing.cubic) });
+    amount.value = withTiming(current, { duration: 900, easing: Easing.out(Easing.cubic) });
+  }, [level, current, progress, amount]);
+  useAnimatedReaction(() => Math.round(amount.value), (v, old) => {
+    if (v !== old) runOnJS(setDisplayAmount)(v);
+  });
+  useAnimatedReaction(() => Math.round(progress.value), (v, old) => {
+    if (v !== old) runOnJS(setDisplayPct)(v);
+  });
+  const water = useAnimatedProps(() => ({
+    y: 420 - 4.2 * progress.value,
+    height: 4.2 * progress.value,
+  }));
+  const silhouette = female ? require('../../assets/body-f.png') : require('../../assets/body-m.png');
   return (
     <View style={{ alignItems: 'center', width: '100%' }}>
-      <View style={{
-        width: 150, height: 280, borderRadius: 52, overflow: 'hidden',
-        borderWidth: 1, borderColor: p.border,
-        backgroundColor: p.surface, justifyContent: 'flex-end',
-      }}>
-        <View style={{
-          position: 'absolute', left: 0, right: 0, bottom: 0,
-          height: `${level}%` as `${number}%`,
-          backgroundColor: p.mc,
-          opacity: 0.9,
-        }} />
-        <View style={{
-          position: 'absolute', left: 18, right: 18, top: 18, height: 1,
-          backgroundColor: p.borderSoft,
-        }} />
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 38, fontWeight: '700', color: level > 48 ? p.onPrimary : p.text }}>
-            {Math.round(level)}%
-          </Text>
-          <Text style={{ ...FONT.small, color: level > 48 ? p.onPrimary : p.text3, marginTop: 2 }}>
-            сегодня
-          </Text>
-        </View>
+      <View style={{ width: 235, height: 420 }}>
+        <Svg width="100%" height="100%" viewBox="0 0 235 420">
+          <Defs>
+            <Mask id="body-water-mask" x="0" y="0" width="235" height="420">
+              <SvgImage href={silhouette} x="0" y="0" width="235" height="420" preserveAspectRatio="xMidYMid meet" />
+            </Mask>
+          </Defs>
+          <SvgImage href={silhouette} x="0" y="0" width="235" height="420"
+            preserveAspectRatio="xMidYMid meet" opacity={0.38} />
+          <G mask="url(#body-water-mask)">
+            <AnimatedRect x="0" width="235" fill={p.mc} animatedProps={water} />
+            <Path d="M0 0 H235" fill="none" />
+          </G>
+        </Svg>
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: S.lg }}>
-        <Text style={{ ...FONT.num, color: p.text }}>{current}</Text>
+      <Text style={{ ...FONT.small, color: p.text3, marginTop: 6 }}>
+        {displayPct}% от дневной нормы
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: S.sm }}>
+        <Text style={{ ...FONT.num, color: p.text }}>{displayAmount}</Text>
         <Text style={{ ...FONT.body, color: p.text3 }}>из {goal} мл</Text>
       </View>
     </View>
@@ -144,7 +165,7 @@ function CancelPlain({ onAdd }: { onAdd: (ml: number) => void }) {
 }
 
 export default function Water() {
-  const { p } = useApp();
+  const { p, me } = useApp();
   const today = isoToday();
   const insets = useSafeAreaInsets();
   const [d, setD] = useState<WaterResponse | null>(null);
@@ -223,7 +244,7 @@ export default function Water() {
         <Animated.View entering={FadeIn.duration(240)}
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center',
             paddingTop: S.xl, paddingBottom: S.lg }}>
-          <WaterGauge current={d.today_ml} goal={d.goal_ml} pct={pct} />
+          <WaterGauge current={d.today_ml} goal={d.goal_ml} pct={pct} female={readSex(me?.user?.sex) !== 'm'} />
           <Text style={{ ...FONT.small, color: p.text3, marginTop: 4 }}>
             {left ? `осталось ${left} мл` : 'норма на сегодня выполнена'}
           </Text>
