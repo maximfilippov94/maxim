@@ -164,7 +164,9 @@ export default function AIFitness() {
       });
       haptic.success();
       await AsyncStorage.removeItem(DRAFT).catch(() => {});
-      router.replace({ pathname: '/ai', params: { plan } });
+      /* После последнего ответа сразу показываем AI-разбор, а не
+         возвращаем пользователя к списку наборов. */
+      router.replace({ pathname: '/ai-intake', params: { plan } });
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Анкета не сохранилась');
     } finally { setBusy(false); }
