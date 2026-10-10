@@ -67,14 +67,35 @@ export default function AIIntake() {
     setBusy(true); setErr(null);
     try {
       await api('/client/ai/intake/confirm', {
-        method: 'POST', body: { plan, summary: d.summary },
+        method: 'POST', body: { plan, summary: d.summary, answers },
       });
       haptic.success();
+
+      /* Если доступ уже активен или платежи временно выключены, после
+         подтверждения сразу запускаем сборку. Пользователь уже прошёл
+         анкету и AI-разбор — возвращать его к тарифам ради ещё одного
+         нажатия нет смысла. */
+      const state = await api<any>('/client/ai', { noCache: true });
+      if (state?.current || state?.payments_mode === 'off') {
+        toast('Разбор подтверждён', { sub: 'собираем ваш план' });
+        await api('/client/ai', {
+          method: 'POST',
+          body: { plan, confirm: 1 },
+        });
+        if (plan === 'nutrition') {
+          router.replace('/client');
+        } else if (plan === 'workouts') {
+          router.replace('/client/workouts');
+        } else {
+          router.replace('/ai');
+        }
+        return;
+      }
+
+      /* При платном новом подключении после разбора остаётся только
+         оформление доступа. Показываем предварительный результат и
+         условия, но не возвращаем к каталогу наборов. */
       toast('Разбор подтверждён');
-      /* `preview` просит экран AI сразу показать предварительный
-         ориентир — шаг веба между подтверждением и оформлением.
-         Возвращать человека к списку наборов значит потерять его на
-         полпути: он подтвердил ответы и ждёт, что из них вышло. */
       router.replace({ pathname: '/ai', params: { plan, preview: '1' } });
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Не подтвердилось');
