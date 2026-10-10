@@ -18,6 +18,8 @@ export default function Shopping() {
   const insets = useSafeAreaInsets();
   const [data, setData] = useState<ShoppingResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const flip = useCallback((name: string) => setCollapsed(v => ({ ...v, [name]: !v[name] })), []);
 
   const load = useCallback(async () => {
     try { setData(await api<ShoppingResponse>('/client/shopping')); }
@@ -77,7 +79,9 @@ export default function Shopping() {
   if (!data) return <Loading title="Список покупок" />;
 
   const done = data.items.filter(i => i.checked).length;
-  const total = data.items.length;
+  const atHome = data.pantry?.length ?? 0;
+  const total = data.items.length + atHome;
+  const ready = done + atHome;
 
   const head = (
     <Animated.View entering={FadeIn.duration(240)}>
@@ -85,7 +89,7 @@ export default function Shopping() {
         <View style={{ paddingHorizontal: 18, paddingVertical: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ fontSize: 16, color: p.text }}>
-              {done} из {total} куплено
+              Готово: {ready} из {total}
             </Text>
             {/* Сброс стирает отметки всего списка — системный диалог
                 спрашивает об этом ровно один раз и по-настоящему. */}
@@ -98,8 +102,11 @@ export default function Shopping() {
             />
           </View>
           <View style={{ marginTop: 10 }}>
-            <Bar value={total ? done / total : 0} />
+            <Bar value={total ? ready / total : 0} />
           </View>
+          <Text style={{ ...FONT.small, color: p.text3, marginTop: 6 }}>
+            Куплено: {done} · Есть дома: {atHome}
+          </Text>
           {/* Период называем так же, как в вебе: не «7 дней меню», а на
               какие именно числа считан список — иначе непонятно, список
               это на эту неделю или на следующую. */}
@@ -129,7 +136,7 @@ export default function Shopping() {
       {sysNative ? (
         <>
           {head}
-          <NativeList cats={cats} pantry={data.pantry ?? []}
+          <NativeList cats={cats} pantry={data.pantry ?? []} collapsed={collapsed} onFlip={flip}
             onSet={(it, v) => toggle(it, v)}
             onHome={it => pantry(it, true)}
             onBack={it => pantry(it, false)} />
@@ -141,8 +148,10 @@ export default function Shopping() {
           {cats.map(([cat, items], gi) => (
             <Animated.View key={cat} entering={FadeIn.duration(240)}
               layout={LinearTransition.duration(220)}>
-              <ListHead>{cat}</ListHead>
-              <ListGroup>
+              <Pressable onPress={() => flip(cat)} accessibilityRole="button">
+                <ListHead>{cat} · {items.length} {collapsed[cat] ? '⌄' : '⌃'}</ListHead>
+              </Pressable>
+              {!collapsed[cat] && <ListGroup>
                 {items.map((it, i) => (
                   <Pressable key={it.key} onPress={() => toggle(it)}>
                     {({ pressed }) => (
@@ -183,13 +192,15 @@ export default function Shopping() {
                     )}
                   </Pressable>
                 ))}
-              </ListGroup>
+              </ListGroup>}
             </Animated.View>
           ))}
           {data.pantry?.length ? (
             <>
-              <ListHead>Уже есть дома</ListHead>
-              <ListGroup>
+              <Pressable onPress={() => flip('__home')} accessibilityRole="button">
+                <ListHead>Уже есть дома · {data.pantry.length} {collapsed.__home ? '⌄' : '⌃'}</ListHead>
+              </Pressable>
+              {!collapsed.__home && <ListGroup>
                 {data.pantry.map((it, i) => (
                   <View key={it.key}>
                     {i ? <View style={{ height: 0.5, backgroundColor: p.border, marginLeft: 18 }} /> : null}
@@ -208,7 +219,7 @@ export default function Shopping() {
                     </View>
                   </View>
                 ))}
-              </ListGroup>
+              </ListGroup>}
             </>
           ) : null}
           <Text style={{ ...FONT.small, color: p.text3, paddingHorizontal: 18, marginTop: 14, lineHeight: 18 }}>
@@ -229,9 +240,11 @@ export default function Shopping() {
  * системный. Взамен получаем всё разом: резину на краю, полный свайп
  * до конца, возврат строки, если палец передумал.
  */
-function NativeList({ cats, pantry, onSet, onHome, onBack }: {
+function NativeList({ cats, pantry, collapsed, onFlip, onSet, onHome, onBack }: {
   cats: [string, ShoppingItem[]][];
   pantry: ShoppingItem[];
+  collapsed: Record<string, boolean>;
+  onFlip: (name: string) => void;
   onSet: (it: ShoppingItem, checked: boolean) => void;
   onHome: (it: ShoppingItem) => void;
   onBack: (it: ShoppingItem) => void;
@@ -249,8 +262,9 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
       <List
         modifiers={[m.listStyle('insetGrouped'), m.scrollContentBackground('hidden')]}>
         {cats.map(([cat, items]) => (
-          <Section key={cat} title={cat}>
-            {items.map(it => {
+          <Section key={cat} title={`${cat} · ${items.length}${collapsed[cat] ? ' ▾' : ''}`}>
+            <Button label={collapsed[cat] ? 'Развернуть категорию' : 'Свернуть категорию'} onPress={() => onFlip(cat)} modifiers={[m.buttonStyle('borderless'), m.tint(p.text3)]} />
+            {!collapsed[cat] && items.map(it => {
               const on = !!it.checked;
               return (
                 <SwipeActions key={it.key}>
@@ -303,8 +317,9 @@ function NativeList({ cats, pantry, onSet, onHome, onBack }: {
         {/* Кладовка — тем же списком, иначе убранное с глаз исчезало бы
             совсем и вернуть его было бы нечем. */}
         {pantry.length ? (
-          <Section title="Уже есть дома">
-            {pantry.map(it => (
+          <Section title={`Уже есть дома · ${pantry.length}`}>
+            <Button label={collapsed.__home ? 'Развернуть' : 'Свернуть'} onPress={() => onFlip('__home')} modifiers={[m.buttonStyle('borderless'), m.tint(p.text3)]} />
+            {!collapsed.__home && pantry.map(it => (
               <SwipeActions key={it.key}>
                 <SwipeActions.Actions edge="trailing">
                   <Button label="Вернуть" systemImage="arrow.uturn.backward"
