@@ -1,15 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useApp } from '../store';
 import { api, WaterResponse } from '../api';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { ListGroup, ListHead, ListRow } from '../ui/List';
 import { Label } from '../ui/base';
-import { Silhouette } from '../ui/Silhouette';
-import { Counter } from '../ui/Counter';
 import { haptic } from '../haptics';
 import { hasExpoUI } from '../native';
 import { Loading, Fail } from './Shopping';
@@ -78,6 +76,44 @@ function Steps({ onAdd }: { onAdd: (ml: number) => void }) {
   );
 }
 
+
+function WaterGauge({ current, goal, pct }: { current: number; goal: number; pct: number }) {
+  const { p } = useApp();
+  const level = Math.max(0, Math.min(100, pct));
+  return (
+    <View style={{ alignItems: 'center', width: '100%' }}>
+      <View style={{
+        width: 150, height: 280, borderRadius: 52, overflow: 'hidden',
+        borderWidth: 1, borderColor: p.border,
+        backgroundColor: p.surface, justifyContent: 'flex-end',
+      }}>
+        <View style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          height: `${level}%` as `${number}%`,
+          backgroundColor: p.mc,
+          opacity: 0.9,
+        }} />
+        <View style={{
+          position: 'absolute', left: 18, right: 18, top: 18, height: 1,
+          backgroundColor: p.borderSoft,
+        }} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 38, fontWeight: '700', color: level > 48 ? p.onPrimary : p.text }}>
+            {Math.round(level)}%
+          </Text>
+          <Text style={{ ...FONT.small, color: level > 48 ? p.onPrimary : p.text3, marginTop: 2 }}>
+            сегодня
+          </Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: S.lg }}>
+        <Text style={{ ...FONT.num, color: p.text }}>{current}</Text>
+        <Text style={{ ...FONT.body, color: p.text3 }}>из {goal} мл</Text>
+      </View>
+    </View>
+  );
+}
+
 /** Запасной вид там, где системных компонентов нет */
 function StepsPlain({ onAdd }: { onAdd: (ml: number) => void }) {
   const { p } = useApp();
@@ -108,26 +144,21 @@ function CancelPlain({ onAdd }: { onAdd: (ml: number) => void }) {
 }
 
 export default function Water() {
-  const { p, me } = useApp();
+  const { p } = useApp();
   const today = isoToday();
-  /* Фигура занимает столько, сколько остаётся под цифрами и кнопками:
-     на маленьком экране она уменьшится, но не залезет под них. */
-  const { height: winH } = useWindowDimensions();
-  const sil = Math.max(280, Math.min(520, winH - 360));
   const insets = useSafeAreaInsets();
   const [d, setD] = useState<WaterResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const fill = useSharedValue(0);
 
   useEffect(() => {
     api<WaterResponse>('/client/water')
-      .then(r => { setD({ ...r, history: r.history ?? [] }); fill.value = withSpring(r.goal_ml ? r.today_ml / r.goal_ml : 0, { damping: 18 }); })
+      .then(r => { setD({ ...r, history: r.history ?? [] }); })
       /* 404 здесь означает не «нет данных», а «на сервере ещё нет этого
          раздела»: приложение обновляется само, сервер — руками. */
       .catch(e => setErr(e.status === 404
         ? 'Сервер ещё не знает про питьевой режим. Обновите его — раздел появится.'
         : e.message));
-  }, [fill]);
+  }, []);
 
   const [goalBusy, setGoalBusy] = useState(false);
   /* Норму меняем на сервере сразу: это не форма, отменять тут нечего.
@@ -141,12 +172,7 @@ export default function Water() {
     try {
       const r = await api<{ goal_ml: number }>('/client/water/goal',
         { method: 'PATCH', body: { goal_ml } });
-      setD(x => {
-        if (!x) return x;
-        fill.value = withSpring(r.goal_ml ? Math.min(1, x.today_ml / r.goal_ml) : 0,
-          { damping: 18 });
-        return { ...x, goal_ml: r.goal_ml };
-      });
+      setD(x => x ? { ...x, goal_ml: r.goal_ml } : x);
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Норма не сохранилась');
     } finally { setGoalBusy(false); }
@@ -159,7 +185,6 @@ export default function Water() {
     const was = d.today_ml;
     const next = Math.max(0, was + ml);
     setD({ ...d, today_ml: next });
-    fill.value = withSpring(d.goal_ml ? next / d.goal_ml : 0, { damping: 18 });
     ml > 0 ? haptic.select() : haptic.tap();
     try {
       const r = await api<{ today_ml: number; goal_ml: number }>('/client/water', {
@@ -170,9 +195,8 @@ export default function Water() {
     } catch {
       haptic.error();
       setD(x => x && { ...x, today_ml: was });
-      fill.value = withSpring(d.goal_ml ? was / d.goal_ml : 0, { damping: 18 });
     }
-  }, [d, fill]);
+  }, [d]);
 
   if (err) return <Fail title="Вода" text={err} />;
   if (!d) return <Loading title="Вода" />;
@@ -198,18 +222,10 @@ export default function Water() {
 
         <Animated.View entering={FadeIn.duration(240)}
           style={{ flex: 1, alignItems: 'center', justifyContent: 'center',
-            paddingTop: S.lg, paddingBottom: S.lg }}>
-          {/* Пустая часть — та же вода, но бледная: на вашем рисунке это
-              светло-голубой, и фигура читается даже при нулевом уровне.
-              Цвет поверхности здесь не годится — он сливается с фоном. */}
-          <Silhouette fill={fill} sex={me?.user?.sex}
-            water={p.mc} base={p.mc + '33'} height={sil} />
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6, marginTop: S.lg }}>
-            <Counter value={d.today_ml} style={{ ...FONT.num, color: p.text }} />
-            <Text style={{ ...FONT.body, color: p.text3 }}>из {d.goal_ml} мл</Text>
-          </View>
-          <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>
-            {left ? `осталось ${left} мл · ${pct}%` : 'норма на сегодня выполнена'}
+            paddingTop: S.xl, paddingBottom: S.lg }}>
+          <WaterGauge current={d.today_ml} goal={d.goal_ml} pct={pct} />
+          <Text style={{ ...FONT.small, color: p.text3, marginTop: 4 }}>
+            {left ? `осталось ${left} мл` : 'норма на сегодня выполнена'}
           </Text>
         </Animated.View>
 
