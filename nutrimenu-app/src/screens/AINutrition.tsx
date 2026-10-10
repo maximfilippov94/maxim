@@ -140,9 +140,13 @@ export default function AINutrition() {
       await api('/client/ai/nutrition', { method: 'POST', body: answers });
       haptic.success();
       await AsyncStorage.removeItem(DRAFT).catch(() => {});
-      /* Возвращаем на экран EQUA AI: там человек увидит, что анкета
-         принята, и сможет оформить набор. */
-      router.replace({ pathname: '/ai', params: { plan } });
+      /* Не возвращаем человека к каталогу наборов. Для полного плана
+         сразу продолжаем анкетой тренировок, для питания — AI-разбором. */
+      if (plan === 'both') {
+        router.replace({ pathname: '/ai-fitness', params: { plan } });
+      } else {
+        router.replace({ pathname: '/ai-intake', params: { plan } });
+      }
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Анкета не сохранилась');
     } finally { setBusy(false); }
