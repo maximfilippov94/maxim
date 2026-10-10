@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, useSharedValue, useAnimatedProps, withTiming, Easing, useAnimatedReaction, runOnJS, withRepeat, withSequence, useDerivedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, useSharedValue, useAnimatedProps, withTiming, Easing, useAnimatedReaction, runOnJS, withRepeat, withSequence, useDerivedValue, withSpring, cancelAnimation } from 'react-native-reanimated';
 import Svg, { Defs, Mask, Image as SvgImage, Rect, Path, G } from 'react-native-svg';
 import { readSex } from '../api';
 import { useApp } from '../store';
@@ -92,6 +92,8 @@ function WaterGauge({ current, goal, pct, female }: {
   const amount = useSharedValue(current);
   const phase = useSharedValue(0);
   const tilt = useSharedValue(0);
+  const splash = useSharedValue(0);
+  const previousLevel = React.useRef(level);
   useEffect(() => {
     phase.value = withRepeat(withTiming(Math.PI * 2, { duration: 2500, easing: Easing.linear }), -1, false);
     // Motion sensor is optional: the surface still ripples without it.
@@ -104,14 +106,21 @@ function WaterGauge({ current, goal, pct, female }: {
         tilt.value = withTiming(Math.max(-0.55, Math.min(0.55, roll)), { duration: 180 });
       });
     } catch { /* DeviceMotion unavailable in this build */ }
-    return () => { subscription?.remove(); };
+    return () => { subscription?.remove(); cancelAnimation(phase); };
   }, [phase, tilt]);
   const [displayAmount, setDisplayAmount] = useState(current);
   const [displayPct, setDisplayPct] = useState(Math.round(level));
   useEffect(() => {
-    progress.value = withTiming(level, { duration: 950, easing: Easing.out(Easing.cubic) });
+    const delta = level - previousLevel.current;
+    previousLevel.current = level;
+    if (Math.abs(delta) > 0.01) {
+      // Pouring displaces the surface; it overshoots and settles with inertia.
+      splash.value = Math.min(18, 5 + Math.abs(delta) * 0.65);
+      splash.value = withSpring(0, { damping: 5, stiffness: 65, mass: 1.2 });
+    }
+    progress.value = withTiming(level, { duration: 1250, easing: Easing.inOut(Easing.cubic) });
     amount.value = withTiming(current, { duration: 900, easing: Easing.out(Easing.cubic) });
-  }, [level, current, progress, amount]);
+  }, [level, current, progress, amount, splash]);
   useAnimatedReaction(() => Math.round(amount.value), (v, old) => {
     if (v !== old) runOnJS(setDisplayAmount)(v);
   });
@@ -121,7 +130,7 @@ function WaterGauge({ current, goal, pct, female }: {
   const water = useAnimatedProps(() => {
     const surface = 420 - 4.2 * progress.value;
     const roll = tilt.value;
-    const amplitude = 4 + Math.abs(roll) * 19;
+    const amplitude = 2 + Math.abs(roll) * 17 + splash.value;
     const points: string[] = [];
     for (let x = -15; x <= 250; x += 5) {
       const slosh = (x - 117.5) * roll * 0.38;
