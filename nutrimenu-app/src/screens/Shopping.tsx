@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 import { useApp } from '../store';
@@ -18,20 +19,28 @@ export default function Shopping() {
   const insets = useSafeAreaInsets();
   const [data, setData] = useState<ShoppingResponse | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const requestId = useRef(0);
+  const pending = useRef(new Set<string>());
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const flip = useCallback((name: string) => setCollapsed(v => ({ ...v, [name]: !v[name] })), []);
 
   const load = useCallback(async () => {
-    try { setData(await api<ShoppingResponse>('/client/shopping')); }
-    catch (e: any) { setErr(e.message); }
+    const id = ++requestId.current;
+    try {
+      const response = await api<ShoppingResponse>('/client/shopping');
+      if (id === requestId.current) { setData(response); setErr(null); }
+    } catch (e: any) {
+      if (id === requestId.current) setErr(e.message);
+    }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); return () => { requestId.current++; }; }, [load]));
 
   /* Отметка ставится сразу, а запрос идёт следом: если сервер откажет —
      возвращаем как было. Ждать сеть ради галочки незачем. */
   const toggle = useCallback(async (it: ShoppingItem, to?: boolean) => {
     const next = (to ?? !it.checked) ? 1 : 0;
-    if (next === (it.checked ? 1 : 0)) return;
+    if (next === (it.checked ? 1 : 0) || pending.current.has(it.key)) return;
+    pending.current.add(it.key);
     setData(d => d && { ...d, items: d.items.map(x => x.key === it.key ? { ...x, checked: next } : x) });
     haptic.select();
     try {
@@ -41,28 +50,37 @@ export default function Shopping() {
     } catch {
       haptic.error();
       setData(d => d && { ...d, items: d.items.map(x => x.key === it.key ? { ...x, checked: it.checked } : x) });
-    }
+    } finally { pending.current.delete(it.key); }
   }, []);
 
   /* Кладовка. Соль и масло попадают в список каждую неделю и каждую
      неделю в нём не нужны. Совсем убирать их нельзя — иногда они как
      раз заканчиваются, поэтому они уходят в отдельный список. */
   const pantry = useCallback(async (it: ShoppingItem, add: boolean) => {
+    if (pending.current.has(it.key)) return;
+    pending.current.add(it.key);
+    requestId.current++;
+    setData(d => d && ({ ...d,
+      items: add ? d.items.filter(x => x.key !== it.key) : [...d.items, { ...it, checked: 0 }],
+      pantry: add ? [...(d.pantry ?? []), { ...it, at_home: 1 }] : (d.pantry ?? []).filter(x => x.key !== it.key),
+    }));
     haptic.select();
     try {
       await api('/client/shopping/pantry', {
         method: 'POST', body: add ? { name: it.name } : { name: it.name, remove: true },
       });
-      load();
-    } catch { haptic.error(); }
+      await load();
+    } catch { haptic.error(); await load(); }
+    finally { pending.current.delete(it.key); }
   }, [load]);
 
   const clear = useCallback(async () => {
+    requestId.current++;
     const before = data?.items ?? [];
     setData(d => d && { ...d, items: d.items.map(x => ({ ...x, checked: 0 })) });
-    try { await api('/client/shopping/clear', { method: 'POST' }); }
-    catch { setData(d => d && { ...d, items: before }); }
-  }, [data]);
+    try { await api('/client/shopping/clear', { method: 'POST' }); await load(); }
+    catch { setData(d => d && { ...d, items: before }); haptic.error(); }
+  }, [data, load]);
 
   /* Группируем по категории — так список читается по отделам магазина */
   const cats = useMemo(() => {
@@ -72,7 +90,7 @@ export default function Shopping() {
       const row = out.find(r => r[0] === c);
       if (row) row[1].push(it); else out.push([c, [it]]);
     }
-    return out;
+    return out.map(([cat, items]) => [cat, [...items].sort((a, b) => Number(!!a.checked) - Number(!!b.checked))] as [string, ShoppingItem[]]);
   }, [data]);
 
   if (err) return <Fail title="Список покупок" text={err} />;
@@ -125,7 +143,7 @@ export default function Shopping() {
       <View style={{ flex: 1, backgroundColor: p.bg }}>
         <NavBar title="Список покупок" back />
         <Empty icon="cart" title="Список пуст"
-          note="Он соберётся сам, когда специалист опубликует меню." />
+          note="Он сформируется автоматически из назначенного меню EQUA AI или специалиста." />
       </View>
     );
   }
@@ -223,8 +241,7 @@ export default function Shopping() {
             </>
           ) : null}
           <Text style={{ ...FONT.small, color: p.text3, paddingHorizontal: 18, marginTop: 14, lineHeight: 18 }}>
-            Продукты, которые всегда есть дома, уберите значком домика —
-            они перестанут появляться в списке.
+            Нажмите на домик, если продукт уже есть дома. Его можно вернуть в покупки в любой момент.
           </Text>
         </ScrollView>
       )}
