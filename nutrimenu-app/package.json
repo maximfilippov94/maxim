@@ -54,7 +54,8 @@
     "react-native-svg": "15.15.4",
     "react-native-web": "~0.21.0",
     "react-native-webrtc": "^124.0.8",
-    "react-native-worklets": "0.10.4"
+    "react-native-worklets": "0.10.4",
+    "expo-sensors": "~57.0.0"
   },
   "devDependencies": {
     "@resvg/resvg-js": "^2.6.2",
