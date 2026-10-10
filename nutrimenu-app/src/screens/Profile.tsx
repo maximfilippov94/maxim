@@ -201,7 +201,7 @@ export default function Profile() {
     <View style={{ flex: 1, backgroundColor: p.bg }}>
       <NavBar title="Профиль" back />
       <ScrollView contentContainerStyle={{
-        paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
+        paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
       }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         <Animated.View entering={FadeIn.duration(240)}>
@@ -255,7 +255,7 @@ export default function Profile() {
             клиента. Маршрут анкеты принимает ровно эти поля, серверной
             работы не потребовалось. */}
         <Card style={{ padding: 0, marginBottom: S.md }}>
-          <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: S.md }}>
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.md, paddingBottom: 12 }}>
             <Text style={{ fontSize: 15, color: p.text2, marginBottom: S.sm }}>Цель</Text>
             <GoalGrid value={goal} onChange={v => edit('goal', v)} />
           </View>
@@ -288,12 +288,14 @@ export default function Profile() {
           {/* Если в карточке лежит значение из старой анкеты («лёгкий»,
               «спортсмен»), показываем и его: иначе выбранного варианта
               не видно вовсе, и человек решит, что поле пустое. */}
-          <Row label="Активность">
+          <View style={{ paddingHorizontal: S.lg, paddingTop: 12, paddingBottom: 14,
+            borderTopWidth: 1, borderTopColor: p.borderSoft }}>
+            <Text style={{ fontSize: 15, color: p.text2, marginBottom: 10 }}>Активность</Text>
             <Chips
               items={[...new Set([...ACTS, ...(act ? [act] : [])])]
                 .map(k => [k, ACTIVITY[k] ?? k] as [string, string])}
               value={act} onChange={v => edit('act', v)} />
-          </Row>
+          </View>
         </Card>
 
         <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.md }}>
@@ -323,7 +325,9 @@ export default function Profile() {
           <Text style={{ ...FONT.small, color: p.text2, marginBottom: S.md }}>{msg}</Text>
         ) : null}
 
-        <SysButton label="Сохранить" variant="prominent" disabled={busy} onPress={save} />
+        <View style={{ marginTop: S.sm, marginBottom: S.md }}>
+          <SysButton label={busy ? 'Сохраняем…' : 'Сохранить изменения'} variant="prominent" disabled={busy} onPress={save} />
+        </View>
       </ScrollView>
     </View>
   );
@@ -340,8 +344,8 @@ function GoalGrid({ value, onChange }: { value: string | null; onChange: (v: str
           <Pressable key={label} onPress={() => { haptic.select(); onChange(label); }}
             accessibilityRole="radio" accessibilityState={{ selected: on }}
             style={({ pressed }) => ({
-              width: '48%', minHeight: 54, borderRadius: R.md,
-              paddingHorizontal: 12, paddingVertical: 10,
+              width: '48%', minHeight: 44, borderRadius: R.md,
+              paddingHorizontal: 12, paddingVertical: 8,
               justifyContent: 'center',
               backgroundColor: on ? p.primarySoft : p.inset,
               borderWidth: 1, borderColor: on ? p.primary : p.border,
@@ -388,7 +392,7 @@ function Chips({ items, value, onChange }: {
   const { p } = useApp();
   return (
     <View style={{
-      flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'flex-end',
+      flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-start',
     }}>
       {items.map(([k, l]) => {
         const on = value === k;
@@ -396,7 +400,7 @@ function Chips({ items, value, onChange }: {
           <Pressable key={k} onPress={() => { haptic.select(); onChange(k); }}
             accessibilityRole="button" accessibilityState={{ selected: on }}
             style={({ pressed }) => ({
-              paddingHorizontal: 13, paddingVertical: 7, borderRadius: R.pill,
+              paddingHorizontal: 16, paddingVertical: 10, borderRadius: R.pill,
               backgroundColor: on ? p.primarySoft : 'transparent',
               borderWidth: 1, borderColor: on ? p.primary : p.btnLine,
               opacity: pressed && !on ? 0.6 : 1,
