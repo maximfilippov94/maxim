@@ -21,7 +21,7 @@ import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useApp } from '../store';
-import { api, API_BASE, AiState, AiPlan } from '../api';
+import { api, AiState, AiPlan } from '../api';
 import { S, R, FONT, CYCLE } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -230,7 +230,11 @@ export default function AI() {
     haptic.tap();
     setErr(null);
     try {
-      await WebBrowser.openBrowserAsync(API_BASE + '/app', {
+      const bridge = await api<{ url: string }>('/auth/web-session', {
+        method: 'POST',
+        body: { target: 'ai' },
+      });
+      await WebBrowser.openBrowserAsync(bridge.url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
         enableBarCollapsing: true,
       });
