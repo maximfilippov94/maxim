@@ -16,7 +16,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Switch, Pressable, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../store';
-import { api, PushPrefs, PUSH_CLIENT, PUSH_SPEC } from '../api';
+import { api } from '../api';
+import { registerPush, inExpoGo } from '../push';
 import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Muted } from '../ui/base';
@@ -25,6 +26,30 @@ import { Icon } from '../ui/Icon';
 import { SysButton } from '../ui/system';
 import { useToast } from '../ui/Toast';
 import { haptic } from '../haptics';
+
+
+interface PushPrefs {
+  breakfast?: number; lunch?: number; dinner?: number; weight?: number;
+  messages?: number; menu_updates?: number; meal_logs?: number; client_inactive?: number;
+  master_enabled?: number; food?: number; workouts?: number; motivation?: number;
+  progress?: number; service?: number; timezone?: string | null;
+  quiet_start?: string | null; quiet_end?: string | null;
+}
+
+const PUSH_CLIENT: [keyof PushPrefs, string, string][] = [
+  ['food', 'Напоминания о питании', 'только если приём ещё не отмечен'],
+  ['workouts', 'Тренировки', 'когда тренировка есть в плане и ещё не выполнена'],
+  ['motivation', 'Мотивация', 'не чаще заданного системой лимита'],
+  ['progress', 'Прогресс', 'только когда есть данные для сравнения'],
+  ['service', 'Рекомендации и обновления сервиса', 'редкие полезные сообщения EQUA'],
+  ['messages', 'Сообщения специалиста', 'чат и важные ответы'],
+  ['menu_updates', 'Изменения меню', 'когда специалист обновил план'],
+];
+const PUSH_SPEC: [keyof PushPrefs, string, string][] = [
+  ['messages', 'Сообщения', 'новые сообщения клиентов'],
+  ['meal_logs', 'Отметки питания', 'клиент отметил или пропустил приём'],
+  ['client_inactive', 'Неактивные клиенты', 'если клиент надолго выпал из дневника'],
+];
 
 /** Часы тихого режима: сервер хранит строкой «22:00». */
 const HOURS = ['', '20:00', '21:00', '22:00', '23:00', '00:00'];
@@ -43,10 +68,19 @@ export default function PushPrefsScreen() {
      ушло сейчас. Числа сервера, не наши догадки. */
   const [diag, setDiag] = useState<{ expo: number; sent: number } | null>(null);
   const [checking, setChecking] = useState(false);
+  const [enabling, setEnabling] = useState(false);
 
   const load = useCallback(() => {
     api<{ preferences: PushPrefs }>(`${base}/push/preferences`)
-      .then(r => { setD(r.preferences ?? {}); setErr(null); })
+      .then(r => {
+        const pref = r.preferences ?? {};
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        setD({ ...pref, timezone: pref.timezone || tz });
+        setErr(null);
+        if (!spec && tz && pref.timezone !== tz) {
+          api('/client/push/preferences', { method: 'PATCH', body: { timezone: tz } }).catch(() => {});
+        }
+      })
       .catch(e => setErr(e?.message ?? 'Настройки не открылись'));
   }, [base]);
   useEffect(() => { load(); }, [load]);
@@ -64,6 +98,21 @@ export default function PushPrefsScreen() {
       load();
     }
   }, [base, load, toast]);
+
+  const enable = useCallback(async () => {
+    if (enabling) return;
+    haptic.tap(); setEnabling(true);
+    try {
+      const r = await registerPush(true);
+      if (r.ok) {
+        haptic.success();
+        toast('Уведомления включены');
+      } else {
+        haptic.error();
+        toast(r.message, { kind: 'err' });
+      }
+    } finally { setEnabling(false); }
+  }, [enabling, toast]);
 
   /* «Проверить доставку» — та же кнопка, что в вебе (`pushTest`).
      Человек включил уведомления и хочет убедиться, что они доходят;
@@ -99,7 +148,16 @@ export default function PushPrefsScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}>
 
-        <ListHead>Что присылать</ListHead>
+        <ListHead>Доставка</ListHead>
+        <View style={{ paddingHorizontal: S.lg, paddingBottom: S.sm }}>
+          <Muted style={{ marginBottom: S.md, lineHeight: 18 }}>
+            EQUA попросит системное разрешение только после нажатия этой кнопки. На iPhone и Android это работает в development/TestFlight-сборке, не в Expo Go.
+          </Muted>
+          <SysButton label={enabling ? 'Включаем…' : 'Включить уведомления'}
+            variant="prominent" disabled={enabling || inExpoGo} onPress={enable} />
+        </View>
+
+        <ListHead>{spec ? 'Что присылать' : 'Автоматические уведомления'}</ListHead>
         <ListGroup>
           {rows.map(([key, label, note], i) => (
             <View key={String(key)} style={{
@@ -139,7 +197,7 @@ export default function PushPrefsScreen() {
           </View>
         ) : null}
 
-        <ListHead>Доставка</ListHead>
+        <ListHead>Проверка</ListHead>
         <View style={{ paddingHorizontal: S.lg }}>
           <Muted style={{ marginBottom: S.md, lineHeight: 18 }}>
             Пришлём на это устройство проверочное уведомление.
