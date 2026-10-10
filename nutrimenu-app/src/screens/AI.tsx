@@ -21,7 +21,7 @@ import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useApp } from '../store';
-import { api, AiState, AiPlan } from '../api';
+import { api, API_BASE, AiState, AiPlan } from '../api';
 import { S, R, FONT, CYCLE } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Card, Label, Muted } from '../ui/base';
@@ -224,6 +224,21 @@ export default function AI() {
       });
       await load();
     } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось изменить доступ'); }
+  }, [load]);
+
+  const openWebPaymentTest = useCallback(async () => {
+    haptic.tap();
+    setErr(null);
+    try {
+      await WebBrowser.openBrowserAsync(API_BASE + '/app', {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        enableBarCollapsing: true,
+      });
+      await load();
+    } catch (e: any) {
+      haptic.error();
+      setErr(e?.message ?? 'Не удалось открыть веб-кабинет');
+    }
   }, [load]);
 
   const cancel = useCallback(() => {
@@ -466,6 +481,18 @@ export default function AI() {
                   ? 'Сейчас EQUA AI доступен бесплатно. После подключения платёжного шлюза здесь появится стоимость.'
                   : 'Оплата разовая на 30 дней. Автопродления нет.'}
               </Muted>
+              {__DEV__ && d.payments_mode === 'off' ? (
+                <View style={{ marginTop: S.md }}>
+                  <SysButton
+                    label="Проверить веб-оплату"
+                    icon="safari"
+                    onPress={openWebPaymentTest}
+                  />
+                  <Muted style={{ marginTop: 6 }}>
+                    Тестовый режим: откроется веб-версия EQUA в системной браузерной шторке.
+                  </Muted>
+                </View>
+              ) : null}
             </View>
           </>
         ) : null}
