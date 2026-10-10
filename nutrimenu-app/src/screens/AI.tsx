@@ -485,7 +485,7 @@ export default function AI() {
                 <View style={{ marginTop: S.md }}>
                   <SysButton
                     label="Проверить веб-оплату"
-                    icon="safari"
+                    icon="device"
                     onPress={openWebPaymentTest}
                   />
                   <Muted style={{ marginTop: 6 }}>
