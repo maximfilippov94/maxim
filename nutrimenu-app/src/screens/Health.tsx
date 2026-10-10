@@ -852,7 +852,7 @@ function Overview({ d, updated, spec, onGo }: {
   ];
   return (
     <View>
-      <Card style={{ marginBottom: S.md }}>
+      <Card style={{ marginBottom: S.sm }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
           <View style={{
             width: 42, height: 42, borderRadius: 21, alignItems: 'center',
@@ -863,32 +863,35 @@ function Overview({ d, updated, spec, onGo }: {
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ ...FONT.h3, color: p.text }}>Профиль здоровья</Text>
             <Muted style={{ marginTop: 2 }}>
-              Обновлено · {updated ? day(updated) : 'ещё нет записей'}
+              {updated ? `Обновлено · ${day(updated)}` : 'Добавьте первые данные о здоровье'}
             </Muted>
           </View>
-          {/* Записи видит только тот, кому клиент открыл раздел — об этом
-              стоит сказать прямо, иначе их просто не заводят. */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-            <Icon name="lock" size={13} color={p.text3} width={1.8} />
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 5,
+            paddingHorizontal: 9, paddingVertical: 6, borderRadius: R.pill,
+            backgroundColor: p.inset,
+          }}>
+            <Icon name="lock" size={12} color={p.text3} width={1.8} />
             <Text style={{ fontSize: 11, color: p.text3 }}>Приватно</Text>
           </View>
         </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginTop: S.lg }}>
-          {tiles.map(([ic, n, label, tab, key]) => (
-            <Pressable key={label} onPress={() => { haptic.tap(); onGo(tab, key || undefined); }}
-              style={({ pressed }) => ({
-                flexBasis: '47%', flexGrow: 1,
-                paddingVertical: 12, paddingHorizontal: 12, borderRadius: R.md,
-                backgroundColor: p.inset, opacity: pressed ? 0.7 : 1,
-              })}>
-              <Icon name={ic} size={16} color={p.text3} width={1.8} />
-              <Text style={{ fontSize: 22, fontWeight: '700', color: p.text, marginTop: 6 }}>{n}</Text>
-              <Text style={{ fontSize: 12, color: p.text3 }} numberOfLines={1}>{label}</Text>
-            </Pressable>
-          ))}
-        </View>
       </Card>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, marginBottom: S.md }}>
+        {tiles.map(([ic, n, label, tab, key]) => (
+          <Pressable key={label} onPress={() => { haptic.tap(); onGo(tab, key || undefined); }}
+            style={({ pressed }) => ({
+              flexBasis: '47%', flexGrow: 1, minHeight: 92,
+              paddingVertical: 13, paddingHorizontal: 14, borderRadius: R.lg,
+              backgroundColor: p.surface, borderWidth: 1, borderColor: p.border,
+              opacity: pressed ? 0.72 : 1,
+            })}>
+            <Icon name={ic} size={16} color={p.text3} width={1.8} />
+            <Text style={{ fontSize: 24, fontWeight: '700', color: p.text, marginTop: 8 }}>{n}</Text>
+            <Text style={{ fontSize: 12, color: p.text3 }} numberOfLines={1}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       {/* История здоровья — шесть последних событий из документов,
           рекомендаций и препаратов, как `timeline` в вебе. Журнал
@@ -1157,9 +1160,10 @@ function ShareOut({ d, name }: { d: Health; name: string }) {
       <Muted>
         Ничего никуда не отправляется само: текст уходит туда, куда вы его отправите.
       </Muted>
-      <SysButton label="Выгрузить профиль" height={44} onPress={exportAll} />
-      <SysButton label={open ? 'Свернуть сводку' : 'Сводка перед консультацией'} height={44}
+      <SysButton label={open ? 'Свернуть сводку' : 'Сводка перед консультацией'}
+        variant="prominent" height={44}
         onPress={() => { haptic.tap(); setOpen(v => !v); }} />
+      <SysButton label="Выгрузить профиль" height={44} onPress={exportAll} />
 
       {open ? (
         <View style={{ gap: S.sm }}>
