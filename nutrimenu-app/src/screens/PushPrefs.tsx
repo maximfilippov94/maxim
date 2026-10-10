@@ -22,7 +22,6 @@ import { S, R, FONT } from '../theme';
 import { NavBar } from '../ui/NavBar';
 import { Muted } from '../ui/base';
 import { ListGroup, ListHead } from '../ui/List';
-import { Icon } from '../ui/Icon';
 import { SysButton } from '../ui/system';
 import { useToast } from '../ui/Toast';
 import { haptic } from '../haptics';
@@ -65,10 +64,6 @@ export default function PushPrefsScreen() {
 
   const [d, setD] = useState<PushPrefs | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  /* Итог проверки доставки: сколько подписок у этого человека и сколько
-     ушло сейчас. Числа сервера, не наши догадки. */
-  const [diag, setDiag] = useState<{ expo: number; sent: number } | null>(null);
-  const [checking, setChecking] = useState(false);
   const [enabling, setEnabling] = useState(false);
 
   const load = useCallback(() => {
@@ -115,22 +110,6 @@ export default function PushPrefsScreen() {
     } finally { setEnabling(false); }
   }, [enabling, toast]);
 
-  /* «Проверить доставку» — та же кнопка, что в вебе (`pushTest`).
-     Человек включил уведомления и хочет убедиться, что они доходят;
-     без неё остаётся ждать случайного повода. */
-  const check = useCallback(async () => {
-    if (checking) return;
-    haptic.tap(); setChecking(true); setDiag(null);
-    try {
-      const r = await api<{ expo?: number; sent?: number }>('/push/test', { method: 'POST' });
-      setDiag({ expo: r.expo ?? 0, sent: r.sent ?? 0 });
-      if ((r.sent ?? 0) > 0) haptic.success();
-    } catch (e: any) {
-      haptic.error();
-      toast(e?.message ?? 'Проверка не прошла', { kind: 'err' });
-    } finally { setChecking(false); }
-  }, [checking, toast]);
-
   if (!d) {
     return (
       <View style={{ flex: 1, backgroundColor: p.bg }}>
@@ -152,7 +131,7 @@ export default function PushPrefsScreen() {
         <ListHead>Доставка</ListHead>
         <View style={{ paddingHorizontal: S.lg, paddingBottom: S.sm }}>
           <Muted style={{ marginBottom: S.md, lineHeight: 18 }}>
-            EQUA попросит системное разрешение только после нажатия этой кнопки. На iPhone и Android это работает в development/TestFlight-сборке, не в Expo Go.
+            Включите уведомления, чтобы не пропускать сообщения и полезные напоминания EQUA.
           </Muted>
           <SysButton label={enabling ? 'Включаем…' : 'Включить уведомления'}
             variant="prominent" disabled={enabling || inExpoGo} onPress={enable} />
@@ -179,11 +158,6 @@ export default function PushPrefsScreen() {
           ))}
         </ListGroup>
 
-        {!spec ? (
-          <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
-            <Muted>Часовой пояс: {d.timezone || 'по устройству'}</Muted>
-          </View>
-        ) : null}
 
         <ListHead>Тихие часы</ListHead>
         <View style={{ paddingHorizontal: S.lg }}>
@@ -204,28 +178,6 @@ export default function PushPrefsScreen() {
           </View>
         ) : null}
 
-        <ListHead>Проверка</ListHead>
-        <View style={{ paddingHorizontal: S.lg }}>
-          <Muted style={{ marginBottom: S.md, lineHeight: 18 }}>
-            Пришлём на это устройство проверочное уведомление.
-          </Muted>
-          <SysButton label={checking ? 'Проверяем…' : 'Проверить доставку'}
-            disabled={checking} onPress={check} />
-          {diag ? (
-            <View style={{ marginTop: S.md, gap: 6 }}>
-              <Row ok={diag.expo > 0} label="Устройство подписано"
-                value={diag.expo > 0 ? `да, устройств: ${diag.expo}` : 'нет'} />
-              <Row ok={diag.sent > 0} label="Отправлено сейчас"
-                value={String(diag.sent)} />
-              {diag.expo === 0 ? (
-                <Muted style={{ marginTop: 2 }}>
-                  Разрешите уведомления в настройках телефона и войдите заново —
-                  подписка создаётся при входе.
-                </Muted>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
       </ScrollView>
     </View>
   );
@@ -258,22 +210,6 @@ function Picker({ label, value, options, onPick }: {
           );
         })}
       </View>
-    </View>
-  );
-}
-
-/** Строка итога проверки: видно сразу, что не так. */
-function Row({ ok, label, value }: { ok: boolean; label: string; value: string }) {
-  const { p } = useApp();
-  return (
-    <View style={{
-      flexDirection: 'row', alignItems: 'center', gap: S.sm,
-      backgroundColor: p.inset, borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: 10,
-    }}>
-      <Icon name={ok ? 'check' : 'close'} size={14} width={2.2}
-        color={ok ? p.good : p.danger} />
-      <Text style={{ ...FONT.small, color: p.text2, flex: 1 }}>{label}</Text>
-      <Text style={{ ...FONT.small, color: p.text, fontWeight: '600' }}>{value}</Text>
     </View>
   );
 }
