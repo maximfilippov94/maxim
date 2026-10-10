@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, useSharedValue, useAnimatedProps, withTiming, Easing, useAnimatedReaction, runOnJS } from 'react-native-reanimated';
+import Animated, { FadeIn, useSharedValue, useAnimatedProps, withTiming, Easing, useAnimatedReaction, runOnJS, withRepeat, withSequence, useDerivedValue } from 'react-native-reanimated';
 import Svg, { Defs, Mask, Image as SvgImage, Rect, Path, G } from 'react-native-svg';
 import { readSex } from '../api';
 import { useApp } from '../store';
@@ -79,7 +79,7 @@ function Steps({ onAdd }: { onAdd: (ml: number) => void }) {
 }
 
 
-const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 /** Original male/female silhouette assets act as alpha masks. Water rises
  * inside the actual body outline rather than a generic rectangular vessel. */
@@ -90,6 +90,22 @@ function WaterGauge({ current, goal, pct, female }: {
   const level = Math.max(0, Math.min(100, pct));
   const progress = useSharedValue(level);
   const amount = useSharedValue(current);
+  const phase = useSharedValue(0);
+  const tilt = useSharedValue(0);
+  useEffect(() => {
+    phase.value = withRepeat(withTiming(Math.PI * 2, { duration: 2500, easing: Easing.linear }), -1, false);
+    // Motion sensor is optional: the surface still ripples without it.
+    let subscription: { remove: () => void } | undefined;
+    try {
+      const { DeviceMotion } = require('expo-sensors');
+      DeviceMotion.setUpdateInterval(80);
+      subscription = DeviceMotion.addListener((event: { rotation?: { gamma?: number; beta?: number } }) => {
+        const roll = event.rotation?.gamma ?? 0;
+        tilt.value = withTiming(Math.max(-0.55, Math.min(0.55, roll)), { duration: 180 });
+      });
+    } catch { /* DeviceMotion unavailable in this build */ }
+    return () => { subscription?.remove(); };
+  }, [phase, tilt]);
   const [displayAmount, setDisplayAmount] = useState(current);
   const [displayPct, setDisplayPct] = useState(Math.round(level));
   useEffect(() => {
@@ -102,10 +118,19 @@ function WaterGauge({ current, goal, pct, female }: {
   useAnimatedReaction(() => Math.round(progress.value), (v, old) => {
     if (v !== old) runOnJS(setDisplayPct)(v);
   });
-  const water = useAnimatedProps(() => ({
-    y: 420 - 4.2 * progress.value,
-    height: 4.2 * progress.value,
-  }));
+  const water = useAnimatedProps(() => {
+    const surface = 420 - 4.2 * progress.value;
+    const roll = tilt.value;
+    const amplitude = 4 + Math.abs(roll) * 19;
+    const points: string[] = [];
+    for (let x = -15; x <= 250; x += 5) {
+      const slosh = (x - 117.5) * roll * 0.38;
+      const wave = Math.sin((x / 235) * Math.PI * 3.5 + phase.value) * amplitude
+        + Math.sin((x / 235) * Math.PI * 6 - phase.value * 0.7) * 1.7;
+      points.push(`${x === -15 ? 'M' : 'L'} ${x} ${surface + slosh + wave}`);
+    }
+    return { d: points.join(' ') + ' L 250 430 L -15 430 Z' };
+  });
   const silhouette = female ? require('../../assets/body-f.png') : require('../../assets/body-m.png');
   return (
     <View style={{ alignItems: 'center', width: '100%' }}>
