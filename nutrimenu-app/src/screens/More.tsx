@@ -139,11 +139,13 @@ export default function More() {
             onPress={() => router.push('/notifications')} />
           <ListRow icon="device" label="Уведомления и тихие часы"
             onPress={() => router.push('/push-prefs')} />
-        </ListGroup>
-
-        <ListHead>Оформление</ListHead>
-        <ListGroup>
-          <View style={{ paddingHorizontal: 18, paddingVertical: 14 }}>
+          <View style={{
+            paddingHorizontal: 18, paddingVertical: 14,
+            borderTopWidth: 1, borderTopColor: p.borderSoft,
+          }}>
+            <Text style={{ ...FONT.small, fontWeight: '600', color: p.text2, marginBottom: 10 }}>
+              Оформление
+            </Text>
             {/* Системный сегментированный переключатель: на iOS это настоящий
                 UISegmentedControl, на Android — Material. Своя реализация
                 всегда выдаёт себя мелочами анимации, поэтому она только
