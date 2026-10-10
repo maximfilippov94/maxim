@@ -1,0 +1,389 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+  View, Text, ScrollView, Pressable, Modal, TextInput,
+  KeyboardAvoidingView, Platform, ActivityIndicator,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { Image } from 'expo-image';
+import { useApp } from '../store';
+import { api, mediaUrl, Gamification, GamReward, ClientTask } from '../api';
+import { uploadForm } from '../upload';
+import { pickPhoto, shootPhoto } from '../photo';
+import { S, R, FONT } from '../theme';
+import { NavBar } from '../ui/NavBar';
+import { Card, Muted, Bar } from '../ui/base';
+import { Icon } from '../ui/Icon';
+import { SysButton, SysConfirm } from '../ui/system';
+import { plural, dmy } from '../format';
+import { Loading, Fail } from './Shopping';
+import { haptic } from '../haptics';
+
+export default function Rewards() {
+  const { p } = useApp();
+  const insets = useSafeAreaInsets();
+  const [g, setG] = useState<Gamification | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  /* Задание, которое сейчас закрывают: держим отдельно, чтобы окно
+     отчёта не перерисовывало весь экран на каждую букву. */
+  const [doing, setDoing] = useState<ClientTask | null>(null);
+
+  const load = useCallback(async () => {
+    try { setG(await api<Gamification>('/client/gamification')); }
+    catch (e: any) { setErr(e.message); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  const redeem = useCallback(async (r: GamReward) => {
+    setNote(null);
+    try {
+      const j = await api<{ code?: string }>('/client/redeem', {
+        method: 'POST', body: { reward_id: r.id },
+      });
+      haptic.success();
+      /* Код нужен, чтобы специалист сверил обмен: привилегию выдаёт он,
+         а не сервис. */
+      setNote(j.code ? `Код обмена ${j.code} — назовите его специалисту` : 'Готово');
+      await load();
+    } catch (e: any) { haptic.error(); setNote(e?.message ?? 'Не удалось обменять'); }
+  }, [load]);
+
+  if (err) return <Fail title="Награды и баллы" text={err} />;
+  if (!g) return <Loading title="Награды и баллы" />;
+
+  const span = Math.max(1, g.level_next - g.level_base);
+  const inLevel = Math.max(0, Math.min(1, (g.earned - g.level_base) / span));
+
+  return (
+    <View style={{ flex: 1, backgroundColor: p.bg }}>
+      <NavBar title="Награды и баллы" back />
+      <ScrollView contentContainerStyle={{
+        paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
+      }} showsVerticalScrollIndicator={false}>
+
+        {/* Баланс, уровень и серия — одной карточкой, как `rw-hero`
+            в вебе: сначала сколько баллов, рядом уровень и серия одной
+            строкой, под ними полоса и сколько XP до следующего уровня.
+            Серия стояла отдельной карточкой — это было своё деление. */}
+        <Animated.View entering={FadeIn.duration(240)}>
+          <Card style={{ marginTop: S.md, marginBottom: S.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: S.md }}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                  <Text style={{ ...FONT.num, color: p.text }}>{g.balance}</Text>
+                  <Muted style={{ marginLeft: 6 }}>баллов</Muted>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center',
+                  flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  <Muted>Ур. {g.level} · {g.level_title} ·</Muted>
+                  <Icon name="flame" size={13} color={p.warn} width={1.8} />
+                  <Muted>
+                    {g.streak} {plural(g.streak, ['день', 'дня', 'дней'])}
+                  </Muted>
+                </View>
+              </View>
+              <View style={{
+                width: 42, height: 42, borderRadius: 21, alignItems: 'center',
+                justifyContent: 'center', backgroundColor: p.primarySoft,
+              }}>
+                <Icon name="coin" size={20} color={p.accent} width={1.8} />
+              </View>
+            </View>
+            <View style={{ marginTop: S.lg }}><Bar value={inLevel} /></View>
+            <Muted style={{ marginTop: S.sm }}>
+              {g.earned} / {g.level_next} XP до следующего уровня
+            </Muted>
+          </Card>
+        </Animated.View>
+
+        {/* Идеальных дней веб не показывает, хотя сервер их считает.
+            Оставлено отдельной плиткой: убирать работающее, чтобы сойтись
+            с сайтом, — не то же самое, что свести оформление. */}
+        {g.perfect_days ? (
+          <Animated.View entering={FadeIn.duration(240)}>
+            <Card style={{ marginBottom: S.md, flexDirection: 'row',
+              alignItems: 'center', gap: S.md }}>
+              <Icon name="check" size={17} color={p.mp} width={1.8} />
+              <Text style={{ ...FONT.body, color: p.text2, flex: 1 }}>Идеальных дней</Text>
+              <Text style={{ fontSize: 19, fontWeight: '700', color: p.text }}>
+                {g.perfect_days}
+              </Text>
+            </Card>
+          </Animated.View>
+        ) : null}
+
+        <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+          Задания дня
+        </Text>
+        <Card style={{ padding: 0, marginBottom: S.md }}>
+          {g.tasks.map((t, i) => (
+            <View key={t.key} style={{
+              flexDirection: 'row', alignItems: 'center', gap: S.md,
+              paddingVertical: 12, paddingHorizontal: S.lg,
+              borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+            }}>
+              <View style={{
+                width: 22, height: 22, borderRadius: 11,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: t.done ? p.primary : 'transparent',
+                borderWidth: t.done ? 0 : 1.5, borderColor: p.track,
+              }}>
+                {t.done ? <Icon name="check" size={12} color={p.onPrimary} width={2.6} /> : null}
+              </View>
+              <Text style={{ flex: 1, fontSize: 15, color: t.done ? p.text3 : p.text }}>
+                {t.label}
+              </Text>
+              {t.progress ? <Muted style={{ marginRight: 8 }}>{t.progress}</Muted> : null}
+              <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
+                +{t.reward}
+              </Text>
+            </View>
+          ))}
+        </Card>
+
+        <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+          Достижения
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.md, marginBottom: S.md }}>
+          {g.achievements.map(a => (
+            <Card key={a.key} style={{
+              width: '47.5%', alignItems: 'center', paddingVertical: S.lg,
+              borderWidth: 1,
+              borderColor: a.unlocked ? p.primary : p.border,
+              opacity: a.unlocked ? 1 : 0.58,
+            }}>
+              <View style={{
+                width: 44, height: 44, borderRadius: 22, marginBottom: S.sm,
+                alignItems: 'center', justifyContent: 'center',
+                backgroundColor: a.unlocked ? p.primarySoft : p.inset,
+              }}>
+                <Icon name={a.icon} size={20} color={a.unlocked ? p.accent : p.text3} />
+              </View>
+              <Text numberOfLines={2} style={{
+                ...FONT.h3, color: a.unlocked ? p.text : p.text3,
+                textAlign: 'center', lineHeight: 20,
+              }}>{a.label}</Text>
+              <Muted style={{ textAlign: 'center', marginTop: 4 }} numberOfLines={2}>{a.hint}</Muted>
+              <Text style={{
+                ...FONT.caption, marginTop: 8,
+                color: a.unlocked ? p.accent : p.text3,
+                fontWeight: '700',
+              }}>
+                {a.unlocked ? 'Получено' : 'Не открыто'}
+              </Text>
+            </Card>
+          ))}
+        </View>
+
+        {/* Личные задания специалиста. У них своя судьба — срок,
+            фотоотчёт, отмена — поэтому они не сворачиваются в ежедневные. */}
+        <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+          Задания специалиста
+        </Text>
+        {g.personal_tasks?.length ? (
+          <Card style={{ padding: 0, marginBottom: S.md }}>
+            {g.personal_tasks.map((t, i) => (
+              <View key={t.id} style={{
+                flexDirection: 'row', alignItems: 'center', gap: S.md,
+                paddingVertical: 12, paddingHorizontal: S.lg,
+                borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+              }}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={{ fontSize: 15, color: t.status === 'done' ? p.text3 : p.text }}>
+                    {t.title}
+                  </Text>
+                  <Muted style={{ marginTop: 2 }} numberOfLines={2}>
+                    {[t.kind === 'photo' ? 'с фотоотчётом' : null,
+                      `${t.points} баллов`,
+                      t.due_on && t.status !== 'done' ? `до ${dmy(t.due_on)}` : null,
+                     ].filter(Boolean).join(' · ')}
+                  </Muted>
+                  {t.note ? <Muted numberOfLines={2}>{t.note}</Muted> : null}
+                </View>
+                {mediaUrl(t.photo_url) ? (
+                  <Image source={{ uri: mediaUrl(t.photo_url)! }}
+                    style={{ width: 40, height: 40, borderRadius: R.sm, backgroundColor: p.inset }}
+                    contentFit="cover" />
+                ) : null}
+                {t.status === 'done' ? (
+                  <Text style={{ ...FONT.small, fontWeight: '700', color: p.accent }}>
+                    +{t.points}
+                  </Text>
+                ) : (
+                  <Pressable onPress={() => setDoing(t)} hitSlop={6}
+                    style={({ pressed }) => ({
+                      paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.pill,
+                      backgroundColor: p.primary, opacity: pressed ? 0.7 : 1,
+                    })}>
+                    <Text style={{ ...FONT.small, fontWeight: '600', color: p.onPrimary }}>
+                      {t.kind === 'photo' ? 'Отчёт' : 'Готово'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            ))}
+          </Card>
+        ) : (
+          <Card style={{ marginBottom: S.md }}>
+            <Muted style={{ lineHeight: 19 }}>Личных заданий пока нет.</Muted>
+          </Card>
+        )}
+
+        <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+          Обменять баллы
+        </Text>
+        {note ? (
+          <Card style={{ marginBottom: S.md }}>
+            <Text style={{ ...FONT.body, color: p.text }}>{note}</Text>
+          </Card>
+        ) : null}
+        {g.rewards.length === 0 ? (
+          <Card style={{ marginBottom: S.md }}>
+            <Muted style={{ lineHeight: 19 }}>
+              Специалист пока не назначил, на что можно обменять баллы.
+            </Muted>
+          </Card>
+        ) : null}
+        <Card style={{ padding: 0, marginBottom: S.md, display: g.rewards.length ? 'flex' : 'none' }}>
+          {g.rewards.map((r, i) => {
+            const can = g.balance >= r.cost;
+            return (
+              <View key={r.id} style={{
+                flexDirection: 'row', alignItems: 'center', gap: S.md,
+                paddingVertical: 12, paddingHorizontal: S.lg,
+                borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+              }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, color: can ? p.text : p.text3 }}>{r.label}</Text>
+                  <Muted style={{ marginTop: 2 }}>
+                    {[r.note, `${r.cost} баллов`].filter(Boolean).join(' · ')}
+                  </Muted>
+                </View>
+                {can ? (
+                  <SysConfirm
+                    label="Обменять"
+                    tint={p.primary}
+                    destructive={false}
+                    title={r.label}
+                    message={`Спишем ${r.cost} баллов и выдадим код обмена — назовите его специалисту.`}
+                    confirmLabel="Обменять"
+                    onConfirm={() => redeem(r)}
+                  />
+                ) : (
+                  <Muted>не хватает {r.cost - g.balance}</Muted>
+                )}
+              </View>
+            );
+          })}
+        </Card>
+
+        {g.redemptions.length ? (
+          <>
+            <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm, marginBottom: S.sm }}>
+              Мои коды обмена
+            </Text>
+            <Card style={{ padding: 0, marginBottom: S.md }}>
+              {g.redemptions.map((r, i) => (
+                <View key={r.code + i} style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  paddingVertical: 12, paddingHorizontal: S.lg,
+                  borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+                }}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: p.text }}>{r.code}</Text>
+                    <Muted numberOfLines={1}>{r.title ?? 'Привилегия'}</Muted>
+                  </View>
+                  <Muted>{r.status === 'used' ? 'использован' : 'активен'}</Muted>
+                </View>
+              ))}
+            </Card>
+          </>
+        ) : null}
+
+        <Muted style={{ marginTop: S.sm, lineHeight: 18 }}>
+          Баллы начисляются за отмеченные приёмы пищи, дни без пропусков,
+          записанный вес и выполненные задания специалиста.
+        </Muted>
+      </ScrollView>
+
+      <TaskSheet task={doing} onClose={() => setDoing(null)}
+        onDone={() => { setDoing(null); load(); }} />
+    </View>
+  );
+}
+
+/**
+ * Закрытие задания.
+ *
+ * Задание с фотоотчётом без снимка не закрывается — в этом и был смысл:
+ * специалист хочет увидеть результат, а не галочку. Снимок можно и
+ * сделать на месте, и выбрать из галереи: приготовленное блюдо
+ * фотографируют сразу, а сданные анализы — уже готовым файлом.
+ */
+function TaskSheet({ task, onClose, onDone }: {
+  task: ClientTask | null; onClose: () => void; onDone: () => void;
+}) {
+  const { p } = useApp();
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => { setComment(''); setErr(null); }, [task?.id]);
+  if (!task) return null;
+  const needPhoto = task.kind === 'photo';
+
+  async function send(withCamera?: boolean) {
+    if (!task) return;
+    setBusy(true); setErr(null);
+    try {
+      if (needPhoto) {
+        const file = withCamera ? await shootPhoto() : await pickPhoto();
+        if (!file) { setBusy(false); return; }
+        await uploadForm(`/client/tasks/${task.id}/done`, file, 'photo', { comment });
+      } else {
+        await api(`/client/tasks/${task.id}/done`, { method: 'POST', body: { comment } });
+      }
+      haptic.success(); onDone();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не отправилось'); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }} onPress={onClose} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={{
+          backgroundColor: p.surface, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg,
+          padding: S.lg, paddingBottom: S.xl + 12, gap: S.md,
+        }}>
+          <Text style={{ ...FONT.h3, color: p.text }}>{task.title}</Text>
+          {task.note ? <Muted style={{ lineHeight: 19 }}>{task.note}</Muted> : null}
+
+          <TextInput value={comment} onChangeText={setComment} multiline
+            placeholder="Как прошло" placeholderTextColor={p.text3}
+            style={{
+              minHeight: 80, backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+              paddingHorizontal: S.lg, paddingVertical: 12, fontSize: 15, lineHeight: 21,
+              textAlignVertical: 'top',
+            }} />
+
+          {err ? <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text> : null}
+          {busy ? <ActivityIndicator color={p.accent} /> : null}
+
+          {needPhoto ? (
+            <View style={{ gap: S.sm }}>
+              <SysButton label="Снять сейчас" icon="camera" variant="prominent"
+                disabled={busy} onPress={() => send(true)} />
+              <SysButton label="Выбрать из галереи" icon="photo"
+                disabled={busy} onPress={() => send(false)} />
+            </View>
+          ) : (
+            <SysButton label="Задание выполнено" icon="checkmark" variant="prominent"
+              disabled={busy} onPress={() => send()} />
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}

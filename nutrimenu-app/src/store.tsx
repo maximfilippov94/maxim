@@ -1,0 +1,168 @@
+/**
+ * Тема и сессия в одном контексте: оба нужны почти каждому экрану,
+ * и оба читаются из хранилища при старте.
+ */
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { Appearance, Platform, useColorScheme } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PALETTES, Palette, ThemeName, ThemePref } from './theme';
+import { api, loadToken, setToken, setUnauthorizedHandler, Me, SignUp } from './api';
+import { registerPush, unregisterPush } from './push';
+import { AppConfig, DEFAULT_CONFIG, fetchAppConfig, featureOn } from './appConfig';
+
+interface Ctx {
+  p: Palette;
+  themePref: ThemePref;
+  setThemePref: (t: ThemePref) => void;
+  me: Me | null;
+  ready: boolean;
+  signIn: (email: string, password: string) => Promise<Me>;
+  /** Вход через Apple, Google или VK: сессию выдал сервер, пароля нет */
+  signInWithToken: (token: string) => Promise<Me>;
+  signUp: (data: SignUp) => Promise<void>;
+  signOut: () => Promise<void>;
+  refreshMe: () => Promise<void>;
+  /* Непрочитанные сообщения — значок на вкладке «Чат». Держим здесь, а не
+     в самой вкладке: число приходит вместе со списком клиентов, который
+     и так загружают «Клиенты» и «Чаты», и лишнего запроса не нужно. */
+  unread: number;
+  setUnread: (n: number) => void;
+  /* Что сервер разрешил и о чём просил сказать: объявление, требование
+     обновиться, выключенные возможности. Читается один раз при запуске —
+     чаще незачем, а лишний запрос на каждом экране заметен на слабой связи. */
+  cfg: AppConfig;
+  /** Включена ли возможность. По умолчанию да: молчание сервера ничего не прячет. */
+  feature: (key: string) => boolean;
+}
+const C = createContext<Ctx>(null as any);
+export const useApp = () => useContext(C);
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const system = useColorScheme();
+  const [themePref, setPref] = useState<ThemePref>('dark');
+  const [me, setMe] = useState<Me | null>(null);
+  const [ready, setReady] = useState(false);
+  const [unread, setUnreadState] = useState(0);
+  const [cfg, setCfg] = useState<AppConfig>(DEFAULT_CONFIG);
+  const setUnread = useCallback((n: number) => setUnreadState(Math.max(0, n | 0)), []);
+
+  useEffect(() => {
+    (async () => {
+      const saved = (await AsyncStorage.getItem('nm_theme')) as ThemePref | null;
+      if (saved) setPref(saved);
+      /* Настройки спрашиваем до готовности экрана: объявление и экран
+         обновления должны быть в первом кадре, а не появляться через
+         секунду после того, как человек начал работать. */
+      fetchAppConfig().then(setCfg).catch(() => {});
+      const t = await loadToken();
+      if (t) {
+        try { setMe(await api<Me>('/me')); registerPush(false); }
+        catch { await setToken(null); }   /* протухший токен — молча выходим */
+      }
+      setReady(true);
+    })();
+  }, []);
+
+  /* Сессия может протухнуть не на запуске, а посреди работы: пароль сменили
+     на другом устройстве, сеанс закрыли из панели. Тогда любой запрос
+     возвращает 401, и приложение целиком возвращается на вход — без этого
+     человек остался бы на экране с данными, которые уже не обновляются. */
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setToken(null).catch(() => {});
+      setMe(null);
+    });
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  const resolved: ThemeName =
+    themePref === 'auto' ? (system === 'light' ? 'light' : 'dark') : themePref;
+
+  /**
+   * Сообщаем системе, в каком режиме считает себя приложение.
+   *
+   * Системные элементы — панель вкладок, шторки, поля ввода — берут
+   * оформление не у нас, а у операционной системы. Пока она не знала
+   * о нашем переключателе, панель оставалась тёмной на светлой теме
+   * и выглядела серой поверх светлого экрана. Задать ей материал не
+   * помогает: на iOS 26 она рисуется жидким стеклом и цвет берёт из
+   * режима всего приложения.
+   *
+   * «Как в системе» возвращает значение «не задано» — иначе выбранный
+   * однажды режим закрепился бы навсегда: системное значение мы читаем
+   * оттуда же.
+   */
+  useEffect(() => {
+    /* В react-native-web этой функции нет, а системных элементов,
+       которым она нужна, там и не бывает. */
+    if (Platform.OS === 'web' || typeof Appearance.setColorScheme !== 'function') return;
+    Appearance.setColorScheme(themePref === 'auto' ? 'unspecified' : themePref);
+  }, [themePref]);
+
+  const setThemePref = useCallback((t: ThemePref) => {
+    setPref(t);
+    AsyncStorage.setItem('nm_theme', t).catch(() => {});
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const r = await api<{ token?: string; need_code?: boolean }>('/auth/login', {
+      method: 'POST', body: { email: email.trim(), password },
+    });
+    /* Второй фактор есть только у панели владельца, а её в приложении
+       нет. Без этой проверки пароль принимался, токен приходил пустым,
+       и человек видел «Не удалось войти» — будто ошибся паролем. */
+    if (!r.token) {
+      throw new Error(r.need_code
+        ? 'Эта учётная запись входит с кодом на почту — через сайт.'
+        : 'Не удалось войти');
+    }
+    await setToken(r.token);
+    const m = await api<Me>('/me');
+    setMe(m);
+    /* Телефон привязываем к вошедшему: напоминания приходят только своему. */
+    registerPush(false);
+    /* Роль нужна вызывающему сразу: специалиста и клиента ждут разные экраны. */
+    return m;
+  }, []);
+
+  const signInWithToken = useCallback(async (t: string) => {
+    await setToken(t);
+    const m = await api<Me>('/me');
+    setMe(m);
+    registerPush(false);
+    return m;
+  }, []);
+
+  /* Регистрация сразу возвращает сессию — отдельного входа не нужно. */
+  const signUp = useCallback(async (data: SignUp) => {
+    const r = await api<{ token: string }>('/auth/register', { method: 'POST', body: data });
+    await setToken(r.token);
+    setMe(await api<Me>('/me'));
+    registerPush(false);
+  }, []);
+
+  const signOut = useCallback(async () => {
+    /* Отписываем телефон до выхода: после сброса токена сервер уже не
+       поймёт, чью подписку убирать. */
+    await unregisterPush(false);
+    try { await api('/auth/logout', { method: 'POST' }); } catch { /* всё равно выходим */ }
+    await setToken(null);
+    setMe(null);
+  }, []);
+
+  const feature = useCallback((key: string) => featureOn(cfg, key), [cfg]);
+
+  const refreshMe = useCallback(async () => {
+    try { setMe(await api<Me>('/me')); } catch { /* оставляем прежнее */ }
+  }, []);
+
+  return (
+    <C.Provider value={{
+      p: PALETTES[resolved], themePref, setThemePref,
+      me, ready, signIn, signInWithToken, signUp, signOut, refreshMe,
+      unread, setUnread, cfg, feature,
+    }}>
+      {children}
+    </C.Provider>
+  );
+}

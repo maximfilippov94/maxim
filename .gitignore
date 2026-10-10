@@ -1,2 +1,35 @@
 *.zip
 .claude/worktrees/
+
+# служебные снимки от проверок валяются в корне — их и отсекаем,
+# а картинки внутри проектов нужны и должны попадать в репозиторий
+/*.png
+
+# Ruflo local secrets and runtime data
+.env
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# Ruflo: рабочие базы и снимок настроек. Базы пересоздаются сами, а
+# бинарник в репозитории растёт с каждой правкой и конфликтует при слиянии.
+ruvector.db
+ruvector.db-*
+.swarm/
+.claude/settings.json.bak-*
+# Рантайм ruflo: метрики, снимок карты кода, состояние политик и сессий
+# перезаписываются на каждом запуске демона и конфликтуют при слиянии.
+# Конфигурация и описание возможностей остаются в репозитории.
+.claude-flow/metrics/
+.claude-flow/mods/
+.claude-flow/policy/
+.claude-flow/security/
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+.claude-flow/*.pid
+.claude-flow/*-state.json
+.claude-flow/*-policy.json
+.claude-flow/memory-package.json
