@@ -37,6 +37,7 @@ interface PushPrefs {
 }
 
 const PUSH_CLIENT: [keyof PushPrefs, string, string][] = [
+  ['master_enabled', 'Все автоматические уведомления', 'главный переключатель напоминаний EQUA'],
   ['food', 'Напоминания о питании', 'только если приём ещё не отмечен'],
   ['workouts', 'Тренировки', 'когда тренировка есть в плане и ещё не выполнена'],
   ['motivation', 'Мотивация', 'не чаще заданного системой лимита'],
@@ -177,6 +178,12 @@ export default function PushPrefsScreen() {
             </View>
           ))}
         </ListGroup>
+
+        {!spec ? (
+          <View style={{ paddingHorizontal: S.lg, paddingTop: S.lg }}>
+            <Muted>Часовой пояс: {d.timezone || 'по устройству'}</Muted>
+          </View>
+        ) : null}
 
         <ListHead>Тихие часы</ListHead>
         <View style={{ paddingHorizontal: S.lg }}>
