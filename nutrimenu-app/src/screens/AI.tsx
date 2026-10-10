@@ -19,6 +19,7 @@ import { View, Text, TextInput, ScrollView, Pressable, ActivityIndicator, Alert,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useApp } from '../store';
 import { api, AiState, AiPlan } from '../api';
 import { S, R, FONT, CYCLE } from '../theme';
@@ -182,10 +183,22 @@ export default function AI() {
     try {
       const r = await api<{ pay?: { confirmation_url?: string } }>('/client/ai',
         { method: 'POST', body: { plan, ...(quote?.code ? { promo_code: quote.code } : {}) } });
-      /* Живой эквайер отдаёт ссылку на оплату. В приложении её не
-         открываем: платежи здесь не проводятся. */
+      /* Живой эквайер отдаёт веб-ссылку. Открываем её системной
+         браузерной шторкой: на iOS это Safari View Controller, поэтому
+         оплата остаётся веб-сценарием, а пользователь не теряет
+         контекст приложения. После закрытия шторки перечитываем
+         состояние с сервера — webhook эквайера мог уже активировать
+         подписку. */
       if (r.pay?.confirmation_url) {
-        toast('Оплату нужно пройти на сайте', { sub: 'nutrimenu.ru · раздел EQUA AI', ms: 6000 });
+        setCheckout(null);
+        haptic.tap();
+        const result = await WebBrowser.openBrowserAsync(r.pay.confirmation_url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          enableBarCollapsing: true,
+        });
+        if (result.type === 'cancel' || result.type === 'dismiss' || result.type === 'opened') {
+          await load();
+        }
       } else {
         haptic.success();
         toast('EQUA AI подключён', { sub: 'собираем ваш план' });
