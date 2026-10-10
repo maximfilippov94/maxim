@@ -56,7 +56,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       fetchAppConfig().then(setCfg).catch(() => {});
       const t = await loadToken();
       if (t) {
-        try { setMe(await api<Me>('/me')); registerPush(); }
+        try { setMe(await api<Me>('/me')); registerPush(false); }
         catch { await setToken(null); }   /* протухший токен — молча выходим */
       }
       setReady(true);
@@ -120,7 +120,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const m = await api<Me>('/me');
     setMe(m);
     /* Телефон привязываем к вошедшему: напоминания приходят только своему. */
-    registerPush();
+    registerPush(false);
     /* Роль нужна вызывающему сразу: специалиста и клиента ждут разные экраны. */
     return m;
   }, []);
@@ -129,7 +129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await setToken(t);
     const m = await api<Me>('/me');
     setMe(m);
-    registerPush();
+    registerPush(false);
     return m;
   }, []);
 
@@ -138,13 +138,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const r = await api<{ token: string }>('/auth/register', { method: 'POST', body: data });
     await setToken(r.token);
     setMe(await api<Me>('/me'));
-    registerPush();
+    registerPush(false);
   }, []);
 
   const signOut = useCallback(async () => {
     /* Отписываем телефон до выхода: после сброса токена сервер уже не
        поймёт, чью подписку убирать. */
-    await unregisterPush();
+    await unregisterPush(false);
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* всё равно выходим */ }
     await setToken(null);
     setMe(null);
