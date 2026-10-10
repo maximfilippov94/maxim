@@ -232,7 +232,7 @@ export default function AI() {
     try {
       const bridge = await api<{ url: string }>('/auth/web-session', {
         method: 'POST',
-        body: { target: 'ai' },
+        body: { target: 'billing' },
       });
       await WebBrowser.openBrowserAsync(bridge.url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
@@ -317,6 +317,8 @@ export default function AI() {
                 onPress={() => { haptic.tap(); router.push('/ai-chat'); }} />
               <SysButton label="Проверить, как идёт план" icon="chart.line.uptrend.xyaxis"
                 onPress={() => { haptic.tap(); router.push('/ai-review'); }} />
+              <SysButton label="Управление подпиской" icon="coin"
+                onPress={openWebPaymentTest} />
               {/* Отсюда — сразу в то, что модель собрала. В вебе эти две
                   кнопки стоят рядом с проверкой плана: человек пришёл
                   посмотреть на результат, а не на описание набора. */}
@@ -493,7 +495,7 @@ export default function AI() {
                     onPress={openWebPaymentTest}
                   />
                   <Muted style={{ marginTop: 6 }}>
-                    Тестовый режим: откроется ваш авторизованный веб-кабинет EQUA в системной браузерной шторке.
+                    Тестовый режим: откроется страница управления подпиской EQUA AI.
                   </Muted>
                 </View>
               ) : null}
