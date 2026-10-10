@@ -121,7 +121,7 @@ export default function More() {
           )}
         </ListGroup>
 
-        <ListHead>Мотивация и связь</ListHead>
+        <ListHead>Мотивация</ListHead>
         <ListGroup>
           <ListRow first icon="gift" label="Награды и баллы"
             onPress={() => router.push('/rewards')} />
@@ -129,16 +129,16 @@ export default function More() {
             <ListRow icon="heart" label="Лента"
               onPress={() => router.push('/feed')} />
           )}
-          {/* Два пункта рядом: что уже пришло и что присылать впредь.
-              Второй называется как в вебе — «Уведомления и тихие часы»:
-              «Что присылать» было моей формулировкой, и рядом с соседним
-              «Уведомления» из неё не читалось, что это настройки. */}
-          <ListRow icon="bell" label="История уведомлений"
+          <ListRow icon="edit" label="Отчёт за неделю"
+            onPress={() => router.push('/checkin')} />
+        </ListGroup>
+
+        <ListHead>Настройки</ListHead>
+        <ListGroup>
+          <ListRow first icon="bell" label="История уведомлений"
             onPress={() => router.push('/notifications')} />
           <ListRow icon="device" label="Уведомления и тихие часы"
             onPress={() => router.push('/push-prefs')} />
-          <ListRow icon="edit" label="Отчёт за неделю"
-            onPress={() => router.push('/checkin')} />
         </ListGroup>
 
         <ListHead>Оформление</ListHead>
@@ -214,13 +214,7 @@ export default function More() {
 
         <ListHead>Аккаунт</ListHead>
         <ListGroup>
-          <View style={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 14 }}>
-            <Text style={{ fontSize: 16, color: p.text }}>{me?.user?.name ?? '—'}</Text>
-            <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>
-              {me?.user?.email ?? ''}
-            </Text>
-          </View>
-          <ListRow icon="exit" label="Выйти" danger action
+          <ListRow first icon="exit" label="Выйти" danger action
             onPress={() => { haptic.warn(); signOut(); }} />
           {/* Удаление аккаунта — здесь же, а не письмом в поддержку:
               человек должен уйти сам, без чужого посредничества. */}
