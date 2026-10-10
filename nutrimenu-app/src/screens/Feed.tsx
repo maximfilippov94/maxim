@@ -314,13 +314,13 @@ function PostCard({ post, onLike, onDelete }: {
             opacity: pressed ? 0.5 : 1,
           })}>
           <Icon name="heart" size={17} width={1.9}
-            color={post.liked ? p.danger : p.text3} />
+            color={post.liked ? p.accent : p.text3} />
           <Text style={{
-            ...FONT.small, color: post.liked ? p.danger : p.text3,
+            ...FONT.small, color: post.liked ? p.accent : p.text3,
             fontWeight: post.liked ? '600' : '400',
           }}>
             {post.likes > 0
-              ? `${post.likes} ${plural(post.likes, ['отклик', 'отклика', 'откликов'])}`
+              ? `${post.likes} ${plural(post.likes, ['поддержка', 'поддержки', 'поддержек'])}`
               : 'Поддержать'}
           </Text>
         </Pressable>
