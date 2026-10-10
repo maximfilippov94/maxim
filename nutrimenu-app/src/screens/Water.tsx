@@ -176,7 +176,7 @@ export default function Water() {
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Норма не сохранилась');
     } finally { setGoalBusy(false); }
-  }, [fill]);
+  }, []);
 
   /* Уровень поднимается сразу, запрос идёт следом: ждать сеть ради
      глотка воды незачем. Не прошло — возвращаем как было. */
