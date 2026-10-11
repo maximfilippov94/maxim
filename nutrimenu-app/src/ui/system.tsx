@@ -233,7 +233,7 @@ function SliderPlain({ value, min, max, step, onChange, onCommit, tint }: {
  * приезжает снизу, гасит экран и сам расставляет роли кнопок: опасное
  * действие красным, «Отмена» отдельно.
  */
-export function SysConfirm({ label, title, message, confirmLabel, onConfirm, tint, destructive = true }: {
+export function SysConfirm({ label, title, message, confirmLabel, onConfirm, tint, destructive = true, disabled = false }: {
   /** Подпись кнопки, которая вызывает диалог */
   label: string;
   title: string;
@@ -242,6 +242,15 @@ export function SysConfirm({ label, title, message, confirmLabel, onConfirm, tin
   onConfirm: () => void;
   tint?: string;
   destructive?: boolean;
+  /**
+   * Нечего делать — кнопка приглушена и не нажимается.
+   *
+   * Без этого выходит так: диалог открывается, обещает последствия,
+   * человек подтверждает — и ничего не меняется. Кнопка не сломана, но
+   * читается как сломанная, а это хуже: в следующий раз ей не поверят,
+   * когда дело будет настоящее.
+   */
+  disabled?: boolean;
 }) {
   const { p } = useApp();
   const [open, setOpen] = useState(false);
@@ -255,9 +264,12 @@ export function SysConfirm({ label, title, message, confirmLabel, onConfirm, tin
         <ConfirmationDialog title={title} isPresented={open}
           onIsPresentedChange={(v: boolean) => setOpen(v)}>
           <ConfirmationDialog.Trigger>
-            <Button label={label} onPress={() => setOpen(true)}
+            {/* Цвет задан явно, поэтому системное затемнение недоступной
+                кнопки до неё не доходит — гасим прозрачностью сами. */}
+            <Button label={label} onPress={() => { if (!disabled) setOpen(true); }}
               modifiers={[m.buttonStyle('plain'), m.foregroundStyle(tint ?? p.text3),
-                m.font({ size: 13 })]} />
+                m.font({ size: 13 }), m.disabled(disabled),
+                ...(disabled ? [m.opacity(0.4)] : [])]} />
           </ConfirmationDialog.Trigger>
           <ConfirmationDialog.Actions>
             <Button label={confirmLabel} role={destructive ? 'destructive' : 'default'}
@@ -273,12 +285,12 @@ export function SysConfirm({ label, title, message, confirmLabel, onConfirm, tin
   }
 
   return (
-    <Pressable hitSlop={10}
+    <Pressable hitSlop={10} disabled={disabled}
       onPress={() => Alert.alert(title, message, [
         { text: 'Отмена', style: 'cancel' },
         { text: confirmLabel, style: destructive ? 'destructive' : 'default', onPress: go },
       ])}
-      style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+      style={({ pressed }) => ({ opacity: disabled ? 0.4 : pressed ? 0.5 : 1 })}>
       <Text style={{ ...FONT.small, color: tint ?? p.text3 }}>{label}</Text>
     </Pressable>
   );

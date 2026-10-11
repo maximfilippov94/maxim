@@ -144,7 +144,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     /* Отписываем телефон до выхода: после сброса токена сервер уже не
        поймёт, чью подписку убирать. */
-    await unregisterPush(false);
+    await unregisterPush();
     try { await api('/auth/logout', { method: 'POST' }); } catch { /* всё равно выходим */ }
     await setToken(null);
     setMe(null);
