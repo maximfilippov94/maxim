@@ -71,24 +71,39 @@ export default function AIIntake() {
       });
       haptic.success();
 
-      /* Если доступ уже активен или платежи временно выключены, после
-         подтверждения сразу запускаем сборку. Пользователь уже прошёл
-         анкету и AI-разбор — возвращать его к тарифам ради ещё одного
-         нажатия нет смысла. */
       const state = await api<any>('/client/ai', { noCache: true });
-      if (state?.current || state?.payments_mode === 'off') {
-        toast('Разбор подтверждён', { sub: 'собираем ваш план' });
-        await api('/client/ai', {
-          method: 'POST',
-          body: { plan, confirm: 1 },
+
+      const go = () => {
+        if (plan === 'nutrition') router.replace('/client');
+        else if (plan === 'workouts') router.replace('/client/workouts');
+        else router.replace('/ai');
+      };
+
+      /* Доступ уже есть — покупать нечего. Раньше здесь всё равно звался
+         POST /client/ai, то есть оформление покупки, и сервер отвечал
+         «У вас уже подключены и питание, и тренировки». Человек видел
+         красную ошибку после «Всё верно» и решал, что анкета не
+         сохранилась, — хотя подтверждение прошло строкой выше.
+
+         Недостающие планы достраивает сам GET /client/ai: он вернулся
+         только что и уже сделал это. Готовый план он не пересобирает,
+         поэтому обещать пересборку здесь нельзя. */
+      if (state?.current) {
+        const made = state?.plan_bootstrap ?? {};
+        toast('Разбор подтверждён', {
+          sub: made.menu || made.workout ? 'собираем ваш план' : undefined,
         });
-        if (plan === 'nutrition') {
-          router.replace('/client');
-        } else if (plan === 'workouts') {
-          router.replace('/client/workouts');
-        } else {
-          router.replace('/ai');
-        }
+        go();
+        return;
+      }
+
+      /* Платежи выключены и доступа ещё нет: выдаём бесплатный и
+         собираем план — возвращать к тарифам ради ещё одного нажатия
+         незачем. */
+      if (state?.payments_mode === 'off') {
+        toast('Разбор подтверждён', { sub: 'собираем ваш план' });
+        await api('/client/ai', { method: 'POST', body: { plan, confirm: 1 } });
+        go();
         return;
       }
 
