@@ -13,7 +13,7 @@
  * и потерять её на восьмом вопросе из-за свёрнутого приложения — верный
  * способ не получить ответов вовсе.
  */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View, Text, TextInput, ScrollView, Pressable, ActivityIndicator,
 } from 'react-native';
@@ -36,6 +36,15 @@ interface Q {
   placeholder?: string;
   /** Вопрос о здоровье — к нему своя оговорка. */
   health?: boolean;
+  /**
+   * Показывать вопрос только при таких ответах.
+   *
+   * Нужен ровно одному случаю: при двух приёмах в день надо знать, от
+   * какого человек отказался. Спрашивать это у всех — лишний экран для
+   * четырёх вариантов из пяти, а угадывать нельзя: пропуск завтрака и
+   * пропуск ужина дают разные меню.
+   */
+  when?: (d: Record<string, string>) => boolean;
 }
 
 /* Вопросы и варианты — ровно те, что в вебе: сервер сопоставляет ответы
@@ -50,9 +59,20 @@ const QS: Q[] = [
     ] },
   { key: 'meals_per_day', title: 'Сколько приёмов пищи вам удобно?',
     sub: 'Мы распределим дневной рацион под этот ритм.', type: 'choice', opts: [
+      [2, '2 приёма', 'Реже, но плотнее'],
       [3, '3 приёма', 'Простой базовый режим'],
       [4, '4 приёма', 'С дополнительным перекусом'],
       [5, '5 приёмов', 'Небольшими порциями чаще'],
+    ] },
+  /* Дневная норма расходится по выбранным приёмам целиком, поэтому при
+     двух приёмах порции выходят крупные. Это не повод прятать вариант —
+     но повод сказать прямо, а не обнаружить это в готовом меню. */
+  { key: 'meal_slots', title: 'От какого приёма отказываетесь?',
+    sub: 'Дневную норму разложим на два оставшихся — порции будут крупнее обычных.',
+    type: 'choice', when: d => d.meals_per_day === '2', opts: [
+      ['lunch_dinner', 'Обед и ужин', 'Завтрак пропускаем'],
+      ['breakfast_dinner', 'Завтрак и ужин', 'Обед пропускаем'],
+      ['breakfast_lunch', 'Завтрак и обед', 'Ужин пропускаем'],
     ] },
   { key: 'cooking_minutes', title: 'Сколько времени готовы тратить на готовку?',
     sub: 'Это повлияет на сложность рецептов.', type: 'choice', opts: [
@@ -110,7 +130,7 @@ export default function AINutrition() {
       .then(raw => {
         if (raw) {
           const d = JSON.parse(raw);
-          if (d?.data) { setData(d.data); setStep(Math.min(d.step ?? 0, QS.length - 1)); }
+          if (d?.data) { setData(d.data); setStep(Math.max(0, Math.min(d.step ?? 0, QS.length - 1))); }
         }
       })
       .catch(() => {})
@@ -121,18 +141,23 @@ export default function AINutrition() {
     AsyncStorage.setItem(DRAFT, JSON.stringify({ data: next, step: nextStep })).catch(() => {});
   }, []);
 
-  const q = QS[step];
+  /* Уточняющий вопрос появляется и исчезает по ходу анкеты, поэтому
+     длина списка не постоянна. Шаг держим в её пределах: иначе смена
+     ответа назад оставляет указатель за концом и экран пустеет. */
+  const qs = useMemo(() => QS.filter(x => !x.when || x.when(data)), [data]);
+  const at = Math.min(step, qs.length - 1);
+  const q = qs[at];
   const value = data[q.key] ?? '';
-  const last = step === QS.length - 1;
+  const last = at === qs.length - 1;
 
   const set = useCallback((v: string) => {
     setData(prev => {
       const next = { ...prev, [q.key]: v };
-      keep(next, step);
+      keep(next, at);
       return next;
     });
     setErr(null);
-  }, [q.key, step, keep]);
+  }, [q.key, at, keep]);
 
   const send = useCallback(async (answers: Record<string, string>) => {
     setBusy(true); setErr(null);
@@ -158,9 +183,9 @@ export default function AINutrition() {
     if (q.type === 'choice' && !value) {
       haptic.error(); setErr('Выберите вариант'); return;
     }
-    if (!last) { haptic.tap(); setStep(s => { keep(data, s + 1); return s + 1; }); return; }
+    if (!last) { haptic.tap(); keep(data, at + 1); setStep(at + 1); return; }
     send(data);
-  }, [q.type, value, last, data, keep, send]);
+  }, [q.type, value, last, at, data, keep, send]);
 
   if (!ready) {
     return (
@@ -179,21 +204,21 @@ export default function AINutrition() {
         <Pressable hitSlop={12}
           onPress={() => {
             haptic.tap();
-            if (step) { setStep(s => s - 1); setErr(null); } else router.back();
+            if (at) { setStep(at - 1); setErr(null); } else router.back();
           }}>
           <Icon name="back" size={22} color={p.accent} width={2.2} />
         </Pressable>
         <Text style={{ ...FONT.label, color: p.text3 }}>EQUA AI · ПИТАНИЕ</Text>
         <Text style={{ ...FONT.small, color: p.text3, marginLeft: 'auto' }}>
-          {step + 1} из {QS.length}
+          {at + 1} из {qs.length}
         </Text>
       </View>
 
       <View style={{ flexDirection: 'row', gap: 3, paddingHorizontal: S.lg, paddingTop: S.sm }}>
-        {QS.map((_, i) => (
+        {qs.map((_, i) => (
           <View key={i} style={{
             flex: 1, height: 3, borderRadius: 2,
-            backgroundColor: i <= step ? p.primary : p.track,
+            backgroundColor: i <= at ? p.primary : p.track,
           }} />
         ))}
       </View>
@@ -201,7 +226,7 @@ export default function AINutrition() {
       <ScrollView contentContainerStyle={{
         paddingHorizontal: S.lg, paddingTop: S.lg, paddingBottom: S.xl,
       }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <Animated.View key={step} entering={FadeInRight.duration(200)} exiting={FadeOutLeft.duration(130)}>
+        <Animated.View key={q.key} entering={FadeInRight.duration(200)} exiting={FadeOutLeft.duration(130)}>
           <Text style={{ ...FONT.h2, color: p.text }}>{q.title}</Text>
           <Text style={{ ...FONT.body, color: p.text2, marginTop: 6, marginBottom: S.lg }}>
             {q.sub}
