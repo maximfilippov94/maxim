@@ -42,6 +42,22 @@ import { haptic } from '../haptics';
  * человек вообще выбрал набор: экран читался как «заполните анкету»,
  * а не как «выберите, что подключить».
  */
+/**
+ * Срок скидки словами. Часы приходят с сервера, потому что владелец
+ * меняет их в панели — а «первые сутки» раньше были написаны в коде и
+ * разошлись бы с настройкой на следующий же день.
+ */
+function welcomeTerm(hours?: number): string {
+  const h = Math.max(1, Math.round(Number(hours) || 24));
+  if (h === 1) return 'первый час';
+  if (h === 24) return 'первые сутки';
+  if (h % 24 === 0) {
+    const d = h / 24;
+    return `первые ${d} ${plural(d, ['день', 'дня', 'дней'])}`;
+  }
+  return `первые ${h} ${plural(h, ['час', 'часа', 'часов'])}`;
+}
+
 const AI_PACK: Record<AiPlan, {
   icon: string; kicker: string; title: string; desc: string;
   eyebrow: string; head: string; lead: string; items: string[];
@@ -425,7 +441,8 @@ export default function AI() {
             {d.welcome_offer?.eligible ? (
               <View style={{ paddingHorizontal: S.lg, paddingBottom: S.sm }}>
                 <Muted>
-                  Скидка {d.welcome_offer.percent}% действует первые сутки после регистрации.
+                  Скидка {d.welcome_offer.percent}% действует {welcomeTerm(d.welcome_offer.hours)} после
+                  регистрации.
                 </Muted>
               </View>
             ) : null}

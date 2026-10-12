@@ -1223,7 +1223,7 @@ export interface AiState {
   } | null;
   specialist_conflict: { id: number; name: string; profession?: string; role?: string }[];
   has_model: boolean;
-  welcome_offer: { eligible: boolean; percent: number; seconds_left: number };
+  welcome_offer: { eligible: boolean; percent: number; hours?: number; seconds_left: number };
   cycle_context?: { enabled: boolean; allowed: boolean; phase?: string | null };
 }
 /* ---------- Недельный отчёт по клиенту ----------
