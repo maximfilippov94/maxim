@@ -1,0 +1,171 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, ScrollView, Linking } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { useApp } from '../store';
+import { api, Notice } from '../api';
+import { S, FONT } from '../theme';
+import { NavBar } from '../ui/NavBar';
+import { Card, Muted } from '../ui/base';
+import { Icon } from '../ui/Icon';
+import { Empty, SysButton, SysConfirm } from '../ui/system';
+import { registerPush, PushState } from '../push';
+import { Loading, Fail } from './Shopping';
+import { haptic } from '../haptics';
+
+const KIND: Record<string, string> = {
+  call: 'video', menu: 'cal', replacement: 'bowl', checkin: 'edit',
+  message: 'chat', weight: 'weight', payment: 'tag',
+};
+
+/** «4 сентября, 14:10» — дата и время одной строкой. */
+const when = (s: string) => {
+  const d = new Date(String(s).replace(' ', 'T'));
+  if (isNaN(+d)) return s;
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    + ', ' + d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
+
+/**
+ * Почему уведомления молчат.
+ *
+ * Показываем плашку только когда что-то мешает: если push работает,
+ * человеку об этом знать незачем. Молчащие уведомления без объяснения
+ * хуже отсутствующих — их считают поломкой приложения.
+ */
+function PushNote() {
+  const { p } = useApp();
+  const [st, setSt] = useState<PushState | null>(null);
+
+  /* При открытии экрана только смотрим состояние: системный запрос
+     разрешения показывают один раз, и тратить его здесь нельзя. */
+  useEffect(() => { registerPush(false).then(setSt).catch(() => {}); }, []);
+
+  if (!st || st.ok) return null;
+
+  const act = st.reason === 'denied'
+    ? { label: 'Открыть настройки', run: () => Linking.openSettings() }
+    : st.reason === 'error'
+      ? { label: 'Попробовать снова', run: () => { haptic.tap(); registerPush().then(setSt); } }
+      : null;
+
+  return (
+    <Card style={{ marginTop: S.md, marginBottom: S.sm, gap: S.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.sm }}>
+        <Icon name="bell" size={16} color={p.text3} />
+        <Text style={{ ...FONT.h3, color: p.text }}>Уведомления не приходят</Text>
+      </View>
+      <Muted style={{ lineHeight: 19 }}>{st.message}</Muted>
+      {act ? (
+        <View style={{ marginTop: 2 }}>
+          <SysButton label={act.label} onPress={act.run} height={44} />
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+export default function Notices({ role = 'client' }: { role?: 'client' | 'specialist' }) {
+  const { p } = useApp();
+  const insets = useSafeAreaInsets();
+  const [list, setList] = useState<Notice[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const base = role === 'specialist' ? '/specialist' : '/client';
+
+  const load = useCallback(async () => {
+    try { setList((await api<{ notifications: Notice[] }>(base + '/notifications')).notifications ?? []); }
+    catch (e: any) { setErr(e.message); }
+  }, [base]);
+  useEffect(() => { load(); }, [load]);
+
+  const readAll = useCallback(async () => {
+    haptic.tap();
+    setList(l => l && l.map(n => ({ ...n, read_at: n.read_at ?? 'now' })));
+    /* У специалиста своя отметка: клиентские уведомления принадлежат
+       клиентам и гасить их он не вправе, поэтому сервер запоминает
+       время просмотра, а не трогает чужие записи. */
+    try { await api(base + '/notifications/read', { method: 'POST' }); }
+    catch { load(); }
+  }, [role, load]);
+
+  /* Очистка ленты. У клиента уведомления его собственные — сервер их
+     удаляет. У специалиста в ленте есть и чужие, клиентские: их он
+     удалять не вправе, поэтому сервер запоминает время очистки и
+     перестаёт показывать ему всё, что было раньше. */
+  const clearAll = useCallback(async () => {
+    setList([]);
+    try { await api(base + '/notifications', { method: 'DELETE' }); }
+    catch { load(); }
+  }, [base, load]);
+
+  if (err) return <Fail title="Уведомления" text={err} />;
+  if (!list) return <Loading title="Уведомления" />;
+
+  const unread = list.filter(n => !n.read_at).length;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: p.bg }}>
+      <NavBar title="Уведомления" back />
+      {list.length === 0 ? (
+        <ScrollView contentContainerStyle={{
+          flexGrow: 1, paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
+        }} showsVerticalScrollIndicator={false}>
+          <PushNote />
+          <Empty icon="bell" title="Уведомлений нет"
+            note="Здесь появятся напоминания, новости меню и звонки специалиста." />
+        </ScrollView>
+      ) : (
+        <ScrollView contentContainerStyle={{
+          paddingHorizontal: S.lg, paddingBottom: insets.bottom + 32,
+        }} showsVerticalScrollIndicator={false}>
+          <PushNote />
+          {unread ? (
+            <View style={{ marginTop: S.md, marginBottom: S.md }}>
+              <SysButton label={`Отметить прочитанными (${unread})`} onPress={readAll} height={46} />
+            </View>
+          ) : <View style={{ height: S.md }} />}
+
+          {list.map((n, i) => (
+            <Animated.View key={`${n.source ?? 'c'}-${n.id}`} entering={FadeIn.duration(220)}>
+              <Card style={{ marginBottom: S.sm, flexDirection: 'row', gap: S.md }}>
+                <View style={{
+                  width: 34, height: 34, borderRadius: 17, marginTop: 1,
+                  alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: n.read_at ? p.inset : p.primarySoft,
+                }}>
+                  <Icon name={KIND[n.type] ?? 'bell'} size={16}
+                    color={n.read_at ? p.text3 : p.accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...FONT.h3, color: n.read_at ? p.text2 : p.text }}>
+                    {n.title}
+                  </Text>
+                  {n.body ? (
+                    <Text style={{ ...FONT.body, color: p.text2, marginTop: 3, lineHeight: 19 }}>
+                      {n.body}
+                    </Text>
+                  ) : null}
+                  <Muted style={{ marginTop: 4 }}>
+                    {[n.client_name, when(n.created_at)].filter(Boolean).join(' · ')}
+                  </Muted>
+                </View>
+              </Card>
+            </Animated.View>
+          ))}
+
+          {/* Под списком, а не в шапке: сначала события читают и только
+              потом решают их убрать. */}
+          <View style={{ alignItems: 'center', marginTop: S.md, marginBottom: S.sm }}>
+            <SysConfirm
+              label="Очистить список" tint={p.text3}
+              title="Очистить уведомления?"
+              message="Список событий станет пустым. Сами сообщения и звонки останутся на своих местах."
+              confirmLabel="Очистить"
+              onConfirm={clearAll}
+            />
+          </View>
+        </ScrollView>
+      )}
+    </View>
+  );
+}

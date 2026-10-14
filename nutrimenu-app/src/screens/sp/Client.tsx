@@ -1,0 +1,1340 @@
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet, TextInput,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeIn } from 'react-native-reanimated';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { Image } from 'expo-image';
+import { useApp } from '../../store';
+import {
+  api, mediaUrl, SpClient, SpMenu, SpMenuItem, ProgressResponse, Totals,
+  ClientTask, Subscription, FoodDay, MEAL_ORDER, MEAL_TITLES,
+  thumbUrl, WoProgress, WO_FEEL, SpAssignment, WEEKDAYS, assignDays, WeeklyReport,
+} from '../../api';
+import { S, R, FONT } from '../../theme';
+import { NavBar } from '../../ui/NavBar';
+import { Card, Label, Muted, Bar } from '../../ui/base';
+import { Icon } from '../../ui/Icon';
+import { Face } from '../../ui/Face';
+import { SysButton, SysChart, SysSlider, SysConfirm, Empty } from '../../ui/system';
+import { round, kg, rub, plural, dmy, menuDate, dayTitle, dowShort, isToday } from '../../format';
+import { haptic } from '../../haptics';
+import { Loading, Fail } from '../Shopping';
+
+type Tab = 'overview' | 'menu' | 'workouts' | 'tasks' | 'progress';
+const TABS: [Tab, string][] = [
+  ['overview', 'Обзор'], ['menu', 'Меню'], ['workouts', 'Тренировки'],
+  ['tasks', 'Задания'], ['progress', 'Прогресс'],
+];
+
+
+/**
+ * КБЖУ блюда при другой граммовке.
+ *
+ * Сервер присылает значения для сохранённой порции, а ползунок меняет
+ * её на лету. Пересчитываем пропорцией от той же порции — так цифра
+ * под блюдом и «калорийность дня» считаются одинаково и не расходятся.
+ */
+function scaleN(item: SpMenuItem, grams: number): Totals {
+  const n = item.nutrition;
+  const from = round(item.portion_g);
+  if (!n || !from) return { kcal: 0, protein: 0, fat: 0, carbs: 0 };
+  const k = grams / from;
+  return {
+    kcal: n.kcal * k, protein: n.protein * k,
+    fat: n.fat * k, carbs: n.carbs * k,
+  };
+}
+
+export default function SpClientScreen() {
+  const { p } = useApp();
+  const insets = useSafeAreaInsets();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const cid = Number(id);
+
+  const [c, setC] = useState<SpClient | null>(null);
+  const [sub, setSub] = useState<Subscription | null>(null);
+  const [tab, setTab] = useState<Tab>('overview');
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await api<{ client: SpClient; subscription: Subscription | null }>(
+        `/specialist/clients/${cid}`);
+      setC(r.client); setSub(r.subscription ?? null); setErr(null);
+    }
+    catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); }
+  }, [cid]);
+  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  if (err && !c) return <Fail title="Клиент" text={err} />;
+  if (!c) return <Loading title="Клиент" />;
+
+  const age = c.birth_year ? new Date().getFullYear() - c.birth_year : null;
+
+  return (
+    <View style={{ flex: 1, backgroundColor: p.bg }}>
+      <NavBar back />
+      <ScrollView contentContainerStyle={{
+        paddingHorizontal: S.lg, paddingBottom: insets.bottom + 40,
+      }} showsVerticalScrollIndicator={false}>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.lg, marginBottom: S.lg }}>
+          <Face url={c.avatar_url} name={c.name} size={58} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ ...FONT.h2, color: p.text }}>{c.name}</Text>
+            {/* Возраст, рост и вес специалист держит в голове при каждом
+                разговоре — значит они принадлежат шапке, а не вкладке
+                «Цели» в двух переходах отсюда. Цель ведёт строку: с неё
+                начинается любой разбор. */}
+            <Muted style={{ marginTop: 2 }}>
+              {[c.goal, age ? `${age} ${plural(age, ['год', 'года', 'лет'])}` : null,
+                c.height_cm ? `${c.height_cm} см` : null,
+                c.weight_kg ? `${kg(c.weight_kg)} кг` : null].filter(Boolean).join(' · ') || '—'}
+            </Muted>
+          </View>
+        </View>
+
+        {/* Три действия в один ряд: во всю ширину они занимали треть
+            экрана и отодвигали меню вниз, а нажимают их по значку. */}
+        <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.lg }}>
+          <Action icon="chat" label="Написать"
+            onPress={() => { haptic.tap(); router.push(`/sp-chat/${cid}`); }} />
+          <Action icon="target" label="Цели"
+            onPress={() => {
+              haptic.tap();
+              router.push({ pathname: '/sp-client-edit', params: { id: cid } });
+            }} />
+          <Action icon="heart" label="Здоровье"
+            onPress={() => {
+              haptic.tap();
+              router.push({ pathname: '/sp-health', params: { id: cid, name: c.name } });
+            }} />
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: S.sm, marginBottom: S.md }}>
+          {TABS.map(([k, l]) => {
+            const on = k === tab;
+            return (
+              <Pressable key={k} onPress={() => { haptic.select(); setTab(k); }}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 14, paddingVertical: 7, borderRadius: R.pill,
+                  backgroundColor: on ? p.primary : p.surface,
+                  borderWidth: on ? 0 : 1, borderColor: p.border,
+                  opacity: pressed && !on ? 0.7 : 1,
+                })}>
+                <Text style={{ fontSize: 14, fontWeight: on ? '600' : '400',
+                  color: on ? p.onPrimary : p.text2 }}>{l}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {tab === 'overview' ? <Overview c={c} sub={sub} onChanged={load} /> : null}
+        {tab === 'menu' ? <MenuTab cid={cid} name={c.name} /> : null}
+        {tab === 'workouts' ? <WorkoutsTab cid={cid} /> : null}
+        {tab === 'tasks' ? <TasksTab cid={cid} /> : null}
+        {tab === 'progress' ? <ProgressTab cid={cid} /> : null}
+      </ScrollView>
+    </View>
+  );
+}
+
+/**
+ * Тренировки клиента: восемь недель столбцами, сводка за месяц и
+ * занятия с оценкой.
+ *
+ * Бледный столбик позади зелёного — сколько стояло в плане: без него
+ * «две тренировки» не с чем сравнить, две из двух и две из пяти
+ * выглядят одинаково. Оценка и слова клиента стоят в строке занятия, а
+ * не мелким шрифтом внизу: это единственное, что он сказал о нагрузке
+ * сам.
+ */
+function WorkoutsTab({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [d, setD] = useState<WoProgress | null>(null);
+  const [asg, setAsg] = useState<SpAssignment[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<WoProgress>(`/specialist/clients/${cid}/workout-progress`)
+      .then(setD).catch(e => setErr(e?.message ?? 'Не открылось'));
+    /* Что назначено сейчас — отдельный вопрос от того, что уже сделано:
+       по одним итогам не видно, есть ли у человека план на эту неделю
+       вообще. */
+    api<{ assignments: SpAssignment[] }>(`/specialist/clients/${cid}/workouts`)
+      .then(r => setAsg(r.assignments ?? [])).catch(() => setAsg([]));
+  }, [cid]);
+
+  if (err) return <Muted>{err}</Muted>;
+  if (!d) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
+
+  const max = Math.max(1, ...d.weeks.map(w => Math.max(w.done + w.skipped, w.planned)));
+  const t = d.totals;
+
+  return (
+    <View>
+      <View style={{ flexDirection: 'row', gap: S.xs, marginBottom: S.md }}>
+        {[[t.done, plural(t.done, ['тренировка', 'тренировки', 'тренировок'])],
+          [t.minutes, plural(t.minutes, ['минута', 'минуты', 'минут'])],
+          [t.kcal, 'ккал'],
+          [t.skipped, plural(t.skipped, ['пропуск', 'пропуска', 'пропусков'])]]
+          .map(([v, l]) => (
+            <Card key={String(l)} style={{ flex: 1, alignItems: 'center', paddingVertical: S.md, paddingHorizontal: 2 }}>
+              <Text style={{ fontSize: 19, fontWeight: '700', color: p.text }}>{String(v)}</Text>
+              <Text numberOfLines={1} style={{ fontSize: 10.5, color: p.text3 }}>{String(l)}</Text>
+            </Card>
+          ))}
+      </View>
+      <Muted style={{ marginBottom: S.lg }}>За последние 30 дней</Muted>
+
+      <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Назначено сейчас</Text>
+      <Card style={{ marginBottom: S.lg }}>
+        {asg == null ? <ActivityIndicator color={p.accent} />
+          : !asg.length ? (
+            <Muted>Ничего не назначено — в плане у клиента пусто.</Muted>
+          ) : asg.map((a, i) => (
+            <View key={a.id} style={{
+              paddingTop: i ? S.sm : 0, marginTop: i ? S.sm : 0,
+              borderTopWidth: i ? StyleSheet.hairlineWidth : 0, borderTopColor: p.border,
+            }}>
+              <Text numberOfLines={1} style={{ ...FONT.body, color: p.text }}>
+                {a.title ?? `Тренировка ${a.workout_id}`}
+              </Text>
+              <Text style={{ ...FONT.small, color: p.text3, marginTop: 1 }}>
+                {a.repeat_kind === 'weekly'
+                  ? `каждую неделю: ${assignDays(a)
+                      .map(n => WEEKDAYS.find(([k]) => k === n)?.[1] ?? '')
+                      .filter(Boolean).join(', ') || '—'}`
+                  : `один раз, ${String(a.start_date ?? '').slice(0, 10).split('-').reverse().join('.')}`}
+                {a.items != null ? ` · ${a.items} ${plural(a.items, ['упражнение', 'упражнения', 'упражнений'])}` : ''}
+              </Text>
+            </View>
+          ))}
+      </Card>
+
+      <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Восемь недель</Text>
+      <Card style={{ marginBottom: S.lg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 140, gap: S.xs }}>
+          {d.weeks.map((w, i) => {
+            const dt = new Date(w.week_start + 'T00:00:00');
+            return (
+              <View key={w.week_start} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                <View style={{ flex: 1, width: '100%', maxWidth: 26, justifyContent: 'flex-end' }}>
+                  {w.planned ? (
+                    <View style={{
+                      position: 'absolute', left: 0, right: 0, bottom: 0,
+                      height: `${(w.planned / max) * 100}%`,
+                      borderRadius: 6, backgroundColor: p.inset,
+                    }} />
+                  ) : null}
+                  {w.skipped ? (
+                    <Animated.View entering={FadeIn.duration(320)} style={{
+                      height: `${(w.skipped / max) * 100}%`,
+                      borderRadius: 6, backgroundColor: p.danger + '33', marginBottom: 2,
+                    }} />
+                  ) : null}
+                  <Animated.View entering={FadeIn.duration(320)} style={{
+                    height: `${(w.done / max) * 100}%`,
+                    borderRadius: 6, backgroundColor: p.primary,
+                  }} />
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: p.text }}>{w.done}</Text>
+                <Text style={{ fontSize: 10.5, color: p.text3 }}>
+                  {dt.getDate()}.{String(dt.getMonth() + 1).padStart(2, '0')}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+        <View style={{ flexDirection: 'row', gap: S.lg, marginTop: S.md }}>
+          {[['выполнено', p.primary], ['пропущено', p.danger + '33']].map(([l, col]) => (
+            <View key={String(l)} style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: String(col) }} />
+              <Text style={{ fontSize: 11.5, color: p.text3 }}>{String(l)}</Text>
+            </View>
+          ))}
+        </View>
+      </Card>
+
+      <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Последние занятия</Text>
+      {d.sessions.length ? (
+        <Card style={{ padding: 0 }}>
+          {d.sessions.map((s, i) => {
+            const f = s.feeling ? WO_FEEL[s.feeling - 1] : null;
+            return (
+              <View key={s.id} style={{
+                flexDirection: 'row', alignItems: 'flex-start', gap: S.md,
+                padding: S.md, borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+              }}>
+                <View style={{
+                  width: 30, height: 30, borderRadius: 15, alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: s.status === 'done' ? p.primary : p.danger + '22',
+                }}>
+                  <Icon name={s.status === 'done' ? 'check' : 'close'} size={15}
+                    color={s.status === 'done' ? p.onPrimary : p.danger} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14.5, fontWeight: '700', color: p.text }}>{s.title}</Text>
+                  <Muted>
+                    {dmy(s.planned_on)}
+                    {s.status === 'done'
+                      ? ` · ${Math.round((s.duration_sec ?? 0) / 60)} мин · ≈${s.kcal ?? 0} ккал`
+                      : ' · пропущена'}
+                  </Muted>
+                  {s.comment ? (
+                    <Text style={{ ...FONT.body, color: p.text2, marginTop: 4 }}>«{s.comment}»</Text>
+                  ) : null}
+                </View>
+                {f ? (
+                  <Text accessibilityLabel={`Нагрузка: ${f[1]}`} style={{ fontSize: 20 }}>{f[2]}</Text>
+                ) : null}
+              </View>
+            );
+          })}
+        </Card>
+      ) : (
+        <Card><Muted>Занятий пока не было. Первая тренировка появится здесь вместе
+          с оценкой нагрузки, как только клиент её проведёт.</Muted></Card>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Как прошла неделя. Блоком в «Обзоре», а не шестой вкладкой: шесть
+ * вкладок не влезают в 393 пикселя, и отчёт — именно то, с чем специалист
+ * открывает карточку, а не отдельное занятие.
+ *
+ * Приверженность показываем от плана и рядом говорим, сколько блюд
+ * человек не трогал и сколько записал сам: «17%» без этого читается как
+ * «клиент не ест», хотя он может есть своё и всё записывать.
+ */
+function WeekReport({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [d, setD] = useState<WeeklyReport | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<WeeklyReport>(`/specialist/weekly-report?client_id=${cid}`)
+      .then(setD)
+      .catch(e => setErr(e?.message ?? 'Отчёт не открылся'));
+  }, [cid]);
+
+  /* Раздел закрыт этой роли или данных нет — молчим: пустая карточка с
+     прочерками говорит меньше, чем её отсутствие. */
+  if (err || !d) return null;
+
+  const tiles: [string, string, string][] = [
+    [d.adherence == null ? '—' : `${d.adherence}%`,
+     d.planned ? `съедено из ${d.planned}` : 'плана нет',
+     'plan'],
+    [d.weight_delta == null ? '—' : `${d.weight_delta > 0 ? '+' : '−'}${kg(Math.abs(d.weight_delta))}`,
+     'кг за неделю', 'weight'],
+    [String(d.own_entries ?? 0), 'своих записей', 'own'],
+    [d.avg_kcal == null ? '—' : String(d.avg_kcal), 'ср. ккал меню', 'kcal'],
+  ];
+
+  return (
+    <Card style={{ marginBottom: S.md }}>
+      <Label>Как прошла неделя</Label>
+      <View style={{ flexDirection: 'row', gap: S.xs, marginTop: S.sm }}>
+        {tiles.map(([v, note, key]) => (
+          <View key={key} style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{ fontSize: 19, fontWeight: '700', color: p.text }}>{v}</Text>
+            <Text numberOfLines={2} style={{
+              fontSize: 10.5, color: p.text3, textAlign: 'center', marginTop: 2,
+            }}>{note}</Text>
+          </View>
+        ))}
+      </View>
+
+      {d.untracked ? (
+        <Muted style={{ marginTop: S.md, lineHeight: 18 }}>
+          {d.untracked} {plural(d.untracked, ['блюдо', 'блюда', 'блюд'])} человек не отмечал
+          {d.own_entries ? ` — зато записал ${d.own_entries} ${plural(d.own_entries, ['свою позицию', 'свои позиции', 'своих позиций'])} в дневнике` : ''}.
+        </Muted>
+      ) : null}
+
+      {/* Слова самого клиента — единственное, чего не видно по цифрам. */}
+      {d.checkin ? (
+        <View style={{
+          marginTop: S.md, padding: S.md, borderRadius: R.md, backgroundColor: p.ov2,
+        }}>
+          <Text style={{ ...FONT.small, color: p.text2 }}>
+            Отчёт клиента{d.checkin.ease_score ? ` · соблюдать ${EASE_WORDS[d.checkin.ease_score] ?? '—'}` : ''}
+            {d.checkin.wellbeing_score ? ` · самочувствие ${d.checkin.wellbeing_score}/10` : ''}
+          </Text>
+          {d.checkin.comment ? (
+            <Text style={{ ...FONT.body, color: p.text, marginTop: 4, lineHeight: 20 }}>
+              «{d.checkin.comment}»
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {d.skips?.length ? (
+        <View style={{ marginTop: S.md }}>
+          <Text style={{ ...FONT.small, color: p.text3, marginBottom: 4 }}>
+            Пропущено: {d.skips.length}
+          </Text>
+          {d.skips.slice(0, 3).map((x, i) => (
+            <Text key={i} numberOfLines={1} style={{ ...FONT.small, color: p.text2 }}>
+              • {x.dish_name}{x.comment ? ` — ${x.comment}` : ''}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+    </Card>
+  );
+}
+
+/** Слова шкалы «легко ли соблюдать» — те же, что видит клиент. */
+const EASE_WORDS: Record<number, string> = {
+  1: 'очень сложно', 2: 'сложно', 3: 'нормально', 4: 'легко', 5: 'очень легко',
+};
+
+function Overview({ c, sub, onChanged }: {
+  c: SpClient; sub: Subscription | null; onChanged: () => void;
+}) {
+  const { p } = useApp();
+  const rows: [string, string][] = [
+    ['Норма калорий', c.target_kcal ? `${c.target_kcal} ккал` : '—'],
+    ['Белки', c.target_protein ? `${round(c.target_protein)} г` : '—'],
+    ['Жиры', c.target_fat ? `${round(c.target_fat)} г` : '—'],
+    ['Углеводы', c.target_carbs ? `${round(c.target_carbs)} г` : '—'],
+    /* Вес переехал в шапку карточки, к возрасту и росту — здесь остаётся
+       то, по чему со специалистом связываются. */
+    ['Почта', c.email ?? '—'],
+    ['Телефон', c.phone ?? '—'],
+  ];
+  const tone = !sub || sub.kind !== 'subscription' || sub.days_left == null ? p.primary
+    : sub.days_left <= 3 ? p.danger : sub.days_left <= 7 ? p.warn : p.primary;
+  return (
+    <Animated.View entering={FadeIn.duration(220)}>
+      <WeekReport cid={c.id} />
+      {/* Какую услугу клиент подключил и до какого числа: специалист
+          должен видеть это, не спрашивая человека. */}
+      {sub ? (
+        <Card style={{ marginBottom: S.md }}>
+          <Label>Услуга</Label>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline',
+            justifyContent: 'space-between', gap: S.md, marginTop: 2 }}>
+            <Text style={{ ...FONT.h3, color: p.text, flex: 1 }}>{sub.title}</Text>
+            <Text style={{ ...FONT.h3, color: p.text }}>{rub(sub.price_kop)}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: S.md,
+            paddingVertical: 9, paddingHorizontal: 12, borderRadius: 12, backgroundColor: p.ov2 }}>
+            <Icon name="clock" size={16} color={tone} width={1.8} />
+            <Text style={{ ...FONT.body, fontWeight: '600', color: tone }}>{subLeft(sub)}</Text>
+            {sub.expires_at ? (
+              <Text style={{ ...FONT.small, color: p.text3, marginLeft: 'auto' }}>
+                до {dmy(sub.expires_at.slice(0, 10))}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Завершить услугу со своей стороны. В вебе это есть, в
+              приложении специалист мог только ждать, пока клиент
+              откажется сам. Деньги считает сервер: заработанные дни
+              остаются специалисту, неотработанная часть — клиенту. */}
+          <View style={{ marginTop: S.md }}>
+            <SysConfirm
+              label="Завершить услугу" tint={p.danger}
+              title="Завершить услугу?"
+              message={'Заработанные дни останутся вам, неотработанная часть вернётся клиенту '
+                + 'в зачёт следующей оплаты.'}
+              confirmLabel="Завершить"
+              onConfirm={async () => {
+                try {
+                  await api(`/specialist/subscriptions/${sub.id}/end`, { method: 'POST' });
+                  haptic.success(); onChanged();
+                } catch { haptic.error(); }
+              }}
+            />
+          </View>
+        </Card>
+      ) : null}
+      <Card style={{ padding: 0, marginBottom: S.md }}>
+        {rows.map(([l, v], i) => (
+          <View key={l} style={{
+            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+            paddingVertical: 12, paddingHorizontal: S.lg,
+            borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+          }}>
+            <Text style={{ fontSize: 15, color: p.text2 }}>{l}</Text>
+            <Text style={{ fontSize: 15, color: p.text }} numberOfLines={1}>{v}</Text>
+          </View>
+        ))}
+      </Card>
+      <Adherence cid={c.id} />
+      <SpFoodLog cid={c.id} />
+      {c.notes ? (
+        <Card>
+          <Label>Заметка</Label>
+          <Text style={{ ...FONT.body, color: p.text2, marginTop: S.sm, lineHeight: 19 }}>
+            {c.notes}
+          </Text>
+        </Card>
+      ) : null}
+
+      {/* Завершить работу с клиентом. В приложении этого не было вовсе:
+          специалист мог только ждать, пока уйдёт сам клиент. Роль при
+          этом освобождается — к человеку сможет подключиться другой
+          специалист той же специальности. */}
+      <View style={{ marginTop: S.lg, alignItems: 'center' }}>
+        <SysConfirm
+          label="Завершить работу с клиентом" tint={p.text3}
+          title="Завершить работу?"
+          message={'Клиент потеряет доступ к вашему меню и чату, роль освободится. '
+            + 'Неотработанная часть оплаты вернётся ему в зачёт.'}
+          confirmLabel="Завершить"
+          onConfirm={async () => {
+            try {
+              await api(`/specialist/clients/${c.id}/end`, { method: 'POST' });
+              haptic.success(); router.back();
+            } catch { haptic.error(); }
+          }}
+        />
+      </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * Меню клиента по дням: то же, что видит он сам, только с правками.
+ * Порция меняется системным ползунком, удаление спрашивает подтверждение —
+ * блюдо из чужого плана нельзя убрать «случайно».
+ */
+function MenuTab({ cid, name }: { cid: number; name: string }) {
+  const { p } = useApp();
+  const [menu, setMenu] = useState<SpMenu | null | undefined>(undefined);
+  const [items, setItems] = useState<SpMenuItem[]>([]);
+  const [day, setDay] = useState(1);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async (keepDay = false) => {
+    try {
+      const r = await api<{ menus: SpMenu[] }>(`/specialist/menus?client_id=${cid}`);
+      const m = r.menus?.[0] ?? null;
+      setMenu(m);
+      if (m) {
+        const full = await api<{ menu: SpMenu; items: SpMenuItem[] }>(`/specialist/menus/${m.id}`);
+        setItems(full.items ?? []);
+        if (!keepDay) {
+          const start = new Date(m.start_date + 'T00:00:00');
+          const today = new Date(); today.setHours(0, 0, 0, 0);
+          const n = Math.floor((+today - +start) / 86400000) + 1;
+          setDay(Math.max(1, Math.min(m.days_count, n)));
+        }
+      } else setItems([]);
+      setErr(null);
+    } catch (e: any) { setErr(e?.message ?? 'Не удалось загрузить'); setMenu(null); }
+  }, [cid]);
+
+  /* Одна загрузка, а не две.
+     Раньше здесь стояли useEffect и useFocusEffect сразу: первый
+     пересчитывал день на сегодняшний, второй сохранял выбранный, и
+     побеждал тот, чей ответ приходил позже. Из-за этого при открытии
+     вкладки день прыгал прямо на глазах.
+     Теперь загрузка одна: в первый раз она встаёт на сегодняшний день,
+     дальше оставляет выбранный — чтобы возвращение с экрана блюда не
+     сбрасывало день. */
+  const opened = useRef(false);
+  useFocusEffect(useCallback(() => {
+    load(opened.current);
+    opened.current = true;
+  }, [load]));
+
+  /* Ползунок двигают — итог дня обязан ехать за ним. Держим граммовку
+     здесь, а не внутри карточки: иначе «калорийность дня» считалась бы
+     по сохранённой порции и расходилась с тем, что видно под блюдом. */
+  const [report, setReport] = useState<GenReportData | null>(null);
+  const [draft, setDraft] = useState<Record<number, number>>({});
+  const dragPortion = useCallback((id: number, g: number) => {
+    setDraft(d => (d[id] === g ? d : { ...d, [id]: g }));
+  }, []);
+
+  const setPortion = useCallback(async (id: number, g: number) => {
+    try {
+      await api(`/specialist/menu-items/${id}`, { method: 'PATCH', body: { portion_g: g } });
+      /* Сохранилось — переносим граммовку в сам список, чтобы
+         черновик не расходился с данными после перерисовки. */
+      setItems(a => a.map(x => x.id === id
+        ? { ...x, portion_g: g, nutrition: scaleN(x, g) } : x));
+      setDraft(d => { const { [id]: _, ...rest } = d; return rest; });
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не сохранилось'); }
+  }, []);
+
+  const remove = useCallback(async (id: number) => {
+    setItems(a => a.filter(x => x.id !== id));
+    try { await api(`/specialist/menu-items/${id}`, { method: 'DELETE' }); await load(true); }
+    catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось убрать'); load(true); }
+  }, [load]);
+
+  const publish = useCallback(async () => {
+    if (!menu) return;
+    setBusy(true);
+    try {
+      await api(`/specialist/menus/${menu.id}/publish`, { method: 'POST' });
+      haptic.success(); await load(true);
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось опубликовать'); }
+    finally { setBusy(false); }
+  }, [menu, load]);
+
+  /* Готовое меню — заготовка для следующего клиента: собирать такой же
+     рацион заново незачем. */
+  const saveTemplate = useCallback(async () => {
+    if (!menu) return;
+    setBusy(true);
+    try {
+      await api('/specialist/templates', {
+        method: 'POST', body: { source_menu_id: menu.id, name: menu.title },
+      });
+      haptic.success(); setErr('Сохранено в шаблоны — они в разделе «Ещё».');
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось сохранить'); }
+    finally { setBusy(false); }
+  }, [menu]);
+
+  /* Сборка меню под цели клиента. Отчёт держим рядом: расхождение по
+     жирам или белку виднее числом, чем при пролистывании семи дней. */
+  const generate = useCallback(async () => {
+    setBusy(true); setErr(null);
+    try {
+      const r = await api<GenReportData>(`/specialist/clients/${cid}/menu/generate`, {
+        method: 'POST', body: { days_count: 7 },
+      });
+      setReport(r); haptic.success(); await load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось собрать'); }
+    finally { setBusy(false); }
+  }, [cid, load]);
+
+  /* Продлить меню на неделю вперёд. Сервер копирует состав и ставит
+     новую дату начала; старое меню остаётся как было. */
+  const duplicate = useCallback(async () => {
+    if (!menu) return;
+    setBusy(true);
+    try {
+      const start = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+      await api(`/specialist/menus/${menu.id}/duplicate`, {
+        method: 'POST', body: { start_date: start },
+      });
+      haptic.success(); await load(true);
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось продлить'); }
+    finally { setBusy(false); }
+  }, [menu, load]);
+
+  /* Скопировать вчерашний день — как в вебе: рацион редко меняют каждый
+     день целиком, чаще правят одно-два блюда. */
+  const copyPrev = useCallback(async () => {
+    if (!menu || day < 2) return;
+    setBusy(true);
+    try {
+      await api(`/specialist/menus/${menu.id}/copy-day`, {
+        method: 'POST', body: { from_day: day - 1, to_day: day },
+      });
+      haptic.success(); await load(true);
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не удалось скопировать'); }
+    finally { setBusy(false); }
+  }, [menu, day, load]);
+
+  if (menu === undefined) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
+
+  if (!menu) {
+    return (
+      <Animated.View entering={FadeIn.duration(220)}>
+        <Empty icon="calendar.badge.plus" title="Меню ещё нет"
+          note="Создайте первое меню для клиента." />
+        <View style={{ gap: S.sm }}>
+          {/* Подбор под цели временно убран из интерфейса: калькулятор
+              ещё дорабатывается. Вызов generate и отчёт GenReport целы —
+              вернуть сюда кнопку, и всё оживёт. */}
+          <SysButton label="Создать меню" variant="prominent" icon="plus"
+            onPress={() => {
+              haptic.tap();
+              router.push({ pathname: '/sp-menu-new', params: { client: cid, name } });
+            }} />
+        </View>
+        {report ? <GenReport r={report} /> : null}
+        {err ? (
+          <Text style={{ ...FONT.small, color: p.danger, marginTop: S.md }}>{err}</Text>
+        ) : null}
+      </Animated.View>
+    );
+  }
+
+  const dayItems = items.filter(i => i.day_number === day);
+  /* Пока палец на ползунке, берём черновую граммовку — цифра сверху
+     меняется вместе с блюдом, а не после сохранения. */
+  const kcal = dayItems.reduce(
+    (a, i) => a + scaleN(i, draft[i.id] ?? i.portion_g).kcal, 0);
+
+  return (
+    <Animated.View entering={FadeIn.duration(220)}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: S.sm }}>
+        <Text style={{ ...FONT.h3, color: p.text, flex: 1 }} numberOfLines={1}>{menu.title}</Text>
+        <Muted>{menu.status === 'published' ? 'опубликовано' : 'черновик'}</Muted>
+      </View>
+
+      {/* Неделя помещается на экран целиком: при семи днях раскладываем
+          их в ряд с равными долями, и обрывать у края нечего. Для меню
+          длиннее недели остаётся прокрутка — там она честная. */}
+      <DayStrip week={menu.days_count <= 7}>
+        {Array.from({ length: menu.days_count }, (_, i) => i + 1).map(n => {
+          const on = n === day;
+          const d = menuDate(menu.start_date, n)!;
+          const now = isToday(d);
+          const filled = items.some(i => i.day_number === n);
+          return (
+            <Pressable key={n} onPress={() => { haptic.select(); setDay(n); }}
+              style={({ pressed }) => ({
+                ...(menu.days_count <= 7 ? { flex: 1, minWidth: 0 } : { width: 46 }),
+                paddingVertical: 9, borderRadius: R.md, alignItems: 'center',
+                backgroundColor: on ? p.primary : p.surface,
+                /* Сегодня обведено — видно, какой день клиент ест прямо сейчас */
+                borderWidth: now && !on ? 1.5 : 0,
+                borderColor: p.primary,
+                opacity: pressed && !on ? 0.7 : 1,
+              })}>
+              <Text style={{ ...FONT.small,
+                color: on ? p.onPrimary : now ? p.primary : p.text3 }}>
+                {dowShort(d)}
+              </Text>
+              <Text style={{ fontSize: 17, fontWeight: '700', marginTop: 1,
+                color: on ? p.onPrimary : p.text }}>{d.getDate()}</Text>
+              {/* Точка под числом — день уже заполнен: видно, где дыра */}
+              <View style={{
+                width: 4, height: 4, borderRadius: 2, marginTop: 3,
+                backgroundColor: filled ? (on ? p.onPrimary : p.primary) : 'transparent',
+              }} />
+            </Pressable>
+          );
+        })}
+      </DayStrip>
+
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm,
+        marginBottom: S.md }}>
+        <Text style={{ ...FONT.h3, color: p.text }}>
+          {dayTitle(menu.start_date, day, true)}
+        </Text>
+        {isToday(menuDate(menu.start_date, day)) ? <Muted>сегодня</Muted> : null}
+      </View>
+
+      <Card style={{ marginBottom: S.md }}>
+        <Label>Калорийность дня</Label>
+        <Text style={{ ...FONT.num, color: p.text, marginTop: 3 }}>{round(kcal)}</Text>
+        <View style={{ marginTop: S.sm }}><Bar value={kcal / 2500} /></View>
+      </Card>
+
+      {err ? <Text style={{ ...FONT.small, color: p.danger, marginBottom: S.sm }}>{err}</Text> : null}
+
+      {MEAL_ORDER.map(mt => {
+        const group = dayItems.filter(i => i.meal_type === mt);
+        return (
+          <View key={mt} style={{ marginBottom: S.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+              marginBottom: S.sm }}>
+              <Text style={{ ...FONT.h3, color: p.text, flexShrink: 1 }}>{MEAL_TITLES[mt]}</Text>
+              <Pressable
+                onPress={() => {
+                  haptic.tap();
+                  router.push({
+                    pathname: '/sp-add-dish',
+                    params: { menu: menu.id, day, meal: mt, start: menu.start_date },
+                  });
+                }}
+                hitSlop={10}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
+                  opacity: pressed ? 0.5 : 1 })}>
+                <Icon name="plus" size={14} color={p.accent} width={2.4} />
+                <Text style={{ ...FONT.small, color: p.accent }}>блюдо</Text>
+              </Pressable>
+              {/* Не всё в меню рецепт: «150 г индейки» назначается
+                  продуктом, а не блюдом. */}
+              <Pressable
+                onPress={() => {
+                  haptic.tap();
+                  router.push({
+                    pathname: '/sp-add-food',
+                    params: { menu: menu.id, day, meal: mt, start: menu.start_date },
+                  });
+                }}
+                hitSlop={10}
+                style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4,
+                  marginLeft: S.md, opacity: pressed ? 0.5 : 1 })}>
+                <Icon name="plus" size={14} color={p.accent} width={2.4} />
+                <Text style={{ ...FONT.small, color: p.accent }}>продукт</Text>
+              </Pressable>
+            </View>
+            {group.length === 0 ? (
+              <Card style={{ paddingVertical: 14 }}>
+                <Muted>Пусто — добавьте блюдо или продукт</Muted>
+              </Card>
+            ) : group.map(i => (
+              <ItemCard key={i.id} item={i} grams={draft[i.id] ?? round(i.portion_g)}
+                onRemove={() => remove(i.id)} />
+            ))}
+          </View>
+        );
+      })}
+
+      <View style={{ gap: S.md, marginTop: S.sm }}>
+        {day > 1 ? (
+          <SysButton label={`Скопировать ${dayTitle(menu.start_date, day - 1)}`}
+            icon="doc.on.doc"
+            disabled={busy} onPress={copyPrev} />
+        ) : null}
+        <SysButton label="Сохранить как шаблон" icon="doc.badge.plus"
+          disabled={busy} onPress={saveTemplate} />
+        {/* Продлить меню на следующую неделю одним нажатием: рацион
+            редко собирают заново каждые семь дней. В вебе это
+            «Дублировать меню на неделю», в приложении не было вовсе. */}
+        <SysButton label="Дублировать на следующую неделю" icon="calendar.badge.plus"
+          disabled={busy} onPress={duplicate} />
+        {menu.status !== 'published' ? (
+          <SysButton label="Опубликовать меню" variant="prominent"
+            disabled={busy} onPress={publish} />
+        ) : null}
+      </View>
+    </Animated.View>
+  );
+}
+
+/**
+ * Действие в карточке клиента: значок над подписью, треть ширины.
+ * Три таких помещаются в строку и не съедают экран, как это делали
+ * кнопки во всю ширину.
+ */
+function Action({ icon, label, onPress }: {
+  icon: string; label: string; onPress: () => void;
+}) {
+  const { p } = useApp();
+  return (
+    <Pressable onPress={onPress}
+      style={({ pressed }) => ({
+        flex: 1, height: 64, borderRadius: R.md,
+        alignItems: 'center', justifyContent: 'center', gap: 5,
+        backgroundColor: p.surface,
+        borderWidth: p.name === 'light' ? StyleSheet.hairlineWidth : 0,
+        borderColor: p.borderSoft,
+        opacity: pressed ? 0.6 : 1,
+      })}>
+      <Icon name={icon} size={19} color={p.accent} width={1.9} />
+      <Text style={{ fontSize: 12.5, fontWeight: '600', color: p.text2 }} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Полоса дней меню.
+ *
+ * Неделя — это всегда семь дней, между неделями переключаться не нужно,
+ * значит и прокручивать нечего: раскладываем в ряд равными долями, и
+ * последний день не срезается краем экрана. Меню длиннее недели в ряд
+ * не влезет — там остаётся прокрутка.
+ */
+function DayStrip({ week, children }: { week: boolean; children: React.ReactNode }) {
+  if (week) {
+    return (
+      <View style={{ flexDirection: 'row', gap: 5, paddingBottom: S.md }}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: S.sm, paddingBottom: S.md }}>
+      {children}
+    </ScrollView>
+  );
+}
+
+/**
+ * Блюдо в меню.
+ *
+ * Фотография, название и порция — день читается взглядом. По нажатию
+ * открывается карточка блюда целиком: состав под эту порцию, рецепт
+ * и та же граммовка. Разворачивать ползунок прямо в строке оказалось
+ * мало: состав и рецепт всё равно приходилось искать отдельно.
+ */
+function ItemCard({ item, grams, onRemove }: {
+  item: SpMenuItem;
+  /** Граммовка живёт в экране целиком — здесь её только показывают */
+  grams: number;
+  onRemove: () => void;
+}) {
+  const { p } = useApp();
+  const photo = thumbUrl(item);
+
+  return (
+    <Pressable
+      onPress={() => {
+        haptic.tap();
+        router.push({
+          pathname: '/sp-menu-item',
+          params: {
+            item: item.id, dish: item.dish_id, meal: item.meal_type,
+            portion: round(grams), base: round(item.base_portion_g ?? 0),
+          },
+        });
+      }}
+      style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}>
+      <Card style={{ marginBottom: S.sm }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <View style={{
+            width: 52, height: 52, borderRadius: R.md, backgroundColor: p.inset,
+            alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+          }}>
+            {/* Значок под снимком: пока фото едет или если его нет,
+                квадрат не остаётся пустым. */}
+            <Icon name="bowl" size={19} color={p.text3} />
+            {photo ? (
+              <Image source={{ uri: photo }}
+                style={{ position: 'absolute', width: '100%', height: '100%' }}
+                contentFit="cover" transition={200} cachePolicy="memory-disk" />
+            ) : null}
+          </View>
+
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {/* Две строки: специалист должен видеть, что за блюдо, целиком.
+                На одной длинные названия обрывались многоточием. */}
+            <Text style={{ ...FONT.h3, color: p.text, lineHeight: 20 }}
+              numberOfLines={2}>{item.dish_name}</Text>
+            <Muted style={{ marginTop: 2 }}>
+              {grams} г · {round(scaleN(item, grams).kcal)} ккал
+            </Muted>
+          </View>
+
+          <SysConfirm
+            label="Убрать" tint={p.danger}
+            title={`Убрать «${item.dish_name}»?`}
+            message="Блюдо исчезнет из меню клиента."
+            confirmLabel="Убрать из меню"
+            onConfirm={onRemove}
+          />
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
+
+interface GenReportData {
+  menu_id: number; target_kcal: number; avg_kcal: number;
+  days: {
+    day: number; kcal: number; protein: number; fat: number; carbs: number;
+    kcal_diff: number; protein_diff: number | null;
+    fat_diff: number | null; carbs_diff: number | null;
+  }[];
+  warnings: string[];
+}
+
+/**
+ * Что получилось после сборки.
+ *
+ * Подбор из готовых блюд не сводит калории и все три числа БЖУ
+ * одновременно. Молчать об этом хуже, чем сказать: специалист поправит
+ * порции сам, если будет знать, где именно разошлось.
+ */
+function GenReport({ r }: { r: GenReportData }) {
+  const { p } = useApp();
+  const sign = (v: number | null) => v == null ? '' : `${v > 0 ? '+' : ''}${v}`;
+  return (
+    <Animated.View entering={FadeIn.duration(220)}>
+      <Card style={{ marginTop: S.lg, gap: S.sm }}>
+        <Label>Черновик готов</Label>
+        <Muted style={{ lineHeight: 19 }}>
+          Цель {r.target_kcal} ккал · в среднем вышло {r.avg_kcal}.
+          Меню сохранено черновиком — проверьте и опубликуйте.
+        </Muted>
+        {r.warnings.map((w, i) => (
+          <Text key={i} style={{ ...FONT.small, color: p.premium, lineHeight: 18 }}>{w}</Text>
+        ))}
+        {r.days.map(d => (
+          <View key={d.day} style={{
+            flexDirection: 'row', alignItems: 'center', gap: S.md,
+            paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: p.borderSoft,
+          }}>
+            <Text style={{ fontSize: 14, color: p.text2, width: 62 }}>День {d.day}</Text>
+            <Text style={{ fontSize: 14, color: p.text }}>{d.kcal}</Text>
+            <Muted style={{ flex: 1 }} numberOfLines={1}>
+              Б {d.protein} ({sign(d.protein_diff)}) · Ж {d.fat} ({sign(d.fat_diff)}) · У {d.carbs} ({sign(d.carbs_diff)})
+            </Muted>
+          </View>
+        ))}
+      </Card>
+    </Animated.View>
+  );
+}
+
+/**
+ * Задания клиенту.
+ *
+ * Зашитые «отметить приёмы» и «записать вес» — правила сервиса, а не
+ * задания специалиста. Здесь он ставит личные: сдать анализы, пройти
+ * шаги, приготовить по рецепту и прислать фото.
+ *
+ * Выполненное задание не удаляется, а только отменяется незакрытое:
+ * закрытые задания — история работы, и стирать её задним числом
+ * нечестно по отношению к клиенту.
+ */
+function TasksTab({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [list, setList] = useState<ClientTask[] | null>(null);
+  const [title, setTitle] = useState('');
+  const [note, setNote] = useState('');
+  const [photo, setPhoto] = useState(false);
+  const [points, setPoints] = useState('20');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try { setList((await api<{ tasks: ClientTask[] }>(`/specialist/clients/${cid}/tasks`)).tasks ?? []); }
+    catch (e: any) { setErr(e?.message ?? 'Не удалось открыть'); setList([]); }
+  }, [cid]);
+  useEffect(() => { load(); }, [load]);
+
+  const add = useCallback(async () => {
+    if (!title.trim()) { haptic.error(); setErr('Что нужно сделать?'); return; }
+    setBusy(true);
+    try {
+      await api(`/specialist/clients/${cid}/tasks`, {
+        method: 'POST',
+        body: {
+          title: title.trim(), note: note.trim(),
+          kind: photo ? 'photo' : 'simple',
+          points: Math.max(0, Math.min(500, parseInt(points, 10) || 0)),
+        },
+      });
+      setTitle(''); setNote(''); setPhoto(false); setPoints('20');
+      haptic.success(); setErr(null); load();
+    } catch (e: any) { haptic.error(); setErr(e?.message ?? 'Не сохранилось'); }
+    finally { setBusy(false); }
+  }, [cid, title, note, photo, points, load]);
+
+  const cancel = useCallback(async (id: number) => {
+    setList(l => l && l.filter(x => x.id !== id));
+    try { await api(`/specialist/tasks/${id}`, { method: 'DELETE' }); haptic.success(); }
+    catch { haptic.error(); load(); }
+  }, [load]);
+
+  if (!list) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
+
+  return (
+    <Animated.View entering={FadeIn.duration(220)}>
+      <Card style={{ marginBottom: S.md, gap: S.sm }}>
+        <Label>Новое задание</Label>
+        <TaskField value={title} onChange={setTitle} placeholder="Сдать общий анализ крови" />
+        <TaskField value={note} onChange={setNote} placeholder="Натощак, до конца недели" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+          <Pressable onPress={() => { haptic.select(); setPhoto(v => !v); }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+            <View style={{
+              width: 22, height: 22, borderRadius: 6,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: photo ? p.primary : 'transparent',
+              borderWidth: photo ? 0 : 1.5, borderColor: p.track,
+            }}>
+              {photo ? <Icon name="check" size={13} color={p.onPrimary} width={2.6} /> : null}
+            </View>
+            <Text style={{ fontSize: 15, color: p.text2 }}>С фотоотчётом</Text>
+          </Pressable>
+          <TaskField value={points} onChange={setPoints} placeholder="20"
+            keyboardType="number-pad" width={80} />
+        </View>
+        {err ? <Text style={{ ...FONT.small, color: p.danger }}>{err}</Text> : null}
+        <SysButton label="Поставить задание" variant="prominent"
+          disabled={busy} onPress={add} />
+      </Card>
+
+      {list.length === 0 ? (
+        <Card><Muted style={{ lineHeight: 19 }}>Заданий пока нет.</Muted></Card>
+      ) : list.map(t => (
+        <Card key={t.id} style={{ marginBottom: S.sm, gap: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: S.md }}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ ...FONT.h3, color: t.status === 'done' ? p.text2 : p.text }}>
+                {t.title}
+              </Text>
+              <Muted style={{ marginTop: 2 }}>
+                {[t.kind === 'photo' ? 'с фотоотчётом' : null,
+                  `${t.points} баллов`,
+                  t.due_on ? `до ${dmy(t.due_on)}` : null,
+                  t.status === 'done' ? 'выполнено' : t.status === 'cancelled' ? 'отменено' : null,
+                 ].filter(Boolean).join(' · ')}
+              </Muted>
+              {t.note ? <Muted>{t.note}</Muted> : null}
+              {t.comment ? (
+                <Text style={{ ...FONT.small, color: p.text2, marginTop: 4 }}>
+                  Ответ клиента: {t.comment}
+                </Text>
+              ) : null}
+            </View>
+            {mediaUrl(t.photo_url) ? (
+              <Image source={{ uri: mediaUrl(t.photo_url)! }}
+                style={{ width: 52, height: 52, borderRadius: R.md, backgroundColor: p.inset }}
+                contentFit="cover" />
+            ) : null}
+          </View>
+          {t.status === 'open' ? (
+            <SysConfirm label="Отменить" tint={p.text3}
+              title={`Отменить «${t.title}»?`} confirmLabel="Отменить"
+              onConfirm={() => cancel(t.id)} />
+          ) : null}
+        </Card>
+      ))}
+    </Animated.View>
+  );
+}
+
+function TaskField({ value, onChange, placeholder, keyboardType, width }: {
+  value: string; onChange: (v: string) => void; placeholder: string;
+  keyboardType?: 'number-pad'; width?: number;
+}) {
+  const { p } = useApp();
+  return (
+    <TextInput value={value} onChangeText={onChange}
+      placeholder={placeholder} placeholderTextColor={p.text3}
+      keyboardType={keyboardType}
+      style={{
+        width, backgroundColor: p.inset, color: p.text, borderRadius: R.md,
+        paddingHorizontal: S.md, paddingVertical: 11, fontSize: 15,
+      }} />
+  );
+}
+
+/**
+ * Съеденное клиентом не по меню.
+ *
+ * Без этого специалист смотрит на «съедено 30%» и строит догадки,
+ * почему вес стоит: половина съеденного просто не попадала ему на
+ * глаза. В приверженность меню это не входит и входить не должно —
+ * съеденный торт не делает меню соблюдённым.
+ */
+function SpFoodLog({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [days, setDays] = useState<FoodDay[] | null | undefined>(undefined);
+
+  useEffect(() => {
+    api<{ days: FoodDay[] }>(`/specialist/clients/${cid}/food-log`)
+      .then(j => setDays(j.days ?? [])).catch(() => setDays(null));
+  }, [cid]);
+
+  if (days === undefined || days === null || !days.length) return null;
+
+  return (
+    <Card style={{ marginTop: S.md }}>
+      <Label>Ел не по меню</Label>
+      <Muted style={{ marginTop: S.sm }}>
+        За две недели. В приверженность меню не входит, в калории дня входит.
+      </Muted>
+      <View style={{ marginTop: S.md, gap: S.md }}>
+        {days.map(d => (
+          <View key={d.date}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <Text style={{ ...FONT.body, fontWeight: '700', color: p.text }}>{dmy(d.date)}</Text>
+              <Muted>{round(d.totals.kcal)} ккал · Б {d.totals.protein} Ж {d.totals.fat} У {d.totals.carbs}</Muted>
+            </View>
+            {d.entries.map(e => (
+              <Text key={e.id} style={{ ...FONT.small, color: p.text2, marginTop: 4, lineHeight: 18 }}>
+                {e.meal_title}: {e.items.map(i => `${i.name} ${round(i.grams)} г`).join(', ')}
+              </Text>
+            ))}
+          </View>
+        ))}
+      </View>
+    </Card>
+  );
+}
+
+function ProgressTab({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [d, setD] = useState<ProgressResponse | null | undefined>(undefined);
+
+  useEffect(() => {
+    api<ProgressResponse>(`/specialist/clients/${cid}/progress`)
+      .then(setD).catch(() => setD(null));
+  }, [cid]);
+
+  if (d === undefined) return <ActivityIndicator color={p.accent} style={{ marginTop: 30 }} />;
+  const ws = d?.weights ?? [];
+  if (!ws.length) {
+    return <Empty icon="scalemass" title="Замеров нет"
+      note="Клиент ещё не записывал вес." />;
+  }
+  const first = +ws[0].weight_kg, last = +ws[ws.length - 1].weight_kg;
+  const delta = Math.round((last - first) * 10) / 10;
+
+  return (
+    <Animated.View entering={FadeIn.duration(220)}>
+      <Card style={{ marginBottom: S.md }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+          <Text style={{ ...FONT.num, color: p.text }}>{kg(last)}</Text>
+          <Text style={{ ...FONT.body, color: p.text3 }}>кг</Text>
+          {delta !== 0 ? (
+            <Text style={{ ...FONT.h3, marginLeft: 'auto', color: delta < 0 ? p.mp : p.mf }}>
+              {delta > 0 ? '+' : '−'}{kg(Math.abs(delta))} кг
+            </Text>
+          ) : null}
+        </View>
+        {ws.length >= 2 ? (
+          <View style={{ marginTop: S.md }}>
+            <SysChart color={p.mp} points={ws.map(w => ({ x: dmy(w.measured_on), y: +w.weight_kg }))} />
+          </View>
+        ) : null}
+      </Card>
+
+      {d?.measurements?.length ? (
+        <>
+          <Text style={{ ...FONT.h3, color: p.text, marginBottom: S.sm }}>Замеры</Text>
+          <Card style={{ padding: 0 }}>
+            {d.measurements.slice().reverse().map((m, i) => (
+              <View key={m.id} style={{
+                flexDirection: 'row', justifyContent: 'space-between',
+                paddingVertical: 11, paddingHorizontal: S.lg,
+                borderTopWidth: i ? 1 : 0, borderTopColor: p.borderSoft,
+              }}>
+                <Text style={{ fontSize: 15, color: p.text2 }}>{dmy(m.measured_on)}</Text>
+                <Text style={{ fontSize: 15, color: p.text }}>
+                  {[m.waist_cm ? `талия ${m.waist_cm}` : null,
+                    m.hips_cm ? `бёдра ${m.hips_cm}` : null,
+                    m.chest_cm ? `грудь ${m.chest_cm}` : null].filter(Boolean).join(' · ') || '—'}
+                </Text>
+              </View>
+            ))}
+          </Card>
+        </>
+      ) : null}
+
+      {/* Фото прогресса клиент вносит ровно для того, чтобы их посмотрел
+          специалист: по одной цифре на весах о теле не судят. Снимок
+          приходит содержимым, а не ссылкой — тег изображения не
+          отправляет заголовок авторизации. */}
+      {d?.photos?.length ? (
+        <>
+          <Text style={{ ...FONT.h3, color: p.text, marginTop: S.lg, marginBottom: S.sm }}>
+            Фото прогресса
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: S.sm }}>
+            {d.photos.filter(ph => ph.photo_url).map(ph => (
+              <View key={ph.id} style={{ width: '31%' }}>
+                <Image source={{ uri: mediaUrl(ph.photo_url)! }}
+                  style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: R.md,
+                    backgroundColor: p.inset }}
+                  contentFit="cover" transition={200} />
+                <Muted style={{ marginTop: 4, fontSize: 11 }}>{dmy(ph.measured_on)}</Muted>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
+    </Animated.View>
+  );
+}
+
+/* ==========================================================================
+   ПРИВЕРЖЕННОСТЬ МЕНЮ ЗА 7 ДНЕЙ.
+
+   Три числа вместо одного: «не ел» и «не отметил» — разные вещи. Первое
+   говорит, что меню не подошло, второе — что клиент просто молчит, и
+   разговор с ним нужен совсем другой. Раньше и то и другое сливалось в
+   один процент, по которому нельзя было понять, о чём спрашивать.
+   ========================================================================== */
+interface Adh {
+  planned: number; logged: number; eaten: number;
+  skipped: number; unlogged: number;
+  marked_pct: number | null; eaten_pct: number | null;
+}
+
+function Adherence({ cid }: { cid: number }) {
+  const { p } = useApp();
+  const [a, setA] = useState<Adh | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api<{ adh?: Adh }>(`/specialist/clients/${cid}/engagement`)
+      .then(r => { if (alive && r.adh) setA(r.adh); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [cid]);
+  if (!a) return null;
+
+  /* Считаем от плана, а не от отметок: доля съеденного среди отмеченных
+     льстит клиенту, который почти ничего не отмечал. */
+  const pct = a.eaten_pct;
+  const word = pct == null ? '—'
+    : pct >= 80 ? 'Отличная' : pct >= 55 ? 'Хорошая' : 'Требует внимания';
+  const tone = pct == null ? p.text2
+    : pct >= 80 ? p.primary : pct >= 55 ? p.warn : p.danger;
+
+  /* Когда меню не опубликовано, показывать прочерк и пустую полосу
+     незачем: это не измерение, а рамка от измерения. Вместо них —
+     объяснение и путь дальше. */
+  if (!a.planned) {
+    return (
+      <Card style={{ marginBottom: S.md }}>
+        <Label>Приверженность меню</Label>
+        <Text style={{ ...FONT.h3, color: p.text, marginTop: S.sm }}>
+          Меню ещё не опубликовано
+        </Text>
+        <Muted style={{ marginTop: 3, lineHeight: 18 }}>
+          Приверженность появится, когда клиент начнёт отмечать приёмы из плана.
+        </Muted>
+      </Card>
+    );
+  }
+
+  return (
+    <Card style={{ marginBottom: S.md }}>
+      <Label>Приверженность меню</Label>
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: S.sm, marginTop: S.sm }}>
+        <Text style={{ ...FONT.h2, color: tone }}>{pct == null ? '—' : `${pct}%`}</Text>
+        <Text style={{ ...FONT.body, color: p.text2 }}>{word}</Text>
+      </View>
+      <Muted style={{ marginTop: 2 }}>
+        {`съедено из ${a.planned} ${plural(a.planned, ['приёма', 'приёмов', 'приёмов'])} плана за 7 дней`}
+      </Muted>
+      <View style={{ marginTop: S.md }}>
+        <Bar value={(pct ?? 0) / 100} color={tone} />
+      </View>
+      {a.planned ? (
+        <View style={{ flexDirection: 'row', marginTop: S.md }}>
+          <Split n={a.eaten} label="съел" color={p.accent} />
+          <Split n={a.skipped} label="не ел" color={p.warn} />
+          <Split n={a.unlogged} label="не отметил" color={p.danger} />
+        </View>
+      ) : null}
+      {a.planned && a.unlogged > a.logged ? (
+        <Muted style={{ marginTop: S.md, lineHeight: 18 }}>
+          Большую часть приёмов клиент не отмечал. Это молчание, а не отказ
+          от меню: сначала стоит спросить, отмечает ли он вообще.
+        </Muted>
+      ) : null}
+    </Card>
+  );
+}
+
+function Split({ n, label, color }: { n: number; label: string; color: string }) {
+  const { p } = useApp();
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={{ ...FONT.num, color }}>{n}</Text>
+      <Text style={{ ...FONT.small, color: p.text3, marginTop: 2 }}>{label}</Text>
+    </View>
+  );
+}
+
+/* Остаток подписки словами. Последний день называем последним:
+   «осталось 0 дней» у работающей услуги читается как поломка. */
+function subLeft(s: Subscription) {
+  if (s.kind !== 'subscription' || s.days_left == null) return 'разовая услуга';
+  const d = s.days_left;
+  if (d <= 0) return 'заканчивается сегодня';
+  if (d === 1) return 'остался 1 день';
+  return `осталось ${d} ${plural(d, ['день', 'дня', 'дней'])}`;
+}
