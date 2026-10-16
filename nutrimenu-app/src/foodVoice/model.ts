@@ -60,8 +60,8 @@ export function rowHint(row: VoiceItem): string {
   if (!selectedFood(row)) {
     if (row.related) return 'Выберите похожий вариант';
     if (!row.candidates.length) return 'Точного варианта нет';
-    if (/творог|йогурт|молоко/i.test(row.name)) return 'Уточните жирность';
-    if (/тунец/i.test(row.name)) return 'В масле или в собственном соку?';
+    if (/творог|йогурт|молоко/i.test(row.name) && !/\d+(?:[.,]\d+)?\s*%/.test(row.name)) return 'Уточните жирность';
+    if (/тунец/i.test(row.name) && !/собственн.*сок|в\s+масл/i.test(row.name)) return 'В масле или в собственном соку?';
     if (/рис|греч|круп|макарон/i.test(row.name)) return 'Сухой или готовый вес?';
     return 'Выберите вариант';
   }

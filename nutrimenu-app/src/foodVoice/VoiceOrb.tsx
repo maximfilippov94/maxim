@@ -36,8 +36,8 @@ export function VoiceOrb({ level, processing }: { level: number; processing: boo
     const t = reduced ? 0 : phase.value, y = Math.sin(t) * 6;
     return { d: `M27 ${96+y} C13 ${84+y},15 139,39 156 C68 178,96 ${153-y},86 ${123-y} C79 104,50 ${115+y},27 ${96+y}Z` };
   });
-  return <View accessible={false} style={{ height: 174, alignItems: 'center', justifyContent: 'center' }}>
-    <Animated.View style={[{ width: 160, height: 160 }, shape]}>
+  return <View accessible={false} style={{ height: processing ? 116 : 148, alignItems: 'center', justifyContent: 'center' }}>
+    <Animated.View style={[{ width: processing ? 108 : 136, height: processing ? 108 : 136 }, shape]}>
       <Svg width="160" height="160" viewBox="-10 -10 220 220">
         <Defs>
           <ClipPath id={`${id}clip`}><Fluid animatedProps={outline} /></ClipPath>

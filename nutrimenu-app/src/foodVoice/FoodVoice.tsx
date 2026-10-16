@@ -3,7 +3,7 @@ import { AppState, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, { LinearTransition, ReduceMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, LinearTransition, ReduceMotion } from 'react-native-reanimated';
 import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioStream } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import { api, ApiError, FOOD_MEALS, type Food, type FoodMeal } from '../api';
@@ -82,6 +82,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   const [transcript, setTranscript] = useState(''), [textOpen, setTextOpen] = useState(false);
   const [draft, setDraft] = useState<VoiceDraft | null>(null), [items, setItems] = useState<VoiceItem[]>([]);
   const [refine, setRefine] = useState<{ draft_id: string; items: VoiceItem[]; scope: number | null } | null>(null);
+  const [heardAudio, setHeardAudio] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [mealPicker, setMealPicker] = useState<'missing' | 'all' | null>(null);
   const [editor, setEditor] = useState<{ index: number; row: VoiceItem; amount: string; unit: 'g' | 'pc' } | null>(null);
@@ -99,6 +100,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
     if (!alive.current || !recording.current) return;
     try {
       const volume = pcm.current.push(buffer.data, buffer.sampleRate, buffer.channels);
+      if (volume > .12) setHeardAudio(true);
       setLevel(volume); setSeconds(pcm.current.seconds);
       preview.current.tick(pcm.current.seconds, () => pcm.current.encode(), capRef.current?.live_preview_available === true);
       if (pcm.current.seconds >= pcm.current.maxSeconds) stopRef.current();
@@ -130,7 +132,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
       if (!alive.current || generation.current !== version) { await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }); return; }
       pcm.current.clear(); erase(upload.current); upload.current = null; requestKey.current = newKey(); textSignature.current = '';
       preview.current.begin(requestKey.current); setLiveText('');
-      setSeconds(0); recording.current = true;
+      setSeconds(0); setHeardAudio(false); recording.current = true;
       await stream.start();
       if (!alive.current || generation.current !== version || speechBlocked()) { stop(); return; }
       setCapture('recording'); haptic.tap();
@@ -267,13 +269,13 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   const title = mode === 'record' || processing ? '' : mode === 'review' ? 'Проверьте еду' : mode === 'edit' ? 'Количество' : mode === 'done' ? 'Записано' : 'Что вы съели?';
 
   return <Modal transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', paddingTop: insets.top + 10 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', paddingTop: insets.top + 10, paddingHorizontal: 12, paddingBottom: Math.max(insets.bottom, 10) }}>
       <Pressable accessibilityLabel="Закрыть голосовой дневник" onPress={close} style={StyleSheet.absoluteFill}>
         <BlurView intensity={8} tint={p.name} style={StyleSheet.absoluteFill} />
         <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9,16,18,.16)' }]} />
       </Pressable>
-      <Animated.View layout={LinearTransition.duration(220).reduceMotion(ReduceMotion.System)} accessibilityViewIsModal style={{ backgroundColor: 'transparent', overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28,
-        maxHeight: Math.max(240, height - insets.top - 20), flexShrink: 1, paddingBottom: Math.max(insets.bottom, 14) }}>
+      <Animated.View layout={LinearTransition.duration(220).reduceMotion(ReduceMotion.System)} accessibilityViewIsModal style={{ backgroundColor: 'transparent', overflow: 'hidden', borderRadius: 28, borderWidth: StyleSheet.hairlineWidth, borderColor: p.separator,
+        maxHeight: Math.max(240, height - insets.top - insets.bottom - 36), flexShrink: 1, paddingBottom: 14 }}>
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
           <BlurView intensity={64} tint={p.name === 'dark' ? 'systemThinMaterialDark' : 'systemThinMaterialLight'} style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: p.name === 'dark' ? 'rgba(22,31,40,.48)' : 'rgba(247,249,248,.66)' }]} />
@@ -282,34 +284,36 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 4 }}>
           {mode === 'edit' && <RoundButton label="Назад к списку" icon="back" action={() => { setMode('review'); setEditor(null); setError(''); }} />}
           {title ? <Text accessibilityRole="header" style={[ink, { flex: 1, fontSize: 22, fontWeight: '600', letterSpacing: -.5 }]}>{title}</Text> : <View style={{ flex: 1 }} />}
+          {mode === 'review' && cap?.refinement_available && <RoundButton label="Уточнить список голосом" icon="mic" action={() => beginRefinement()} subtle />}
           <RoundButton label={mode === 'record' ? (refine ? 'Вернуться к списку' : 'Отменить запись') : 'Закрыть'} icon="close" action={mode === 'record' && refine ? cancelRefinement : close} disabled={saving} subtle />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={false}
           style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 4, gap: 12 }}>
+          <Animated.View key={mode} entering={FadeIn.duration(180).reduceMotion(ReduceMotion.System)} style={{ gap: 10 }}>
           {(mode === 'record' || processing) && <>
             <VoiceOrb level={level} processing={processing} />
             {processing && <Text accessibilityLiveRegion="polite" style={[muted, { textAlign: 'center', fontSize: 15, paddingBottom: 8 }]}>{refine ? 'Уточняю список…' : 'Разбираю продукты…'}</Text>}
             {mode === 'record' && capture === 'permission' && <Text accessibilityLiveRegion="polite" style={[muted, { textAlign: 'center', fontSize: 14 }]}>Разрешите микрофон</Text>}
             {mode === 'record' && <View style={{ minHeight: liveText ? 48 : 24, justifyContent: 'center', paddingHorizontal: 8, paddingBottom: 4 }}>
-              <Text accessibilityLabel="Предварительно распознанная речь" accessibilityLiveRegion="polite" style={{ color: liveText ? p.text : p.text3, fontSize: liveText ? 18 : 14, lineHeight: 24, textAlign: 'center' }} numberOfLines={2}>{liveText || (refine ? 'Скажите, что изменить' : 'Назовите продукты и количество')}</Text>
+              <Text accessibilityLabel="Предварительно распознанная речь" accessibilityLiveRegion="polite" style={{ color: liveText ? p.text : p.text3, fontSize: liveText ? 18 : 14, lineHeight: 24, textAlign: 'center' }} numberOfLines={2}>{liveText || (heardAudio ? '' : refine ? 'Скажите, что изменить' : 'Назовите продукты и количество')}</Text>
             </View>}
           </>}
           {mode === 'text' && <TextInput accessibilityLabel="Что вы съели" multiline autoFocus maxLength={2500} value={transcript}
             onChangeText={setTranscript} placeholder="Например, на обед рис 100 г и два яйца" placeholderTextColor={p.text3}
             style={[ink, { fontSize: 17, minHeight: 110, padding: 16, borderRadius: 18, backgroundColor: p.inset, textAlignVertical: 'top' }]} />}
           {mode === 'review' && <>
-            {cap?.refinement_available && <Pressable onPress={() => beginRefinement()} accessibilityRole="button" accessibilityLabel="Уточнить список голосом" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 }}><Icon name="mic" size={18} color={p.accent} /><Text style={{ color: p.accent, fontSize: 15 }}>Уточнить голосом</Text></Pressable>}
+
             <Pressable accessibilityRole="button" onPress={() => setMealPicker(mealPicker ? null : missingMeal ? 'missing' : 'all')} style={{ paddingVertical: 8 }}>
               <Text style={{ color: p.accent, fontSize: 16, fontWeight: '500' }}>{missingMeal ? 'Уточните приём пищи' : meals.length === 1 ? `${FOOD_MEALS.find(([m]) => m === meals[0])?.[1]}${snackContext(meals[0]!) ? ` · ${snackContext(meals[0]!)}` : ''}  ⌄` : 'Несколько приёмов пищи  ⌄'}</Text>
             </Pressable>
-            {(missingMeal || mealPicker) && <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {(missingMeal || mealPicker) && <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexShrink: 0 }} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
               {FOOD_MEALS.map(([key, label]) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${label} ${snackContext(key)}`}
                 onPress={() => { setItems(rows => rows.map(r => ({ ...r, meal: mealPicker === 'all' || !r.meal ? key : r.meal }))); setMealPicker(null); haptic.select(); }}
-                style={{ backgroundColor: p.inset, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10 }}>
+                style={{ backgroundColor: p.inset, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10, minWidth: 84, alignItems: 'center' }}>
                 <Text style={[ink, { fontSize: 15 }]}>{label}</Text>
                 {!!snackContext(key) && <Text style={[muted, { fontSize: 10, marginTop: 2 }]}>{snackContext(key)}</Text>}
               </Pressable>)}
-            </View>}
+            </ScrollView>}
             <View style={{ borderRadius: 20, backgroundColor: p.inset, overflow: 'hidden' }}>
               {items.map((row, index) => <View key={index} style={{ borderTopWidth: index ? StyleSheet.hairlineWidth : 0, borderTopColor: p.separator }}>
                 <Pressable accessibilityRole="button" accessibilityLabel={`${selectedFood(row)?.name ?? row.name}, ${rowHint(row)}`}
@@ -358,6 +362,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
           </View>}
           {!!error && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={{ color: p.danger, fontSize: 14, lineHeight: 20, paddingVertical: 8 }}>{error}</Text>}
           {permissionDenied && <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()} style={{ paddingVertical: 10 }}><Text style={{ color: p.accent }}>Открыть настройки микрофона</Text></Pressable>}
+          </Animated.View>
         </ScrollView>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, borderTopWidth: mode === 'review' || mode === 'edit' ? StyleSheet.hairlineWidth : 0, borderTopColor: p.separator }}>
           {mode === 'record' && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', paddingTop: 4, paddingBottom: 8 }}>

@@ -31,6 +31,8 @@ const orbSource=fs.readFileSync(require.resolve('../src/foodVoice/VoiceOrb.tsx')
 const offsets=[...orbSource.matchAll(/offset=\{([0-9.]+)\}/g)].map(m=>parser(Number(m[1])));
 check(offsets.length>=20&&offsets.every(Number.isFinite)&&warnings.length===0&&!/offset="\./.test(orbSource),'all current stops accepted by actual installed SVG parser without warnings');
 const food = (id, name, piece_g = null) => ({ id, name, piece_g, kcal: 100, protein: 10, fat: 3, carbs: 5, fiber: 0 });
+check(model.rowHint({name:'тунец в собственном соку',candidates:[food(900,'Тунец в собственном соку')],ingredient_id:null})==='Выберите вариант','tuna hint never asks the liquid already spoken');
+check(model.rowHint({name:'творог 5%',candidates:[food(900,'Творог 5%')],ingredient_id:null})==='Выберите вариант','fat already spoken is not asked twice');
 const egg = food(1, 'Яйцо', 60), rice = food(2, 'Рис варёный'), dryRice = food(3, 'Рис сухой');
 const row = { name: 'яйца', phrase: '2 яйца', quantity_text: '2 шт.', grams: 120, pieces: 2,
   weight_source: 'pieces', meal: null, ingredient_id: 1, candidates: [egg] };
@@ -126,7 +128,7 @@ Module._load = function(name, parent, ...rest) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } };
   if (name === 'react-native-reanimated') return { __esModule: true, default: { View: 'AnimatedView' },
-    ReduceMotion: { System: 'system' }, LinearTransition: { duration: () => ({ reduceMotion: () => ({}) }) } };
+    ReduceMotion: { System: 'system' }, FadeIn: { duration: () => ({ reduceMotion: () => ({}) }) }, LinearTransition: { duration: () => ({ reduceMotion: () => ({}) }) } };
   if (name === 'react-native') return {
     AppState: { addEventListener: (_, fn) => { appState = fn; return { remove() {} }; } },
     KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView',
