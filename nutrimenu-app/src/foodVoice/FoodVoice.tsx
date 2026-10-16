@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, Linking } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
+import Svg, { Circle } from 'react-native-svg';
 import Animated, { LinearTransition, ReduceMotion } from 'react-native-reanimated';
 import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioStream } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
@@ -263,7 +264,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   const editorFood = editor && selectedFood(editor.row);
   const editedAmount = editor ? applyAmount(editor.row, Number(editor.amount.replace(',', '.')), editor.unit) : null;
   const processing = mode === 'processing';
-  const title = mode === 'record' || processing ? 'EQUA AI' : mode === 'review' ? 'Проверьте еду' : mode === 'edit' ? 'Количество' : mode === 'done' ? 'Записано' : 'Что вы съели?';
+  const title = mode === 'record' || processing ? '' : mode === 'review' ? 'Проверьте еду' : mode === 'edit' ? 'Количество' : mode === 'done' ? 'Записано' : 'Что вы съели?';
 
   return <Modal transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', paddingTop: insets.top + 10 }}>
@@ -280,20 +281,15 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
         <View accessible={false} style={{ width: 38, height: 4, borderRadius: 2, backgroundColor: p.text3, opacity: .5, alignSelf: 'center', marginTop: 10, marginBottom: 4 }} />
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 4 }}>
           {mode === 'edit' && <RoundButton label="Назад к списку" icon="back" action={() => { setMode('review'); setEditor(null); setError(''); }} />}
-          <Text accessibilityRole="header" style={[ink, { flex: 1, fontSize: 22, fontWeight: '600', letterSpacing: -.5 }]}>{title}</Text>
+          {title ? <Text accessibilityRole="header" style={[ink, { flex: 1, fontSize: 22, fontWeight: '600', letterSpacing: -.5 }]}>{title}</Text> : <View style={{ flex: 1 }} />}
           <RoundButton label={mode === 'record' ? (refine ? 'Вернуться к списку' : 'Отменить запись') : 'Закрыть'} icon="close" action={mode === 'record' && refine ? cancelRefinement : close} disabled={saving} subtle />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={false}
           style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 4, gap: 12 }}>
           {(mode === 'record' || processing) && <>
             <VoiceOrb level={level} processing={processing} />
-            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, paddingBottom: 8 }}>
-              {capture === 'recording' && !processing && <View accessible={false} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: p.primary }} />}
-              <Text accessibilityLiveRegion="polite" style={[muted, { fontSize: 15 }]}>
-                {processing ? (refine ? 'Уточняю список…' : 'Разбираю продукты…') : capture === 'permission' ? 'Разрешите микрофон' : capture === 'recording' ? (refine ? 'Слушаю уточнение…' : 'Слушаю') : capture === 'ready' ? 'Готово к отправке' : refine ? 'Что изменить?' : 'Расскажите, что съели'}
-              </Text>
-              {!processing && <Text style={[muted, { fontSize: 15, fontVariant: ['tabular-nums'] }]}>0:{String(Math.floor(seconds)).padStart(2, '0')}</Text>}
-            </View>
+            {processing && <Text accessibilityLiveRegion="polite" style={[muted, { textAlign: 'center', fontSize: 15, paddingBottom: 8 }]}>{refine ? 'Уточняю список…' : 'Разбираю продукты…'}</Text>}
+            {mode === 'record' && capture === 'permission' && <Text accessibilityLiveRegion="polite" style={[muted, { textAlign: 'center', fontSize: 14 }]}>Разрешите микрофон</Text>}
             {mode === 'record' && <View style={{ minHeight: liveText ? 48 : 24, justifyContent: 'center', paddingHorizontal: 8, paddingBottom: 4 }}>
               <Text accessibilityLabel="Предварительно распознанная речь" accessibilityLiveRegion="polite" style={{ color: liveText ? p.text : p.text3, fontSize: liveText ? 18 : 14, lineHeight: 24, textAlign: 'center' }} numberOfLines={2}>{liveText || (refine ? 'Скажите, что изменить' : 'Назовите продукты и количество')}</Text>
             </View>}
@@ -366,7 +362,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
         <View style={{ paddingHorizontal: 20, paddingTop: 10, borderTopWidth: mode === 'review' || mode === 'edit' ? StyleSheet.hairlineWidth : 0, borderTopColor: p.separator }}>
           {mode === 'record' && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', paddingTop: 4, paddingBottom: 8 }}>
             {<RoundButton label="Ввести текст" icon="keyboard" action={() => { invalidate(); stop(); if (liveText) setTranscript(liveText); setMode('text'); }} disabled={capture === 'permission'} />}
-            {<RoundButton label={capture === 'recording' ? 'Остановить запись' : 'Записать ещё раз'} icon={capture === 'recording' ? 'pause' : 'mic'} action={() => capture === 'recording' ? stop() : start()} disabled={capture === 'permission' || cap?.speech_available === false} />}
+            {<RoundButton label={capture === 'recording' ? 'Остановить запись' : 'Записать ещё раз'} icon={capture === 'recording' ? 'pause' : 'mic'} progressSeconds={seconds} action={() => capture === 'recording' ? stop() : start()} disabled={capture === 'permission' || cap?.speech_available === false} />}
             {<RoundButton label="Отправить запись" icon="arrowUp" action={() => analyze()} primary disabled={!['recording', 'ready'].includes(capture) || cap?.speech_available === false} />}
           </View>}
           {mode === 'text' && <Action label="Разобрать продукты" fn={() => analyze(true)} disabled={!transcript.trim() || cap?.text_available === false} />}
@@ -382,13 +378,15 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   </Modal>;
 }
 
-function RoundButton({ label, icon, action, primary = false, disabled = false, subtle = false }: { label: string; icon: string; action: () => void; primary?: boolean; disabled?: boolean; subtle?: boolean }) {
+function RoundButton({ label, icon, action, primary = false, disabled = false, subtle = false, progressSeconds }: { label: string; icon: string; action: () => void; primary?: boolean; disabled?: boolean; subtle?: boolean; progressSeconds?: number }) {
     const { p } = useApp();
-    return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled}
-      onPress={action} style={({ pressed }) => ({ width: primary ? 62 : 48, height: primary ? 62 : 48, borderRadius: 30,
+    return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} accessibilityValue={progressSeconds === undefined ? undefined : { min: 0, max: 24, now: Math.min(24, Math.floor(progressSeconds)), text: `${Math.floor(progressSeconds)} из 24 секунд` }} disabled={disabled}
+      onPress={action} style={({ pressed }) => ({ width: primary ? 62 : progressSeconds !== undefined ? 60 : 48, height: primary ? 62 : progressSeconds !== undefined ? 60 : 48, borderRadius: 30,
         backgroundColor: primary ? p.primary : subtle ? 'transparent' : p.inset, opacity: disabled ? .4 : pressed ? .7 : 1,
         alignItems: 'center', justifyContent: 'center' })}>
-      <Icon name={icon} size={23} color={primary ? p.onPrimary : p.text2} />
+      {progressSeconds !== undefined && <Svg width="60" height="60" style={StyleSheet.absoluteFill} accessible={false}><Circle cx="30" cy="30" r="27" fill="none" stroke={p.text3} strokeOpacity={.18} strokeWidth={2} /><Circle cx="30" cy="30" r="27" fill="none" stroke={p.primary} strokeWidth={2.5} strokeLinecap="round" strokeDasharray={[169.646,169.646]} strokeDashoffset={169.646 * (1 - Math.min(24, Math.max(0, progressSeconds)) / 24)} rotation={-90} origin="30,30" /></Svg>}
+      <Icon name={icon} size={progressSeconds !== undefined ? 19 : 23} color={primary ? p.onPrimary : p.text2} />
+      {progressSeconds !== undefined && <Text style={{ color: p.text3, fontSize: 9, fontVariant: ['tabular-nums'], marginTop: 2 }}>{`0:${String(Math.floor(progressSeconds)).padStart(2,'0')}`}</Text>}
     </Pressable>;
   }
 function Action({ label, fn, disabled = false }: { label: string; fn: () => void; disabled?: boolean }) {

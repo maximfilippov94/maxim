@@ -134,6 +134,7 @@ Module._load = function(name, parent, ...rest) {
     useWindowDimensions: () => ({ width: 393, height: 852 }), StyleSheet: { absoluteFill: {}, hairlineWidth: .5 },
   };
   if (name === 'react-native-safe-area-context') return { useSafeAreaInsets: () => ({ top: 59, bottom: 34 }) };
+  if (name === 'react-native-svg') return { __esModule: true, default: 'Svg', Circle: 'Circle' };
   if (name === 'expo-blur') return { BlurView: 'BlurView' };
   if (name === 'expo-audio') return { AudioModule: { AudioStream: function() {} },
     requestRecordingPermissionsAsync: () => permission(), setAudioModeAsync: async () => {},
@@ -187,8 +188,10 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   } finally { global.fetch = oldFetch; transportFailure = false; file.delete(); }
   await mount();
   check(starts === 1, 'tap starts actual capture hook');
+  check(!tree.root.findAllByType('Text').some(t=>['EQUA AI','Слушаю'].includes(t.children.join(''))),'recording has no branding or listening caption');
   await act(async () => speak(7));
   check(tree.root.findByType('VoiceOrb').props.level > 0, 'real PCM drives orb');
+  check(label('Остановить запись').props.accessibilityValue.now===7,'record button exposes actual elapsed progress');
   check(tree.root.findAllByType('Text').find(n=>n.props.accessibilityLabel==='Предварительно распознанная речь').props.children==='рис 100 граммов','native recording displays actual preview response');
   await tap(label('Остановить запись'));
   check(!calls.some(c => c.path.endsWith('/analyze')), 'stop holds recording without sending');
