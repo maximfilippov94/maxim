@@ -1,6 +1,7 @@
 import type { FoodMeal, Food as FoodProduct } from '../api';
 
 export interface VoiceItem {
+  source_index?: number;
   name: string;
   phrase: string;
   quantity_text: string | null;
@@ -21,6 +22,7 @@ export interface VoiceDraft {
   items: VoiceItem[];
 }
 export interface VoiceCapabilities {
+  refinement_available?: boolean;
   speech_available: boolean;
   text_available: boolean;
   max_seconds: number;
@@ -57,12 +59,12 @@ export function localDay(date = new Date()): string {
 export function rowHint(row: VoiceItem): string {
   if (!selectedFood(row)) {
     if (row.related) return 'Выберите похожий вариант';
-    if (!row.candidates.length) return 'Найти продукт';
+    if (!row.candidates.length) return 'Точного варианта нет';
     if (/творог|йогурт|молоко/i.test(row.name)) return 'Уточните жирность';
     if (/тунец/i.test(row.name)) return 'В масле или в собственном соку?';
     if (/рис|греч|круп|макарон/i.test(row.name)) return 'Сухой или готовый вес?';
     return 'Выберите вариант';
   }
   if (!validGrams(row.grams)) return 'Укажите количество';
-  return `${Math.round(selectedFood(row)!.kcal * row.grams / 100)} ккал`;
+  return `${selectedFood(row)?.match_note === 'Ваш подтверждённый выбор' ? 'Ваш выбор · ' : ''}${Math.round(selectedFood(row)!.kcal * row.grams / 100)} ккал`;
 }

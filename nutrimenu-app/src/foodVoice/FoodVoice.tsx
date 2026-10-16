@@ -67,6 +67,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   const [cap, setCap] = useState<VoiceCapabilities | null>(null);
   const [transcript, setTranscript] = useState(''), [textOpen, setTextOpen] = useState(false);
   const [draft, setDraft] = useState<VoiceDraft | null>(null), [items, setItems] = useState<VoiceItem[]>([]);
+  const [refine, setRefine] = useState<{ draft_id: string; items: VoiceItem[]; scope: number | null } | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [mealPicker, setMealPicker] = useState<'missing' | 'all' | null>(null);
   const [editor, setEditor] = useState<{ index: number; row: VoiceItem; amount: string; unit: 'g' | 'pc' } | null>(null);
@@ -76,6 +77,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   const alive = useRef(true), working = useRef(false), recording = useRef(false), permission = useRef(false);
   const generation = useRef(0), pcm = useRef(new VoicePCM()), upload = useRef<File | null>(null);
   const requestKey = useRef(newKey()), textSignature = useRef(''), request = useRef<AbortController | null>(null);
+  const refineBaseText = useRef('');
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopRef = useRef<() => void>(() => {});
   const capRef = useRef<VoiceCapabilities | null>(null);
@@ -166,10 +168,12 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
     const returnMode = asText ? 'text' : 'record';
     setMode('processing'); request.current = new AbortController();
     try {
-      let body: FormData | { text: string; request_key: string; eaten_on: string };
+      let body: FormData | { text: string; request_key: string; eaten_on: string; refine_json?: string };
+      const refinement = refine ? JSON.stringify({ ...refine, items: refine.items.map(({ name, ingredient_id, grams, meal, pieces, weight_source, source_index }) => ({ name, ingredient_id, grams, meal, pieces, weight_source, source_index })) }) : undefined;
       if (asText) {
         if (textSignature.current !== transcript.trim()) { requestKey.current = newKey(); textSignature.current = transcript.trim(); }
         body = { text: transcript.trim(), request_key: requestKey.current, eaten_on: date };
+        if (refinement) body.refine_json = refinement;
       } else {
         if (!upload.current) {
           const bytes = pcm.current.encode();
@@ -181,11 +185,13 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
         // before any HTTP request and must not be passed as pretend Blobs.
         body.append('audio', upload.current);
         body.append('request_key', requestKey.current); body.append('eaten_on', date);
+        if (refinement) body.append('refine_json', refinement);
       }
       const result = await api<VoiceDraft>('/client/food-voice/analyze', { method: 'POST', body,
         signal: request.current.signal, retry: false, dedupe: false, timeoutMs: 70000, fileUpload: !asText });
       if (!alive.current) return;
       setDraft(result); setItems(fillKnownMeal(result.items)); setTranscript(result.transcript);
+      setRefine(null);
       setMode('review'); setExpanded(null); setTextOpen(false); setMealPicker(null); haptic.success();
       erase(upload.current); upload.current = null; pcm.current.clear(); setCapture('idle');
     } catch (e) {
@@ -200,12 +206,23 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
     setEditor({ index, row: { ...row }, amount: String(unit === 'pc' ? row.pieces : row.grams ?? ''), unit });
     setQuery(row.name); setResults([]); setSearchBusy(true); setError(''); setMode('edit');
   }
+  function beginRefinement(scope: number | null = null) {
+    if (!draft || working.current || !cap?.refinement_available) return;
+    const current = editor ? items.map((r, i) => i === editor.index ? (applyAmount(editor.row, Number(editor.amount.replace(',', '.')), editor.unit) ?? editor.row) : r) : items;
+    refineBaseText.current = transcript; setTranscript('');
+    setItems(current); setRefine({ draft_id: draft.draft_id, items: current, scope });
+    setEditor(null); setMode('record'); setError(''); start();
+  }
+  function cancelRefinement() {
+    invalidate(); stop(); erase(upload.current); upload.current = null; pcm.current.clear();
+    setTranscript(refineBaseText.current); setRefine(null); setMode('review'); setError('');
+  }
   async function confirm() {
     if (!draft || !readyToConfirm(items) || working.current) return;
     working.current = true; setSaving(true); setError(''); request.current = new AbortController();
     try {
       const result = await api<{ items_count: number }>(`/client/food-voice/${draft.draft_id}/confirm`, {
-        method: 'POST', body: { eaten_on: date, items: items.map(r => ({ ingredient_id: r.ingredient_id, grams: r.grams, meal: r.meal })) },
+        method: 'POST', body: { eaten_on: date, items: items.map(r => ({ ingredient_id: r.ingredient_id, grams: r.grams, meal: r.meal, source_index: r.source_index })) },
         signal: request.current.signal, retry: false,
       });
       onSaved();
@@ -222,7 +239,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
       accessibilityLabel={`${food.name}, выбрать`} style={({ pressed }) => ({ padding: 14, backgroundColor: pressed ? p.ov3 : p.ov1,
         borderRadius: 12, flexDirection: 'row', alignItems: 'center', gap: 10 })}>
       <View style={{ flex: 1 }}><Text style={[ink, { fontSize: 16, fontWeight: '500' }]}>{food.name}</Text>
-        <Text style={[muted, { fontSize: 12, marginTop: 3 }]}>{food.kcal} ккал / 100 г{food.brand ? ` · ${food.brand}` : ''}</Text></View>
+        <Text style={[muted, { fontSize: 12, marginTop: 3 }]}>{food.match_note ? `${food.match_note} · ` : ''}{food.kcal} ккал / 100 г{food.brand ? ` · ${food.brand}` : ''}</Text></View>
       <Icon name="plus" size={19} color={p.accent} />
     </Pressable>;
   }
@@ -253,7 +270,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
             <VoiceOrb level={level} processing={processing} />
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, paddingBottom: 16 }}>
               <Text accessibilityLiveRegion="polite" style={[muted, { fontSize: 16 }]}>
-                {processing ? 'Разбираю продукты…' : capture === 'permission' ? 'Разрешите микрофон' : capture === 'recording' ? 'Слушаю…' : capture === 'ready' ? 'Готово к отправке' : 'Расскажите, что съели'}
+                {processing ? (refine ? 'Уточняю список…' : 'Разбираю продукты…') : capture === 'permission' ? 'Разрешите микрофон' : capture === 'recording' ? (refine ? 'Слушаю уточнение…' : 'Слушаю…') : capture === 'ready' ? 'Готово к отправке' : refine ? 'Что изменить?' : 'Расскажите, что съели'}
               </Text>
               {!processing && <Text style={[muted, { fontSize: 15, fontVariant: ['tabular-nums'] }]}>0:{String(Math.floor(seconds)).padStart(2, '0')}</Text>}
             </View>
@@ -262,6 +279,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
             onChangeText={setTranscript} placeholder="Например, на обед рис 100 г и два яйца" placeholderTextColor={p.text3}
             style={[ink, { fontSize: 17, minHeight: 110, padding: 16, borderRadius: 18, backgroundColor: p.inset, textAlignVertical: 'top' }]} />}
           {mode === 'review' && <>
+            {cap?.refinement_available && <Pressable onPress={() => beginRefinement()} accessibilityRole="button" accessibilityLabel="Уточнить список голосом" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 }}><Icon name="mic" size={18} color={p.accent} /><Text style={{ color: p.accent, fontSize: 15 }}>Уточнить голосом</Text></Pressable>}
             <Pressable accessibilityRole="button" onPress={() => setMealPicker(mealPicker ? null : missingMeal ? 'missing' : 'all')} style={{ paddingVertical: 8 }}>
               <Text style={{ color: p.accent, fontSize: 16, fontWeight: '500' }}>{missingMeal ? 'Уточните приём пищи' : meals.length === 1 ? `${FOOD_MEALS.find(([m]) => m === meals[0])?.[1]}${snackContext(meals[0]!) ? ` · ${snackContext(meals[0]!)}` : ''}  ⌄` : 'Несколько приёмов пищи  ⌄'}</Text>
             </Pressable>
@@ -284,7 +302,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
                   <Icon name="chevr" size={16} color={p.text3} />
                 </Pressable>
                 {expanded === index && <View style={{ gap: 6, paddingHorizontal: 12, paddingBottom: 12 }}>
-                  {row.candidates.map(food => foodChoice(food, () => { setItems(rows => rows.map((r, i) => i === index ? chooseFood(r, food) : r)); setExpanded(null); }))}
+                  {row.candidates.slice(0, 3).map(food => foodChoice(food, () => { setItems(rows => rows.map((r, i) => i === index ? chooseFood(r, food) : r)); setExpanded(null); }))}
                   <Pressable onPress={() => openEditor(index)} accessibilityRole="button" style={{ padding: 12 }}><Text style={{ color: p.accent }}>Найти другой продукт</Text></Pressable>
                 </View>}
               </View>)}
@@ -295,6 +313,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
           </>}
           {mode === 'edit' && editor && <>
             <Text style={[ink, { fontSize: 18, fontWeight: '600', lineHeight: 25 }]}>{editorFood?.name ?? editor.row.name}</Text>
+            {cap?.refinement_available && <Pressable onPress={() => beginRefinement(editor.index)} accessibilityRole="button" accessibilityLabel="Уточнить этот продукт голосом" style={{ paddingVertical: 8 }}><Text style={{ color: p.accent }}>Уточнить голосом</Text></Pressable>}
             <View style={{ flexDirection: 'row', backgroundColor: p.inset, borderRadius: 18, paddingHorizontal: 16, alignItems: 'center' }}>
               <TextInput value={editor.amount} onChangeText={amount => setEditor({ ...editor, amount })} keyboardType="decimal-pad"
                 accessibilityLabel={editor.unit === 'g' ? 'Количество в граммах' : 'Количество штук'} placeholder="Количество" placeholderTextColor={p.text3}
@@ -312,7 +331,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
             <TextInput accessibilityLabel="Найти продукт" value={query} onChangeText={value => { setQuery(value); setResults([]); setSearchBusy(value.trim().length >= 2); }} placeholder="Найти продукт" placeholderTextColor={p.text3}
               maxLength={140} style={[ink, { fontSize: 16, padding: 15, borderRadius: 16, backgroundColor: p.inset, marginTop: 4 }]} />
             {searchBusy && <Text style={muted}>Ищу…</Text>}
-            {!searchBusy && query.trim().length >= 2 && !results.length && <Text style={[muted, { fontSize: 13 }]}>Уточните название для поиска</Text>}
+            {!searchBusy && query.trim().length >= 2 && !results.length && <Text style={[muted, { fontSize: 13 }]}>Точного варианта нет. Можно изменить запрос.</Text>}
             {results.map(food => foodChoice(food, () => { const row = chooseFood(editor.row, food); setEditor({ ...editor, row, unit: 'g', amount: String(row.grams ?? '') }); }))}
           </>}
           {mode === 'done' && <View style={{ alignItems: 'center', paddingVertical: 30, gap: 14 }}>
@@ -323,7 +342,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
         </ScrollView>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, borderTopWidth: mode === 'review' || mode === 'edit' ? StyleSheet.hairlineWidth : 0, borderTopColor: p.separator }}>
           {mode === 'record' && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 }}>
-            {<RoundButton label="Отменить запись" icon="close" action={close} />}
+            {<RoundButton label={refine ? 'Вернуться к списку' : 'Отменить запись'} icon={refine ? 'back' : 'close'} action={refine ? cancelRefinement : close} />}
             {<RoundButton label="Ввести текст" icon="edit" action={() => { invalidate(); stop(); setMode('text'); }} disabled={capture === 'permission'} />}
             {<RoundButton label={capture === 'recording' ? 'Остановить запись' : 'Записать ещё раз'} icon={capture === 'recording' ? 'pause' : 'mic'} action={() => capture === 'recording' ? stop() : start()} disabled={capture === 'permission' || cap?.speech_available === false} />}
             {<RoundButton label="Отправить запись" icon="send" action={() => analyze()} primary disabled={!['recording', 'ready'].includes(capture) || cap?.speech_available === false} />}

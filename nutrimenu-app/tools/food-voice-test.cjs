@@ -66,10 +66,10 @@ global.FormData = FormDataDouble;
 class ApiError extends Error { constructor(message, status) { super(message); this.status = status; } }
 const stream = { start: async () => { starts++; }, stop: () => { stops++; } };
 const draft = { draft_id: 'a'.repeat(32), eaten_on: '2026-10-16', transcript: 'На обед рис сто грамм и два яйца',
-  expires_in: 900, items: [{ ...row, meal: 'lunch' }, { ...row, name: 'рис', ingredient_id: null, candidates: [rice, dryRice], grams: 100, pieces: null, weight_source: 'voice', meal: 'lunch' }] };
+  expires_in: 900, items: [{ ...row, source_index: 0, meal: 'lunch' }, { ...row, source_index: 1, name: 'рис', ingredient_id: null, candidates: [rice, dryRice], grams: 100, pieces: null, weight_source: 'voice', meal: 'lunch' }] };
 const api = async (path, opt = {}) => {
   calls.push({ path, ...opt });
-  if (path.endsWith('/capabilities')) return { speech_available: true, text_available: true, max_seconds: 25 };
+  if (path.endsWith('/capabilities')) return { speech_available: true, text_available: true, refinement_available: true, max_seconds: 25 };
   if (path.endsWith('/analyze')) {
     if (opt.body instanceof FormDataDouble) {
       check(opt.fileUpload === true, 'voice explicitly selects Expo file transport');
@@ -81,6 +81,13 @@ const api = async (path, opt = {}) => {
       check(payload.includes(Buffer.from('name="audio"; filename="')) && payload.includes(Buffer.from('name="request_key"')) && payload.includes(Buffer.from('name="eaten_on"')), 'multipart file and metadata headers serialized');
     }
     if (failAnalyze) { failAnalyze = false; throw new ApiError('Нет связи', 0); }
+    const refinePart = opt.body instanceof FormDataDouble && opt.body.fields.find(([name]) => name === 'refine_json');
+    if (refinePart) {
+      const context = JSON.parse(refinePart[1]);
+      check(context.scope === 1 && context.items[1].source_index === 1, 'focused voice correction carries current row identity');
+      check(context.items[1].ingredient_id === rice.id && context.items[0].pieces === 2, 'manual product choices and other rows retained in correction context');
+      return { ...structuredClone(draft), draft_id: 'b'.repeat(32), items: context.items.map((r, i) => ({ ...r, candidates: i ? [rice, dryRice] : [egg], grams: i === 1 ? 150 : r.grams })) };
+    }
     return structuredClone(draft);
   }
   if (path.endsWith('/confirm')) {
@@ -174,6 +181,16 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   await tap(host().find(n => n.props.accessibilityLabel?.startsWith('рис,')));
   await tap(label('Рис варёный, выбрать'));
   check(!textButton('Добавить 2 продукта').props.disabled, 'inline choice resolves product');
+  const analyzesBeforeCancel = calls.filter(c => c.path.endsWith('/analyze')).length;
+  await tap(label('Уточнить список голосом'));
+  await act(async () => speak());
+  await tap(label('Вернуться к списку'));
+  check(calls.filter(c => c.path.endsWith('/analyze')).length === analyzesBeforeCancel && !textButton('Добавить 2 продукта').props.disabled, 'cancel voice refinement restores resolved list without sending');
+  await tap(host().find(n => n.props.accessibilityLabel?.startsWith('Рис варёный,')));
+  await tap(label('Уточнить этот продукт голосом'));
+  await act(async () => speak());
+  await tap(label('Отправить запись'));
+  check(host().some(n => n.props.accessibilityLabel?.startsWith('Рис варёный,')) && !textButton('Добавить 2 продукта').props.disabled, 'voice correction returns to complete valid list');
   await tap(host().find(n => n.props.accessibilityLabel?.startsWith('Яйцо,')));
   const input = tree.root.findByProps({ accessibilityLabel: 'Количество штук' });
   await act(async () => input.props.onChangeText('3'));
@@ -185,6 +202,7 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   await act(async () => { release(); }); await flush(); holdConfirm = null;
   const confirmation = calls.find(c => c.path.endsWith('/confirm'));
   check(confirmation.body.items[0].grams === 180 && confirmation.body.items.every(r => r.meal === 'lunch'), 'confirm sends catalog grams and one meal');
+  check(confirmation.body.items[1].grams === 150 && confirmation.body.items.every(r => Number.isInteger(r.source_index)), 'confirmed voice correction preserves source indices for personal learning');
   check(saved === 1, 'Today refresh only after confirmed save');
   check(tree.root.findAllByType('Text').some(n => n.children.join('') === 'Записано'), 'server-confirmed success');
   await tap(textButton('Готово'));

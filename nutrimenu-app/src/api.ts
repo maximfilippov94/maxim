@@ -635,6 +635,8 @@ export const parseList = (v?: string | null): string[] => {
    Запись независима от меню — день, приём пищи, набор продуктов. */
 
 export interface Food {
+  /** Voice matching explanation; never nutrition supplied by the model. */
+  match_note?: string;
   id: number; name: string; category?: string | null; brand?: string | null;
   barcode?: string | null;
   kcal: number; protein: number; fat: number; carbs: number; fiber: number;
