@@ -12,6 +12,7 @@ import { haptic } from '../haptics';
 import { plural } from '../format';
 import { VoiceOrb } from './VoiceOrb';
 import { VoicePCM } from './pcm';
+import { VoicePreview } from './preview';
 import { applyAmount, chooseFood, fillKnownMeal, localDay, readyToConfirm, rowHint, selectedFood, type VoiceCapabilities, type VoiceDraft, type VoiceItem } from './model';
 
 type Mode = 'record' | 'text' | 'processing' | 'review' | 'edit' | 'done';
@@ -19,6 +20,16 @@ type Capture = 'idle' | 'permission' | 'recording' | 'ready';
 const newKey = () => `expo_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
 const erase = (file: File | null) => { try { if (file?.exists) file.delete(); } catch {} };
 const snackContext = (meal: FoodMeal) => meal === 'snack1' ? 'после завтрака' : meal === 'snack2' ? 'после обеда' : '';
+
+async function previewSpeech(bytes: Uint8Array, key: string, seq: number, signal: AbortSignal): Promise<string> {
+  const file = new File(Paths.cache, `equa-preview-${key}-${seq}.pcm`);
+  try {
+    file.create({ overwrite: true }); file.write(bytes);
+    const body = new FormData(); body.append('audio', file); body.append('session_key', key); body.append('seq', String(seq));
+    const result = await api<{ text: string }>('/client/food-voice/preview', { method: 'POST', body, fileUpload: true, signal, retry: false, dedupe: false, timeoutMs: 14000 });
+    return result.text;
+  } finally { erase(file); }
+}
 
 /** Mounted inside Today, outside the scrolling content. No WebView or cloud keys. */
 export function FoodVoice({ onSaved }: { onSaved: () => void }) {
@@ -62,6 +73,8 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   const insets = useSafeAreaInsets(), { height } = useWindowDimensions();
   const [mode, setMode] = useState<Mode>('record');
   const [capture, setCapture] = useState<Capture>('idle');
+  const [liveText, setLiveText] = useState('');
+  const preview = useRef(new VoicePreview(previewSpeech, text => setLiveText(text)));
   const [level, setLevel] = useState(0), [seconds, setSeconds] = useState(0);
   const [error, setError] = useState(''), [permissionDenied, setPermissionDenied] = useState(false);
   const [cap, setCap] = useState<VoiceCapabilities | null>(null);
@@ -86,13 +99,14 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
     try {
       const volume = pcm.current.push(buffer.data, buffer.sampleRate, buffer.channels);
       setLevel(volume); setSeconds(pcm.current.seconds);
+      preview.current.tick(pcm.current.seconds, () => pcm.current.encode(), capRef.current?.live_preview_available === true);
       if (pcm.current.seconds >= pcm.current.maxSeconds) stopRef.current();
     } catch (e) { stopRef.current(); setError(e instanceof Error ? e.message : 'Не удалось записать звук'); }
   } });
 
   const stop = useCallback(() => {
     if (!recording.current) return;
-    recording.current = false;
+    recording.current = false; preview.current.cancel();
     if (timeout.current) clearTimeout(timeout.current);
     try { stream.stop(); } catch {}
     setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }).catch(() => {});
@@ -114,6 +128,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, shouldPlayInBackground: false });
       if (!alive.current || generation.current !== version) { await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }); return; }
       pcm.current.clear(); erase(upload.current); upload.current = null; requestKey.current = newKey(); textSignature.current = '';
+      preview.current.begin(requestKey.current); setLiveText('');
       setSeconds(0); recording.current = true;
       await stream.start();
       if (!alive.current || generation.current !== version || speechBlocked()) { stop(); return; }
@@ -135,11 +150,11 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
       capRef.current = c; setCap(c);
       if (!c.speech_available) { stop(); setError(c.message || 'Голосовой ввод временно недоступен. Повторите позже.'); }
     }).catch(e => { if (alive.current && !ctl.signal.aborted) { stop(); setError(e.message); } });
-    const buffer = pcm.current;
+    const buffer = pcm.current, previewCapture = preview.current;
     queueMicrotask(() => { if (alive.current) start(); });
     const sub = AppState.addEventListener('change', state => { if (state !== 'active') stop(); });
     return () => {
-      alive.current = false; invalidate(); ctl.abort(); request.current?.abort();
+      alive.current = false; previewCapture.cancel(); invalidate(); ctl.abort(); request.current?.abort();
       if (timeout.current) clearTimeout(timeout.current);
       recording.current = false;
       try { stream.stop(); } catch {}
@@ -262,18 +277,22 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 14 }}>
           {mode === 'edit' && <RoundButton label="Назад к списку" icon="back" action={() => { setMode('review'); setEditor(null); setError(''); }} />}
           <Text accessibilityRole="header" style={[ink, { flex: 1, fontSize: 22, fontWeight: '600', letterSpacing: -.5 }]}>{title}</Text>
-          {mode !== 'record' && <RoundButton label="Закрыть" icon="close" action={close} disabled={saving} />}
+          <RoundButton label={mode === 'record' ? (refine ? 'Вернуться к списку' : 'Отменить запись') : 'Закрыть'} icon="close" action={mode === 'record' && refine ? cancelRefinement : close} disabled={saving} subtle />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={false}
           style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 14, gap: 12 }}>
           {(mode === 'record' || processing) && <>
             <VoiceOrb level={level} processing={processing} />
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12, paddingBottom: 16 }}>
-              <Text accessibilityLiveRegion="polite" style={[muted, { fontSize: 16 }]}>
-                {processing ? (refine ? 'Уточняю список…' : 'Разбираю продукты…') : capture === 'permission' ? 'Разрешите микрофон' : capture === 'recording' ? (refine ? 'Слушаю уточнение…' : 'Слушаю…') : capture === 'ready' ? 'Готово к отправке' : refine ? 'Что изменить?' : 'Расскажите, что съели'}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, paddingBottom: 8 }}>
+              {capture === 'recording' && !processing && <View accessible={false} style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: p.primary }} />}
+              <Text accessibilityLiveRegion="polite" style={[muted, { fontSize: 15 }]}>
+                {processing ? (refine ? 'Уточняю список…' : 'Разбираю продукты…') : capture === 'permission' ? 'Разрешите микрофон' : capture === 'recording' ? (refine ? 'Слушаю уточнение…' : 'Слушаю') : capture === 'ready' ? 'Готово к отправке' : refine ? 'Что изменить?' : 'Расскажите, что съели'}
               </Text>
               {!processing && <Text style={[muted, { fontSize: 15, fontVariant: ['tabular-nums'] }]}>0:{String(Math.floor(seconds)).padStart(2, '0')}</Text>}
             </View>
+            {mode === 'record' && <View style={{ minHeight: 72, justifyContent: 'center', paddingHorizontal: 8, paddingBottom: 12 }}>
+              <Text accessibilityLabel="Предварительно распознанная речь" accessibilityLiveRegion="polite" style={{ color: liveText ? p.text : p.text3, fontSize: liveText ? 20 : 16, lineHeight: 28, textAlign: 'center' }} numberOfLines={3}>{liveText || (refine ? 'Скажите, что изменить' : 'Назовите продукты и количество')}</Text>
+            </View>}
           </>}
           {mode === 'text' && <TextInput accessibilityLabel="Что вы съели" multiline autoFocus maxLength={2500} value={transcript}
             onChangeText={setTranscript} placeholder="Например, на обед рис 100 г и два яйца" placeholderTextColor={p.text3}
@@ -341,11 +360,10 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
           {permissionDenied && <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()} style={{ paddingVertical: 10 }}><Text style={{ color: p.accent }}>Открыть настройки микрофона</Text></Pressable>}
         </ScrollView>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, borderTopWidth: mode === 'review' || mode === 'edit' ? StyleSheet.hairlineWidth : 0, borderTopColor: p.separator }}>
-          {mode === 'record' && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 }}>
-            {<RoundButton label={refine ? 'Вернуться к списку' : 'Отменить запись'} icon={refine ? 'back' : 'close'} action={refine ? cancelRefinement : close} />}
-            {<RoundButton label="Ввести текст" icon="edit" action={() => { invalidate(); stop(); setMode('text'); }} disabled={capture === 'permission'} />}
+          {mode === 'record' && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', paddingTop: 8, paddingBottom: 24 }}>
+            {<RoundButton label="Ввести текст" icon="keyboard" action={() => { invalidate(); stop(); if (liveText) setTranscript(liveText); setMode('text'); }} disabled={capture === 'permission'} />}
             {<RoundButton label={capture === 'recording' ? 'Остановить запись' : 'Записать ещё раз'} icon={capture === 'recording' ? 'pause' : 'mic'} action={() => capture === 'recording' ? stop() : start()} disabled={capture === 'permission' || cap?.speech_available === false} />}
-            {<RoundButton label="Отправить запись" icon="send" action={() => analyze()} primary disabled={!['recording', 'ready'].includes(capture) || cap?.speech_available === false} />}
+            {<RoundButton label="Отправить запись" icon="arrowUp" action={() => analyze()} primary disabled={!['recording', 'ready'].includes(capture) || cap?.speech_available === false} />}
           </View>}
           {mode === 'text' && <Action label="Разобрать продукты" fn={() => analyze(true)} disabled={!transcript.trim() || cap?.text_available === false} />}
           {mode === 'review' && <Action label={saving ? 'Сохраняю…' : `Добавить ${items.length} ${plural(items.length, ['продукт', 'продукта', 'продуктов'])}`} fn={confirm} disabled={saving || !draft || !readyToConfirm(items)} />}
@@ -360,11 +378,11 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   </Modal>;
 }
 
-function RoundButton({ label, icon, action, primary = false, disabled = false }: { label: string; icon: string; action: () => void; primary?: boolean; disabled?: boolean }) {
+function RoundButton({ label, icon, action, primary = false, disabled = false, subtle = false }: { label: string; icon: string; action: () => void; primary?: boolean; disabled?: boolean; subtle?: boolean }) {
     const { p } = useApp();
     return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled}
-      onPress={action} style={({ pressed }) => ({ width: primary ? 56 : 46, height: primary ? 56 : 46, borderRadius: 30,
-        backgroundColor: primary ? p.primary : p.inset, opacity: disabled ? .4 : pressed ? .7 : 1,
+      onPress={action} style={({ pressed }) => ({ width: primary ? 62 : 48, height: primary ? 62 : 48, borderRadius: 30,
+        backgroundColor: primary ? p.primary : subtle ? 'transparent' : p.inset, opacity: disabled ? .4 : pressed ? .7 : 1,
         alignItems: 'center', justifyContent: 'center' })}>
       <Icon name={icon} size={23} color={primary ? p.onPrimary : p.text2} />
     </Pressable>;

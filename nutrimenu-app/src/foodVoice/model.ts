@@ -22,7 +22,7 @@ export interface VoiceDraft {
   items: VoiceItem[];
 }
 export interface VoiceCapabilities {
-  refinement_available?: boolean;
+  refinement_available?: boolean; live_preview_available?: boolean;
   speech_available: boolean;
   text_available: boolean;
   max_seconds: number;

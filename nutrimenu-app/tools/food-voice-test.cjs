@@ -69,7 +69,8 @@ const draft = { draft_id: 'a'.repeat(32), eaten_on: '2026-10-16', transcript: '�
   expires_in: 900, items: [{ ...row, source_index: 0, meal: 'lunch' }, { ...row, source_index: 1, name: 'рис', ingredient_id: null, candidates: [rice, dryRice], grams: 100, pieces: null, weight_source: 'voice', meal: 'lunch' }] };
 const api = async (path, opt = {}) => {
   calls.push({ path, ...opt });
-  if (path.endsWith('/capabilities')) return { speech_available: true, text_available: true, refinement_available: true, max_seconds: 25 };
+  if (path.endsWith('/preview')) return { text: 'рис 100 граммов', provisional: true };
+  if (path.endsWith('/capabilities')) return { speech_available: true, text_available: true, refinement_available: true, live_preview_available: true, max_seconds: 25 };
   if (path.endsWith('/analyze')) {
     if (opt.body instanceof FormDataDouble) {
       check(opt.fileUpload === true, 'voice explicitly selects Expo file transport');
@@ -147,6 +148,15 @@ async function mount() {
 function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * seconds).fill(.2).buffer, sampleRate: 16000, channels: 1, timestamp: 0 }); }
 
 (async () => {
+  const { VoicePreview } = require('../src/foodVoice/preview.ts');
+  let previewResolve, previews=0, heard=[];
+  const preview=new VoicePreview(async()=>{previews++;return new Promise(resolve=>{previewResolve=resolve})},text=>heard.push(text));
+  preview.begin('a'.repeat(32));preview.tick(5,()=>new Uint8Array(10),true);preview.tick(7,()=>new Uint8Array(10),false);await flush();check(previews===0,'preview waits six seconds and server capability');
+  preview.tick(6,()=>new Uint8Array(10),true);await flush();preview.tick(12,()=>new Uint8Array(10),true);await flush();check(previews===1,'only one preliminary request in flight');
+  previewResolve('real speech');await flush();check(heard[0]==='real speech','preview displays provider text');
+  preview.tick(12,()=>new Uint8Array(10),true);await flush();preview.cancel();previewResolve('late reply');await flush();check(heard.length===1,'cancel rejects stale text');
+  preview.begin('b'.repeat(32));for(const second of [6,12,18,24]){preview.tick(second,()=>new Uint8Array(10),true);await flush();if(second<24){previewResolve('snapshot');await flush();}}check(previews===5,'at most three snapshots per new recording');
+  let failed=0;const optional=new VoicePreview(async()=>{failed++;throw Error('offline')},()=>{});optional.begin('c'.repeat(32));optional.tick(6,()=>new Uint8Array(1),true);await flush();optional.tick(12,()=>new Uint8Array(1),true);await flush();check(failed===1,'preview failure never retries or blocks final audio');
   const legacy = new FormDataDouble(); legacy.append('audio', { uri: 'file:///voice.pcm', name: 'voice.pcm', type: 'application/octet-stream' });
   await assert.rejects(convertFormDataAsync(legacy), /Unsupported FormDataPart/); checks++;
   const actualApi = require('../src/api.ts');
@@ -165,6 +175,7 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   check(starts === 1, 'tap starts actual capture hook');
   await act(async () => speak(7));
   check(tree.root.findByType('VoiceOrb').props.level > 0, 'real PCM drives orb');
+  check(tree.root.findAllByType('Text').find(n=>n.props.accessibilityLabel==='Предварительно распознанная речь').props.children==='рис 100 граммов','native recording displays actual preview response');
   await tap(label('Остановить запись'));
   check(!calls.some(c => c.path.endsWith('/analyze')), 'stop holds recording without sending');
   failAnalyze = true;
