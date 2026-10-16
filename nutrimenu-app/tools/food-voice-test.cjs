@@ -45,15 +45,23 @@ check(model.fillKnownMeal([row, { ...row, meal: 'snack1' }, { ...row, meal: 'sna
 
 let audioBuffer, starts = 0, stops = 0, saved = 0, permission = async () => ({ granted: true });
 let appState, calls = [], failAnalyze = false, holdConfirm = null;
+let transportCalls = 0, transportFailure = false;
 const files = new Map();
 class File {
   constructor(base, name) { this.uri = name ? `${base.uri}/${name}` : base; }
+  get name() { return this.uri.split('/').pop(); }
+  get type() { return 'application/octet-stream'; }
+  async bytes() { assert.ok(this.exists, 'file must still exist during serialization'); return files.get(this.uri); }
   get exists() { return files.has(this.uri); }
   create() { files.set(this.uri, new Uint8Array()); }
   write(data) { files.set(this.uri, data); }
   delete() { files.delete(this.uri); }
 }
-class FormDataDouble { fields = []; append(...args) { this.fields.push(args); } }
+class FormDataDouble { _parts = []; get fields() { return this._parts; } }
+// Exercise the installed SDK 57 implementation, not a permissive upload double.
+const { installFormDataPatch } = require('../node_modules/expo/src/winter/FormData.ts');
+const { convertFormDataAsync } = require('../node_modules/expo/src/winter/fetch/convertFormData.ts');
+installFormDataPatch(FormDataDouble);
 global.FormData = FormDataDouble;
 class ApiError extends Error { constructor(message, status) { super(message); this.status = status; } }
 const stream = { start: async () => { starts++; }, stop: () => { stops++; } };
@@ -63,6 +71,15 @@ const api = async (path, opt = {}) => {
   calls.push({ path, ...opt });
   if (path.endsWith('/capabilities')) return { speech_available: true, text_available: true, max_seconds: 25 };
   if (path.endsWith('/analyze')) {
+    if (opt.body instanceof FormDataDouble) {
+      check(opt.fileUpload === true, 'voice explicitly selects Expo file transport');
+      const encoded = await convertFormDataAsync(opt.body);
+      const payload = Buffer.from(encoded.body);
+      const part = opt.body.fields.find(([name]) => name === 'audio')[1];
+      check(part instanceof File, 'upload contains an actual File, never a URI descriptor');
+      check(payload.includes(Buffer.from(await part.bytes())), 'real Expo serializer retains every PCM byte');
+      check(payload.includes(Buffer.from('name="audio"; filename="')) && payload.includes(Buffer.from('name="request_key"')) && payload.includes(Buffer.from('name="eaten_on"')), 'multipart file and metadata headers serialized');
+    }
     if (failAnalyze) { failAnalyze = false; throw new ApiError('Нет связи', 0); }
     return structuredClone(draft);
   }
@@ -76,6 +93,16 @@ const api = async (path, opt = {}) => {
 const palette = new Proxy({ name: 'dark' }, { get: (o, k) => o[k] ?? '#aaaaaa' });
 const originalLoad = Module._load;
 Module._load = function(name, parent, ...rest) {
+  if (name === './tokenStore' && parent?.filename.endsWith('/src/api.ts')) return { readToken: async () => null, writeToken: async () => {} };
+  if (name === 'expo/fetch') return { fetch: async (_url, opt) => {
+    transportCalls++;
+    if (transportFailure) throw new Error('test upload transport failure');
+    const encoded = await convertFormDataAsync(opt.body);
+    check(encoded.body.length > 3200, 'actual API transport serializes PCM multipart');
+    check(opt.headers.Authorization === 'Bearer disposable-qa-session', 'file transport retains existing authentication');
+    check(!opt.headers['Content-Type'], 'fetch owns multipart boundary');
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  } };
   if (name === 'react-native-reanimated') return { __esModule: true, default: { View: 'AnimatedView' },
     ReduceMotion: { System: 'system' }, LinearTransition: { duration: () => ({ reduceMotion: () => ({}) }) } };
   if (name === 'react-native') return {
@@ -113,9 +140,23 @@ async function mount() {
 function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * seconds).fill(.2).buffer, sampleRate: 16000, channels: 1, timestamp: 0 }); }
 
 (async () => {
+  const legacy = new FormDataDouble(); legacy.append('audio', { uri: 'file:///voice.pcm', name: 'voice.pcm', type: 'application/octet-stream' });
+  await assert.rejects(convertFormDataAsync(legacy), /Unsupported FormDataPart/); checks++;
+  const actualApi = require('../src/api.ts');
+  await actualApi.setToken('disposable-qa-session');
+  const file = new File({ uri: 'cache://' }, 'transport.pcm'); file.create(); file.write(new Uint8Array(3200));
+  const form = new FormDataDouble(); form.append('audio', file);
+  const oldFetch = global.fetch;
+  global.fetch = async () => { throw new Error('legacy fetch must not handle this File'); };
+  try {
+    check((await actualApi.api('/client/food-voice/analyze', { method: 'POST', body: form, fileUpload: true, retry: false })).ok, 'API selects explicit Expo transport');
+    transportFailure = true;
+    await assert.rejects(actualApi.api('/client/food-voice/analyze', { method: 'POST', body: form, fileUpload: true, retry: false }), e => e.message.includes('аудиозапись') && !e.message.includes('интернет')); checks++;
+    check(transportCalls === 2, 'uploads are not retried automatically');
+  } finally { global.fetch = oldFetch; transportFailure = false; file.delete(); }
   await mount();
   check(starts === 1, 'tap starts actual capture hook');
-  await act(async () => speak());
+  await act(async () => speak(7));
   check(tree.root.findByType('VoiceOrb').props.level > 0, 'real PCM drives orb');
   await tap(label('Остановить запись'));
   check(!calls.some(c => c.path.endsWith('/analyze')), 'stop holds recording without sending');
@@ -123,7 +164,8 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   await tap(label('Отправить запись'));
   check(files.size === 1, 'network failure retains PCM for explicit retry');
   const first = calls.find(c => c.path.endsWith('/analyze'));
-  check(first.body instanceof FormDataDouble && first.body.fields.some(([k,v]) => k === 'audio' && v.name === 'recording.pcm'), 'voice uses PCM multipart, not a text substitute');
+  check(first.body instanceof FormDataDouble && first.body.fields.some(([k,v]) => k === 'audio' && v instanceof File && v.name.endsWith('.pcm')), 'voice uses PCM multipart, not a text substitute');
+  check(files.values().next().value.length === 7 * 32000, 'reported seven-second recording is exactly 224000 PCM bytes');
   await tap(label('Отправить запись'));
   const attempts = calls.filter(c => c.path.endsWith('/analyze'));
   check(attempts[0].body.fields.find(x => x[0] === 'request_key')[1] === attempts[1].body.fields.find(x => x[0] === 'request_key')[1], 'network retry keeps idempotency key');

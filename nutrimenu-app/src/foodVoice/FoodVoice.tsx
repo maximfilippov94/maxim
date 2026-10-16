@@ -177,11 +177,13 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
           upload.current.create({ overwrite: true }); upload.current.write(bytes);
         }
         body = new FormData();
-        body.append('audio', { uri: upload.current.uri, name: 'recording.pcm', type: 'application/octet-stream' } as unknown as Blob);
+        // SDK 57's Expo fetch serializes File.bytes(); legacy {uri} parts fail
+        // before any HTTP request and must not be passed as pretend Blobs.
+        body.append('audio', upload.current);
         body.append('request_key', requestKey.current); body.append('eaten_on', date);
       }
       const result = await api<VoiceDraft>('/client/food-voice/analyze', { method: 'POST', body,
-        signal: request.current.signal, retry: false, dedupe: false, timeoutMs: 70000 });
+        signal: request.current.signal, retry: false, dedupe: false, timeoutMs: 70000, fileUpload: !asText });
       if (!alive.current) return;
       setDraft(result); setItems(fillKnownMeal(result.items)); setTranscript(result.transcript);
       setMode('review'); setExpanded(null); setTextOpen(false); setMealPicker(null); haptic.success();

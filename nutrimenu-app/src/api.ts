@@ -3,6 +3,7 @@
  * приложение говорит с тем же /api/v1, что и веб-версия.
  */
 import { readToken, writeToken } from './tokenStore';
+import { fetch as expoFetch } from 'expo/fetch';
 
 /** Адрес сервера. На проде — боевой домен, при разработке подменяется. */
 export const API_BASE =
@@ -81,6 +82,8 @@ export function dropGetCache(prefix?: string) {
 }
 
 export interface ApiOptions {
+  /** File/Blob multipart uses Expo's serializer, even with RN fetch opted in. */
+  fileUpload?: boolean;
   /** Голосовой разбор включает распознавание и проверку списка на сервере. */
   timeoutMs?: number;
   method?: string;
@@ -175,7 +178,8 @@ async function request<T = any>(
       outer.addEventListener('abort', relay);
     }
     try {
-      res = await fetch(API_BASE + '/api/v1' + path, {
+      const send = opt.fileUpload ? expoFetch : fetch;
+      res = await send(API_BASE + '/api/v1' + path, {
         method, headers, body, signal: abort.signal,
       });
     } catch {
@@ -183,7 +187,10 @@ async function request<T = any>(
       if (attempt < tries - 1 && timeLeft()) { await wait(BACKOFF[attempt]); continue; }
       /* Обрыв связи и ошибка сервера — разные вещи: на первом показываем
          «нет сети», на втором сообщение с сервера. */
-      throw new ApiError('Нет связи с сервером. Проверьте интернет.', 0);
+      throw new ApiError(abort.signal.aborted
+        ? 'Сервер не успел ответить. Повторите отправку.'
+        : opt.fileUpload ? 'Не удалось загрузить аудиозапись. Повторите отправку.'
+        : 'Нет связи с сервером. Проверьте интернет.', 0);
     } finally {
       clearTimeout(timer);
       if (outer) outer.removeEventListener('abort', relay);
