@@ -62,6 +62,7 @@ check(model.fillKnownMeal([row, { ...row, meal: 'snack2' }])[0].meal === 'snack2
 check(model.fillKnownMeal([row, { ...row, meal: 'snack1' }, { ...row, meal: 'snack2' }])[0].meal === null, 'different spoken meals preserved');
 
 let audioBuffer, starts = 0, stops = 0, saved = 0, permission = async () => ({ granted: true });
+const cueEvents=[];
 let appState, calls = [], failAnalyze = false, holdConfirm = null;
 let transportCalls = 0, transportFailure = false;
 const files = new Map();
@@ -82,7 +83,7 @@ const { convertFormDataAsync } = require('../node_modules/expo/src/winter/fetch/
 installFormDataPatch(FormDataDouble);
 global.FormData = FormDataDouble;
 class ApiError extends Error { constructor(message, status) { super(message); this.status = status; } }
-const stream = { start: async () => { starts++; }, stop: () => { stops++; } };
+const stream = { start: async () => { cueEvents.push('recording'); starts++; }, stop: () => { stops++; } };
 const draft = { draft_id: 'a'.repeat(32), eaten_on: '2026-10-16', transcript: 'На обед рис сто грамм и два яйца',
   expires_in: 900, items: [{ ...row, source_index: 0, meal: 'lunch' }, { ...row, source_index: 1, name: 'рис', ingredient_id: null, candidates: [rice, dryRice], grams: 100, pieces: null, weight_source: 'voice', meal: 'lunch' }] };
 const api = async (path, opt = {}) => {
@@ -130,7 +131,7 @@ Module._load = function(name, parent, ...rest) {
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } };
   if (name === 'react-native-reanimated') return { __esModule: true, default: { View: 'AnimatedView' },
-    ReduceMotion: { System: 'system' }, FadeIn: { duration: () => ({ reduceMotion: () => ({}) }) }, LinearTransition: { duration: () => ({ reduceMotion: () => ({}) }) } };
+    cancelAnimation(){}, useReducedMotion:()=>true, useSharedValue:()=>React.useRef({value:0}).current, useAnimatedStyle:fn=>fn(), ReduceMotion: { System: 'system' }, FadeIn: { duration: () => ({ reduceMotion: () => ({}) }) }, LinearTransition: { duration: () => ({ reduceMotion: () => ({}) }) } };
   if (name === 'react-native') return {
     AppState: { addEventListener: (_, fn) => { appState = fn; return { remove() {} }; } },
     KeyboardAvoidingView: 'KeyboardAvoidingView', Modal: 'Modal', Pressable: 'Pressable', ScrollView: 'ScrollView',
@@ -149,6 +150,7 @@ Module._load = function(name, parent, ...rest) {
     if (name === '../store') return { useApp: () => ({ p: palette }) };
     if (name === '../ui/Icon') return { Icon: 'Icon' };
     if (name === '../haptics') return { haptic: { tap() {}, select() {}, success() {} } };
+    if (name === './cues') return { playVoiceCue: async kind => { cueEvents.push(kind); }, cancelVoiceCue() {} };
     if (name === './VoiceOrb') return { VoiceOrb: 'VoiceOrb' };
   }
   return originalLoad.call(this, name, parent, ...rest);
@@ -192,6 +194,7 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   } finally { global.fetch = oldFetch; transportFailure = false; file.delete(); }
   await mount();
   check(starts === 1, 'tap starts actual capture hook');
+  check(cueEvents[0]==='start'&&cueEvents[1]==='recording','start cue is awaited before actual capture begins');
   check(!tree.root.findAllByType('Text').some(t=>['EQUA AI','Слушаю'].includes(t.children.join(''))),'recording has no branding or listening caption');
   await act(async () => speak(7));
   check(tree.root.findByType('VoiceOrb').props.level > 0, 'real PCM drives orb');
@@ -199,8 +202,9 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   check(tree.root.findAllByType('Text').find(n=>n.props.accessibilityLabel==='Предварительно распознанная речь').props.children==='рис 100 граммов','native recording displays actual preview response');
   await tap(label('Остановить запись'));
   check(!calls.some(c => c.path.endsWith('/analyze')), 'stop holds recording without sending');
-  failAnalyze = true;
+  failAnalyze = true;const readyBefore=cueEvents.filter(x=>x==='ready').length;
   await tap(label('Отправить запись'));
+  check(cueEvents.filter(x=>x==='ready').length===readyBefore,'failed recognition never sounds like success');
   check(files.size === 1, 'network failure retains PCM for explicit retry');
   const first = calls.find(c => c.path.endsWith('/analyze'));
   check(first.body instanceof FormDataDouble && first.body.fields.some(([k,v]) => k === 'audio' && v instanceof File && v.name.endsWith('.pcm')), 'voice uses PCM multipart, not a text substitute');
@@ -209,6 +213,7 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   const attempts = calls.filter(c => c.path.endsWith('/analyze'));
   check(attempts[0].body.fields.find(x => x[0] === 'request_key')[1] === attempts[1].body.fields.find(x => x[0] === 'request_key')[1], 'network retry keeps idempotency key');
   check(files.size === 0, 'recognized audio removed from cache');
+  check(cueEvents.filter(x=>x==='ready').length===readyBefore+1,'ready cue occurs only after successful voice result');
   check(textButton('Добавить 2 продукта').props.disabled, 'unresolved product blocks save');
   await tap(host().find(n => n.props.accessibilityLabel?.startsWith('рис,')));
   await tap(label('Рис варёный, выбрать'));

@@ -3,7 +3,7 @@ import { AppState, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView,
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 import Svg, { Circle } from 'react-native-svg';
-import Animated, { FadeIn, LinearTransition, ReduceMotion } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, FadeIn, LinearTransition, ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { AudioModule, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioStream } from 'expo-audio';
 import { File, Paths } from 'expo-file-system';
 import { api, ApiError, FOOD_MEALS, type Food, type FoodMeal } from '../api';
@@ -13,6 +13,7 @@ import { haptic } from '../haptics';
 import { plural } from '../format';
 import { VoiceOrb } from './VoiceOrb';
 import { VoicePCM } from './pcm';
+import { cancelVoiceCue, playVoiceCue } from './cues';
 import { VoicePreview } from './preview';
 import { applyAmount, chooseFood, fillKnownMeal, localDay, readyToConfirm, rowHint, selectedFood, type VoiceCapabilities, type VoiceDraft, type VoiceItem } from './model';
 
@@ -37,15 +38,30 @@ export function FoodVoice({ onSaved }: { onSaved: () => void }) {
   const { p } = useApp();
   const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
+  const reduced = useReducedMotion(), pulse = useSharedValue(0);
+  useEffect(() => {
+    cancelAnimation(pulse); pulse.value = 0;
+    if (!open && !reduced) pulse.value = withRepeat(withSequence(
+      withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.sin) }),
+      withTiming(0, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+      withDelay(3000, withTiming(0, { duration: 1 }))
+    ), -1);
+    return () => cancelAnimation(pulse);
+  }, [open, reduced, pulse]);
+  const breathing = useAnimatedStyle(() => ({ transform: [{ scale: reduced ? 1 : 1 + pulse.value * .025 }] }));
+  const halo = useAnimatedStyle(() => ({ opacity: reduced ? 0 : pulse.value * .14, transform: [{ scale: 1 + pulse.value * .18 }] }));
   return <>
+    <Animated.View pointerEvents={open ? 'none' : 'auto'} style={[{ position: 'absolute', right: 20, bottom: insets.bottom + 58, width: 56, height: 56 }, breathing]}>
     <Pressable accessibilityRole="button" accessibilityLabel="Записать еду голосом"
       onPress={() => { haptic.tap(); setOpen(true); }}
-      style={({ pressed }) => ({ position: 'absolute', right: 20, bottom: insets.bottom + 90, width: 56, height: 56,
+      style={({ pressed }) => ({ width: 56, height: 56,
         borderRadius: 28, backgroundColor: p.primary, alignItems: 'center', justifyContent: 'center',
         opacity: pressed ? .8 : 1, transform: [{ scale: pressed ? .94 : 1 }], elevation: 5,
         shadowColor: p.shadow, shadowOpacity: .18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } })}>
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: 28, borderWidth: 2, borderColor: p.primary }, halo]} />
       <Icon name="mic" size={24} color={p.onPrimary} />
     </Pressable>
+    </Animated.View>
     {open && <VoiceDialog onClose={() => setOpen(false)} onSaved={onSaved} />}
   </>;
 }
@@ -128,6 +144,8 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
       if (!alive.current || generation.current !== version) return;
       if (!access.granted) { setPermissionDenied(true); throw new Error('Разрешите микрофон, чтобы назвать продукты голосом.'); }
       if (speechBlocked()) { setCapture('idle'); return; }
+      await playVoiceCue('start');
+      if (!alive.current || generation.current !== version || speechBlocked()) return;
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, shouldPlayInBackground: false });
       if (!alive.current || generation.current !== version) { await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true }); return; }
       pcm.current.clear(); erase(upload.current); upload.current = null; requestKey.current = newKey(); textSignature.current = '';
@@ -155,9 +173,9 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
     }).catch(e => { if (alive.current && !ctl.signal.aborted) { stop(); setError(e.message); } });
     const buffer = pcm.current, previewCapture = preview.current;
     queueMicrotask(() => { if (alive.current) start(); });
-    const sub = AppState.addEventListener('change', state => { if (state !== 'active') stop(); });
+    const sub = AppState.addEventListener('change', state => { if (state !== 'active') { if (state === 'background') { cancelVoiceCue(); if (permission.current) { invalidate(); setCapture('idle'); } } stop(); } });
     return () => {
-      alive.current = false; previewCapture.cancel(); invalidate(); ctl.abort(); request.current?.abort();
+      alive.current = false; cancelVoiceCue(); previewCapture.cancel(); invalidate(); ctl.abort(); request.current?.abort();
       if (timeout.current) clearTimeout(timeout.current);
       recording.current = false;
       try { stream.stop(); } catch {}
@@ -210,7 +228,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
       if (!alive.current) return;
       setDraft(result); setItems(fillKnownMeal(result.items)); setTranscript(result.transcript);
       setRefine(null);
-      setMode('review'); setExpanded(null); setTextOpen(false); setMealPicker(null); haptic.success();
+      setMode('review'); setExpanded(null); setTextOpen(false); setMealPicker(null); haptic.success(); if (!asText) void playVoiceCue('ready');
       erase(upload.current); upload.current = null; pcm.current.clear(); setCapture('idle');
     } catch (e) {
       if (!alive.current) return;
