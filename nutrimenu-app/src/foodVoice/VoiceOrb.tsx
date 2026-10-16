@@ -38,7 +38,7 @@ export function VoiceOrb({ level, processing }: { level: number; processing: boo
   });
   return <View accessible={false} style={{ height: processing ? 116 : 148, alignItems: 'center', justifyContent: 'center' }}>
     <Animated.View style={[{ width: processing ? 108 : 136, height: processing ? 108 : 136 }, shape]}>
-      <Svg width="160" height="160" viewBox="-10 -10 220 220">
+      <Svg width={processing ? 108 : 136} height={processing ? 108 : 136} viewBox="-10 -10 220 220">
         <Defs>
           <ClipPath id={`${id}clip`}><Fluid animatedProps={outline} /></ClipPath>
           <RadialGradient id={`${id}base`} cx="34%" cy="24%" rx="86%" ry="86%">

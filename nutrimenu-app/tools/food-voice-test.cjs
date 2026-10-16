@@ -33,6 +33,8 @@ check(offsets.length>=20&&offsets.every(Number.isFinite)&&warnings.length===0&&!
 const food = (id, name, piece_g = null) => ({ id, name, piece_g, kcal: 100, protein: 10, fat: 3, carbs: 5, fiber: 0 });
 check(model.rowHint({name:'тунец в собственном соку',candidates:[food(900,'Тунец в собственном соку')],ingredient_id:null})==='Выберите вариант','tuna hint never asks the liquid already spoken');
 check(model.rowHint({name:'творог 5%',candidates:[food(900,'Творог 5%')],ingredient_id:null})==='Выберите вариант','fat already spoken is not asked twice');
+check(/<Svg width=\{processing \? 108 : 136\} height=\{processing \? 108 : 136\}/.test(orbSource),'SVG matches the actual compact stage in both modes, preventing caption overlap');
+const shortPCM=new VoicePCM();shortPCM.push(new Float32Array(16000*4).fill(.2).buffer,16000,1);check(shortPCM.seconds===4&&shortPCM.encode().byteLength===128000,'four-second dictation remains valid PCM, no four-second cutoff');
 const egg = food(1, 'Яйцо', 60), rice = food(2, 'Рис варёный'), dryRice = food(3, 'Рис сухой');
 const row = { name: 'яйца', phrase: '2 яйца', quantity_text: '2 шт.', grams: 120, pieces: 2,
   weight_source: 'pieces', meal: null, ingredient_id: 1, candidates: [egg] };
@@ -237,6 +239,13 @@ function speak(seconds = 1) { audioBuffer({ data: new Float32Array(16000 * secon
   check(tree.root.findAllByType('Text').some(n => n.children.join('') === 'Записано'), 'server-confirmed success');
   await tap(textButton('Готово'));
   await act(async () => tree.unmount());
+
+  await mount(); await act(async () => speak(4));
+  check(label('Остановить запись').props.accessibilityValue.now===4,'four-second hook capture remains active before explicit stop');
+  await tap(label('Остановить запись'));failAnalyze=true;await tap(label('Отправить запись'));
+  check(files.size===1&&files.values().next().value.length===128000,'failed four-second upload retains all captured bytes');
+  await tap(label('Отправить запись'));check(files.size===0&&tree.root.findAllByType('Text').some(t=>t.children.join('')==='Проверьте еду'),'four-second retry reaches food review');
+  await tap(label('Закрыть'));await act(async () => tree.unmount());
 
   await mount(); await act(async () => speak());
   const beforeStop = stops;
