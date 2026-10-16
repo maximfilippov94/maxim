@@ -1,7 +1,9 @@
 import React, { useEffect, useId } from 'react';
 import { View } from 'react-native';
-import Svg, { Circle, ClipPath, Defs, G, Path, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { ClipPath, Defs, G, Path, RadialGradient, Stop } from 'react-native-svg';
 import Animated, { cancelAnimation, Easing, useAnimatedProps, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+
+import { orbContour } from './orbGeometry';
 
 const Fluid = Animated.createAnimatedComponent(Path);
 
@@ -12,11 +14,12 @@ export function VoiceOrb({ level, processing }: { level: number; processing: boo
   useEffect(() => { volume.value = withTiming(Math.max(0, Math.min(1, level)), { duration: 160 }); }, [level, volume]);
   useEffect(() => {
     cancelAnimation(phase);
-    if (!reduced) phase.value = withRepeat(withTiming(phase.value + Math.PI * 2, { duration: processing ? 6200 : 14000, easing: Easing.linear }), -1);
+    if (!reduced) phase.value = withRepeat(withTiming(phase.value + Math.PI * 2, { duration: processing ? 3400 : 5600, easing: Easing.linear }), -1);
     else phase.value = 0;
     return () => cancelAnimation(phase);
   }, [processing, reduced, phase]);
-  const shape = useAnimatedStyle(() => ({ transform: [{ scale: reduced ? 1 : 1 + volume.value * .045 }] }));
+  const shape = useAnimatedStyle(() => ({ transform: [{ scale: reduced ? 1 : 1 + volume.value * .035 }] }));
+  const outline = useAnimatedProps(() => ({ d: orbContour(reduced ? 0 : phase.value, reduced ? 0 : volume.value) }));
   const lower = useAnimatedProps(() => {
     const t = reduced ? 0 : phase.value, a = reduced ? 0 : volume.value * 12;
     return { d: `M-12 109 C${28 + Math.sin(t) * 13} ${38 - a},49 ${146 + Math.cos(t) * 14},105 ${126 + Math.sin(t) * 16} C154 ${104 - a},154 ${39 + Math.cos(t) * 18},211 78 L214 220 L-12 220Z` };
@@ -33,43 +36,43 @@ export function VoiceOrb({ level, processing }: { level: number; processing: boo
     const t = reduced ? 0 : phase.value, y = Math.sin(t) * 6;
     return { d: `M27 ${96+y} C13 ${84+y},15 139,39 156 C68 178,96 ${153-y},86 ${123-y} C79 104,50 ${115+y},27 ${96+y}Z` };
   });
-  return <View accessible={false} style={{ height: 230, alignItems: 'center', justifyContent: 'center' }}>
-    <Animated.View style={[{ width: 166, height: 166 }, shape]}>
-      <Svg width="166" height="166" viewBox="0 0 200 200">
+  return <View accessible={false} style={{ height: 174, alignItems: 'center', justifyContent: 'center' }}>
+    <Animated.View style={[{ width: 160, height: 160 }, shape]}>
+      <Svg width="160" height="160" viewBox="-10 -10 220 220">
         <Defs>
-          <ClipPath id={`${id}clip`}><Circle cx="100" cy="100" r="98" /></ClipPath>
+          <ClipPath id={`${id}clip`}><Fluid animatedProps={outline} /></ClipPath>
           <RadialGradient id={`${id}base`} cx="34%" cy="24%" rx="86%" ry="86%">
-            <Stop offset="0" stopColor="#FFFFF5" /><Stop offset=".42" stopColor="#E8EEC2" />
-            <Stop offset=".77" stopColor="#C3D36D" /><Stop offset="1" stopColor="#86944B" />
+            <Stop offset={0.0} stopColor="#FFFFF5" /><Stop offset={0.42} stopColor="#E8EEC2" />
+            <Stop offset={0.77} stopColor="#C3D36D" /><Stop offset={1.0} stopColor="#86944B" />
           </RadialGradient>
           <RadialGradient id={`${id}pool`} cx="32%" cy="42%" rx="66%" ry="73%">
-            <Stop offset="0" stopColor="#758747" stopOpacity=".86" /><Stop offset=".44" stopColor="#B8CE61" stopOpacity=".86" />
-            <Stop offset=".76" stopColor="#E7F89B" stopOpacity=".72" /><Stop offset="1" stopColor="#FBFFE3" stopOpacity=".12" />
+            <Stop offset={0.0} stopColor="#758747" stopOpacity=".86" /><Stop offset={0.44} stopColor="#B8CE61" stopOpacity=".86" />
+            <Stop offset={0.76} stopColor="#E7F89B" stopOpacity=".72" /><Stop offset={1.0} stopColor="#FBFFE3" stopOpacity=".12" />
           </RadialGradient>
           <RadialGradient id={`${id}light`} cx="34%" cy="28%" rx="72%" ry="74%">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity=".95" /><Stop offset=".52" stopColor="#FAFFE5" stopOpacity=".8" />
-            <Stop offset=".84" stopColor="#F0F7CC" stopOpacity=".16" /><Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
+            <Stop offset={0.0} stopColor="#FFFFFF" stopOpacity=".95" /><Stop offset={0.52} stopColor="#FAFFE5" stopOpacity=".8" />
+            <Stop offset={0.84} stopColor="#F0F7CC" stopOpacity=".16" /><Stop offset={1.0} stopColor="#FFFFFF" stopOpacity="0" />
           </RadialGradient>
           <RadialGradient id={`${id}fold`} cx="60%" cy="55%" rx="65%" ry="60%">
-            <Stop offset="0" stopColor="#F9FFE8" stopOpacity=".84" /><Stop offset=".48" stopColor="#E5F4AB" stopOpacity=".36" />
-            <Stop offset="1" stopColor="#DFFF3A" stopOpacity="0" />
+            <Stop offset={0.0} stopColor="#F9FFE8" stopOpacity=".84" /><Stop offset={0.48} stopColor="#E5F4AB" stopOpacity=".36" />
+            <Stop offset={1.0} stopColor="#DFFF3A" stopOpacity="0" />
           </RadialGradient>
           <RadialGradient id={`${id}lens`} cx="31%" cy="38%" rx="76%" ry="72%">
-            <Stop offset="0" stopColor="#839258" stopOpacity=".7" /><Stop offset=".42" stopColor="#BECF7C" stopOpacity=".65" />
-            <Stop offset=".73" stopColor="#FBFFE5" stopOpacity=".78" /><Stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
+            <Stop offset={0.0} stopColor="#839258" stopOpacity=".7" /><Stop offset={0.42} stopColor="#BECF7C" stopOpacity=".65" />
+            <Stop offset={0.73} stopColor="#FBFFE5" stopOpacity=".78" /><Stop offset={1.0} stopColor="#FFFFFF" stopOpacity="0" />
           </RadialGradient>
           <RadialGradient id={`${id}shine`} cx="30%" cy="21%" rx="65%" ry="65%">
-            <Stop offset="0" stopColor="#FFFFFF" stopOpacity=".6" /><Stop offset=".24" stopColor="#FFFFFF" stopOpacity=".16" />
-            <Stop offset=".66" stopColor="#FFFFFF" stopOpacity="0" />
+            <Stop offset={0.0} stopColor="#FFFFFF" stopOpacity=".6" /><Stop offset={0.24} stopColor="#FFFFFF" stopOpacity=".16" />
+            <Stop offset={0.66} stopColor="#FFFFFF" stopOpacity="0" />
           </RadialGradient>
         </Defs>
         <G clipPath={`url(#${id}clip)`}>
-          <Circle cx="100" cy="100" r="98" fill={`url(#${id}base)`} />
+          <Fluid animatedProps={outline} fill={`url(#${id}base)`} />
           <Fluid animatedProps={lower} fill={`url(#${id}pool)`} />
           <Fluid animatedProps={upper} fill={`url(#${id}light)`} />
           <Fluid animatedProps={fold} fill={`url(#${id}fold)`} />
           <Fluid animatedProps={lens} fill={`url(#${id}lens)`} />
-          <Circle cx="100" cy="100" r="98" fill={`url(#${id}shine)`} />
+          <Fluid animatedProps={outline} fill={`url(#${id}shine)`} />
         </G>
       </Svg>
     </Animated.View>

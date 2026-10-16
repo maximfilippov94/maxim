@@ -16,6 +16,20 @@ const { VoicePCM } = require('../src/foodVoice/pcm.ts');
 const model = require('../src/foodVoice/model.ts');
 let checks = 0;
 const check = (condition, message) => { checks++; assert.ok(condition, message); };
+const { orbContour } = require('../src/foodVoice/orbGeometry.ts');
+check(orbContour(0,0)!==orbContour(1,0),'liquid silhouette moves even in silence');
+check(orbContour(1,0)!==orbContour(1,1),'real volume deforms silhouette, not just internal texture');
+check(orbContour(0,NaN)===orbContour(0,0),'invalid volume is safely quiet');
+const contour=orbContour(2,1);check(contour.endsWith('Z')&&(contour.match(/C/g)||[]).length===12,'contour is one closed smooth shape');
+for(const t of [0,1,2,3,4,5,6]){const coords=orbContour(t,1).match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/g).map(Number);check(coords.every(n=>Number.isFinite(n)&&n>=-10&&n<=210),'loud outline remains in viewport at phase '+t);}
+// Reproduce the exact installed SVG parser warning from the user's screenshot.
+const gradient=fs.readFileSync(require.resolve('react-native-svg/src/lib/extract/extractGradient.ts'),'utf8');
+const parserCode=gradient.slice(gradient.indexOf('const percentReg'),gradient.indexOf('const offsetComparator'));
+const warnings=[];const parser=require('node:vm').runInNewContext(ts.transpileModule(parserCode+'\npercentToFloat;', {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{console:{warn:m=>warnings.push(m)}});
+parser('.48');check(warnings.length===1,'installed SVG parser reproduces old fractional-string warning');warnings.length=0;
+const orbSource=fs.readFileSync(require.resolve('../src/foodVoice/VoiceOrb.tsx'),'utf8');
+const offsets=[...orbSource.matchAll(/offset=\{([0-9.]+)\}/g)].map(m=>parser(Number(m[1])));
+check(offsets.length>=20&&offsets.every(Number.isFinite)&&warnings.length===0&&!/offset="\./.test(orbSource),'all current stops accepted by actual installed SVG parser without warnings');
 const food = (id, name, piece_g = null) => ({ id, name, piece_g, kcal: 100, protein: 10, fat: 3, carbs: 5, fiber: 0 });
 const egg = food(1, 'Яйцо', 60), rice = food(2, 'Рис варёный'), dryRice = food(3, 'Рис сухой');
 const row = { name: 'яйца', phrase: '2 яйца', quantity_text: '2 шт.', grams: 120, pieces: 2,

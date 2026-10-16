@@ -268,19 +268,23 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
   return <Modal transparent animationType="fade" onRequestClose={close} statusBarTranslucent>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', paddingTop: insets.top + 10 }}>
       <Pressable accessibilityLabel="Закрыть голосовой дневник" onPress={close} style={StyleSheet.absoluteFill}>
-        <BlurView intensity={22} tint={p.name} style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9,16,18,.45)' }]} />
+        <BlurView intensity={8} tint={p.name} style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(9,16,18,.16)' }]} />
       </Pressable>
-      <Animated.View layout={LinearTransition.duration(220).reduceMotion(ReduceMotion.System)} accessibilityViewIsModal style={{ backgroundColor: p.surface, borderTopLeftRadius: 30, borderTopRightRadius: 30,
+      <Animated.View layout={LinearTransition.duration(220).reduceMotion(ReduceMotion.System)} accessibilityViewIsModal style={{ backgroundColor: 'transparent', overflow: 'hidden', borderTopLeftRadius: 28, borderTopRightRadius: 28,
         maxHeight: Math.max(240, height - insets.top - 20), flexShrink: 1, paddingBottom: Math.max(insets.bottom, 14) }}>
-        <View accessible={false} style={{ width: 38, height: 4, borderRadius: 2, backgroundColor: p.text3, opacity: .5, alignSelf: 'center', marginTop: 10, marginBottom: 12 }} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 14 }}>
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          <BlurView intensity={64} tint={p.name === 'dark' ? 'systemThinMaterialDark' : 'systemThinMaterialLight'} style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: p.name === 'dark' ? 'rgba(22,31,40,.48)' : 'rgba(247,249,248,.66)' }]} />
+        </View>
+        <View accessible={false} style={{ width: 38, height: 4, borderRadius: 2, backgroundColor: p.text3, opacity: .5, alignSelf: 'center', marginTop: 10, marginBottom: 4 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 4 }}>
           {mode === 'edit' && <RoundButton label="Назад к списку" icon="back" action={() => { setMode('review'); setEditor(null); setError(''); }} />}
           <Text accessibilityRole="header" style={[ink, { flex: 1, fontSize: 22, fontWeight: '600', letterSpacing: -.5 }]}>{title}</Text>
           <RoundButton label={mode === 'record' ? (refine ? 'Вернуться к списку' : 'Отменить запись') : 'Закрыть'} icon="close" action={mode === 'record' && refine ? cancelRefinement : close} disabled={saving} subtle />
         </View>
         <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={false}
-          style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 14, gap: 12 }}>
+          style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 4, gap: 12 }}>
           {(mode === 'record' || processing) && <>
             <VoiceOrb level={level} processing={processing} />
             <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10, paddingBottom: 8 }}>
@@ -290,8 +294,8 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
               </Text>
               {!processing && <Text style={[muted, { fontSize: 15, fontVariant: ['tabular-nums'] }]}>0:{String(Math.floor(seconds)).padStart(2, '0')}</Text>}
             </View>
-            {mode === 'record' && <View style={{ minHeight: 72, justifyContent: 'center', paddingHorizontal: 8, paddingBottom: 12 }}>
-              <Text accessibilityLabel="Предварительно распознанная речь" accessibilityLiveRegion="polite" style={{ color: liveText ? p.text : p.text3, fontSize: liveText ? 20 : 16, lineHeight: 28, textAlign: 'center' }} numberOfLines={3}>{liveText || (refine ? 'Скажите, что изменить' : 'Назовите продукты и количество')}</Text>
+            {mode === 'record' && <View style={{ minHeight: liveText ? 48 : 24, justifyContent: 'center', paddingHorizontal: 8, paddingBottom: 4 }}>
+              <Text accessibilityLabel="Предварительно распознанная речь" accessibilityLiveRegion="polite" style={{ color: liveText ? p.text : p.text3, fontSize: liveText ? 18 : 14, lineHeight: 24, textAlign: 'center' }} numberOfLines={2}>{liveText || (refine ? 'Скажите, что изменить' : 'Назовите продукты и количество')}</Text>
             </View>}
           </>}
           {mode === 'text' && <TextInput accessibilityLabel="Что вы съели" multiline autoFocus maxLength={2500} value={transcript}
@@ -360,7 +364,7 @@ function NativeVoiceDialog({ onClose, onSaved }: { onClose: () => void; onSaved:
           {permissionDenied && <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()} style={{ paddingVertical: 10 }}><Text style={{ color: p.accent }}>Открыть настройки микрофона</Text></Pressable>}
         </ScrollView>
         <View style={{ paddingHorizontal: 20, paddingTop: 10, borderTopWidth: mode === 'review' || mode === 'edit' ? StyleSheet.hairlineWidth : 0, borderTopColor: p.separator }}>
-          {mode === 'record' && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', paddingTop: 8, paddingBottom: 24 }}>
+          {mode === 'record' && <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center', justifyContent: 'center', paddingTop: 4, paddingBottom: 8 }}>
             {<RoundButton label="Ввести текст" icon="keyboard" action={() => { invalidate(); stop(); if (liveText) setTranscript(liveText); setMode('text'); }} disabled={capture === 'permission'} />}
             {<RoundButton label={capture === 'recording' ? 'Остановить запись' : 'Записать ещё раз'} icon={capture === 'recording' ? 'pause' : 'mic'} action={() => capture === 'recording' ? stop() : start()} disabled={capture === 'permission' || cap?.speech_available === false} />}
             {<RoundButton label="Отправить запись" icon="arrowUp" action={() => analyze()} primary disabled={!['recording', 'ready'].includes(capture) || cap?.speech_available === false} />}
