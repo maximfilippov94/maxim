@@ -18,6 +18,7 @@ import { Announce } from '../ui/Announce';
 import { round, kg, plural } from '../format';
 import { haptic } from '../haptics';
 import { useToast } from '../ui/Toast';
+import { FoodVoice } from '../foodVoice/FoodVoice';
 import { TodayWorkout, TodayCycle, TodayPlanSource } from '../ui/TodayBlocks';
 import type { WorkoutToday, HealthResponse, AiAccess } from '../ui/TodayBlocks';
 
@@ -355,6 +356,7 @@ export default function Today() {
         {items.length > 0 && `${doneCount} ${plural(doneCount, ['приём', 'приёма', 'приёмов'])} из ${items.length} отмечено`}
       </Muted>
     </ScrollView>
+    <FoodVoice onSaved={() => { load(true); }} />
     </>
   );
 }
