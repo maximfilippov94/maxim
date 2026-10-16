@@ -81,6 +81,8 @@ export function dropGetCache(prefix?: string) {
 }
 
 export interface ApiOptions {
+  /** Голосовой разбор включает распознавание и проверку списка на сервере. */
+  timeoutMs?: number;
   method?: string;
   body?: any;
   retry?: boolean;
@@ -162,7 +164,7 @@ async function request<T = any>(
     /* Без таймаута зависшее соединение держит экран в загрузке до
        бесконечности: телефон в лифте не рвёт сокет, а просто молчит. */
     const abort = new AbortController();
-    const timer = setTimeout(() => abort.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => abort.abort(), opt.timeoutMs ?? TIMEOUT_MS);
     /* Отмена снаружи: человек ушёл с экрана, набрал в поиске дальше или
        нажал «Остановить». Запрос обрывается сразу, а не доживает до
        таймаута, занимая соединение. */
