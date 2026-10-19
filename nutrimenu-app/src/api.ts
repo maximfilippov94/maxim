@@ -6,7 +6,7 @@ import { readToken, writeToken } from './tokenStore';
 
 /** Адрес сервера. На проде — боевой домен, при разработке подменяется. */
 export const API_BASE =
-  process.env.EXPO_PUBLIC_API_BASE ?? 'https://nutrimenu.ru';
+  process.env.EXPO_PUBLIC_API_BASE ?? 'https://equaapp.ru';
 
 let token: string | null = null;
 
