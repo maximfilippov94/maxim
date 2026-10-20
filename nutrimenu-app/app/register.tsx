@@ -29,7 +29,7 @@ import { SignUpProfile, api } from '../src/api';
 import { S, R, FONT, alpha } from '../src/theme';
 import { Icon } from '../src/ui/Icon';
 import { AuthShell, ON_PHOTO, photoField, Note, AuthButton } from '../src/ui/AuthShell';
-import { LegalNote } from '../src/ui/LegalNote';
+import { openLegal } from '../src/ui/legal';
 import { haptic } from '../src/haptics';
 
 type Role = 'client' | 'specialist';
@@ -84,6 +84,9 @@ export default function Register() {
   const [dislikes, setDislikes] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [termsOk, setTermsOk] = useState(false);
+  const [personalDataOk, setPersonalDataOk] = useState(false);
+  const [healthDataOk, setHealthDataOk] = useState(false);
 
   const profile = useCallback((): SignUpProfile => ({
     ...(sex ? { sex } : {}),
@@ -96,6 +99,9 @@ export default function Register() {
 
   const create = useCallback(async () => {
     setErr(null);
+    if (!termsOk || !personalDataOk || (role === 'client' && !healthDataOk)) {
+      haptic.error(); setErr('Подтвердите обязательные согласия перед регистрацией'); return;
+    }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
       haptic.error(); setErr('Проверьте адрес почты'); return;
     }
@@ -109,6 +115,9 @@ export default function Register() {
         name: name.trim(),
         email: email.trim(),
         password: pass,
+        consent_terms: true,
+        consent_personal_data: true,
+        ...(role === 'client' ? { consent_health_data: true as const } : {}),
         ...(role === 'specialist'
           ? { profession: prof }
           : { profile: profile() }),
@@ -133,7 +142,7 @@ export default function Register() {
     } catch (e: any) {
       haptic.error(); setErr(e?.message ?? 'Не удалось зарегистрироваться');
     } finally { setBusy(false); }
-  }, [role, name, email, pass, prof, dislikes, profile, signUp]);
+  }, [role, name, email, pass, prof, dislikes, profile, signUp, termsOk, personalDataOk, healthDataOk]);
 
   /* Проверка своя на каждом шаге: дальше пускаем только с ответом, но
      спрашиваем по одному — человеку не приходится искать, где он
@@ -236,12 +245,14 @@ export default function Register() {
         <Chips items={PROFESSIONS.map(([k, l]) => [k, l])}
           value={prof} onChange={v => setProf(v as Prof)} />
 
+        <ConsentChecklist role="specialist" terms={termsOk} setTerms={setTermsOk}
+          personal={personalDataOk} setPersonal={setPersonalDataOk} />
+
         {problem}
 
         <View style={{ marginTop: S.xl }}>
           <AuthButton title={busy ? 'Создаём…' : 'Создать аккаунт'}
             loading={busy} onPress={create} />
-          <LegalNote color={ON_PHOTO.text3} link={ON_PHOTO.text2} />
         </View>
       </AuthShell>
     );
@@ -348,6 +359,9 @@ export default function Register() {
                 secureTextEntry autoComplete="new-password"
                 placeholder="Пароль — от 8 символов, буква и цифра"
                 placeholderTextColor={ON_PHOTO.text3} />
+              <ConsentChecklist role="client" terms={termsOk} setTerms={setTermsOk}
+                personal={personalDataOk} setPersonal={setPersonalDataOk}
+                health={healthDataOk} setHealth={setHealthDataOk} />
             </>
           ) : null}
         </View>
@@ -359,9 +373,40 @@ export default function Register() {
         <AuthButton
           title={busy ? 'Создаём…' : step < STEPS ? 'Далее' : 'Создать аккаунт'}
           loading={busy} onPress={next} />
-        {step === STEPS ? <LegalNote color={ON_PHOTO.text3} link={ON_PHOTO.text2} /> : null}
       </View>
     </AuthShell>
+  );
+}
+
+function ConsentChecklist({ role, terms, setTerms, personal, setPersonal, health, setHealth }: {
+  role: Role; terms: boolean; setTerms: (v: boolean) => void;
+  personal: boolean; setPersonal: (v: boolean) => void;
+  health?: boolean; setHealth?: (v: boolean) => void;
+}) {
+  const row = (checked: boolean, toggle: () => void, content: React.ReactNode, key: string) => (
+    <Pressable key={key} onPress={toggle} accessibilityRole="checkbox" accessibilityState={{ checked }}
+      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: S.md }}>
+      <View style={{ width: 21, height: 21, borderRadius: 6, marginTop: 1, alignItems: 'center', justifyContent: 'center',
+        backgroundColor: checked ? ON_PHOTO.primary : 'transparent', borderWidth: 1,
+        borderColor: checked ? ON_PHOTO.primary : ON_PHOTO.fieldBorder }}>
+        {checked ? <Icon name="check" size={13} color={ON_PHOTO.onPrimary} width={2.5} /> : null}
+      </View>
+      <Text style={{ flex: 1, fontSize: 12, lineHeight: 17, color: ON_PHOTO.text2 }}>{content}</Text>
+    </Pressable>
+  );
+  const link = (doc: 'terms' | 'privacy', label: string) => (
+    <Text onPress={() => { haptic.tap(); openLegal(doc); }} style={{ color: ON_PHOTO.accent, textDecorationLine: 'underline' }}>{label}</Text>
+  );
+  return (
+    <View style={{ marginTop: S.lg, padding: S.md, borderRadius: R.md,
+      backgroundColor: 'rgba(255,255,255,0.045)', borderWidth: 1, borderColor: ON_PHOTO.fieldBorder }}>
+      <Text style={{ fontSize: 12, lineHeight: 17, color: ON_PHOTO.text3 }}>
+        Отметьте каждый пункт отдельно. Согласие на данные о здоровье требуется клиенту для расчёта питания и работы персональных рекомендаций.
+      </Text>
+      {row(terms, () => setTerms(!terms), <>Принимаю {link('terms', 'условия использования')} EQUA.</>, 'terms')}
+      {row(personal, () => setPersonal(!personal), <>Даю согласие на обработку персональных данных согласно {link('privacy', 'политике обработки персональных данных')}.</>, 'personal')}
+      {role === 'client' && setHealth ? row(!!health, () => setHealth(!health), <>Даю отдельное согласие на обработку специальных категорий персональных данных о здоровье, которые указываю в анкете и использую в приложении.</>, 'health') : null}
+    </View>
   );
 }
 

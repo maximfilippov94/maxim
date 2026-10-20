@@ -108,6 +108,7 @@ function Root() {
         <Stack.Screen name="sp-services" />
         <Stack.Screen name="sp-leads" />
         <Stack.Screen name="sp-verification" />
+        <Stack.Screen name="sp-documents" />
         <Stack.Screen name="sp-reviews" />
         <Stack.Screen name="sp-rewards" />
         <Stack.Screen name="sp-workouts" />
@@ -167,6 +168,8 @@ function Root() {
         <Stack.Screen name="cycle" />
         <Stack.Screen name="cycle-settings" />
         <Stack.Screen name="dish/[id]" />
+        <Stack.Screen name="food-source" />
+        <Stack.Screen name="dish-catalog" />
         {/* Системная шторка iOS с фиксаторами высоты: тянется пальцем,
             фон остаётся видимым — привычное поведение, а не своё окно. */}
         <Stack.Screen
