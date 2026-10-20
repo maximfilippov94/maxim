@@ -84,7 +84,9 @@ export default function SpMore() {
             с профилем, а не в глубине настроек. */}
         <ListHead>Доверие</ListHead>
         <ListGroup>
-          <ListRow first icon="shield" label="Верификация"
+          <ListRow first icon="clip" label="Документы и договор"
+            onPress={() => router.push('/sp-documents')} />
+          <ListRow icon="shield" label="Верификация"
             value={VERIFY_LABEL[pr?.verify_status ?? 'none']}
             onPress={() => router.push('/sp-verification')} />
           <ListRow icon="star" label="Отзывы"
