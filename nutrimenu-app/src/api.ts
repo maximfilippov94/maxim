@@ -796,6 +796,10 @@ export interface SignUp {
   profession?: 'nutritionist' | 'trainer' | 'endocrinologist' | 'coach';
   /** Анкета клиента: по ней считается предварительная норма */
   profile?: SignUpProfile;
+  /** Отдельные явные отметки; API сервера обязан проверить и записать их. */
+  consent_terms: true;
+  consent_personal_data: true;
+  consent_health_data?: true;
 }
 
 /* ---------- Кабинет специалиста ---------- */
