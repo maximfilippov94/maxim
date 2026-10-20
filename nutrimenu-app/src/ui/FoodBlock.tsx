@@ -120,7 +120,7 @@ export function MealAdd({ meal }: { meal: string }) {
   const { p } = useApp();
   return (
     <Pressable
-      onPress={() => { haptic.tap(); router.push(`/food-log?meal=${meal}`); }}
+      onPress={() => { haptic.tap(); router.push(`/food-source?meal=${meal}`); }}
       style={({ pressed }) => ({
         flexDirection: 'row', alignItems: 'center', gap: 8,
         minHeight: 46, paddingHorizontal: 12,
