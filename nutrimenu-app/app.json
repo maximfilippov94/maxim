@@ -1,0 +1,86 @@
+{
+  "expo": {
+    "name": "EQUA",
+    "slug": "equa",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "equa",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ru.equa.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Камера нужна для видеозвонка со специалистом, снимков блюд и сканирования штрихкода продукта.",
+        "NSMicrophoneUsageDescription": "Микрофон нужен для видеозвонка и голосовых сообщений специалисту.",
+        "NSPhotoLibraryUsageDescription": "Доступ к фото нужен, чтобы прикреплять снимки к сообщениям и прогрессу.",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "CFBundleDevelopmentRegion": "ru",
+        "CFBundleLocalizations": [
+          "ru"
+        ]
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "ru.equa.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/equa-adaptive.png",
+        "backgroundColor": "#DBFC15"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Камера нужна для видеозвонка со специалистом, снимков блюд и сканирования штрихкода продукта."
+        }
+      ],
+      "expo-image-picker",
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "color": "#2E7D63",
+          "defaultChannel": "default"
+        }
+      ],
+      "expo-video",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/equa-splash.png",
+          "imageWidth": 190,
+          "resizeMode": "contain",
+          "backgroundColor": "#121820",
+          "dark": {
+            "backgroundColor": "#121820"
+          }
+        }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Камера нужна для видеозвонка со специалистом, снимков блюд и сканирования штрихкода продукта.",
+          "microphonePermission": "Микрофон нужен для видеозвонка и голосовых сообщений специалисту."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "icon": "./assets/equa-icon.png"
+  }
+}

@@ -1,0 +1,73 @@
+import React from 'react';
+
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useApp } from '../../src/store';
+
+/**
+ * Нижняя панель — настоящая системная, та же, что у Apple в своих
+ * приложениях и у Телеграма. Своя реализация повторить её не могла:
+ * стеклянный бегунок там не заливка, а линза, и перетекает он средствами
+ * системы, недоступными снаружи.
+ *
+ * Плата за это — перелистывание страниц пальцем. У системной панели его
+ * нет: у Apple и в Телеграме вкладки тоже переключаются только нажатием.
+ *
+ * Значки — наши, из `src/ui/Icon.tsx`, отпечатанные в PNG скриптом
+ * `tools/tab-icons.mjs`. Системного символа нашей толщины не бывает: в
+ * типах `NativeTabs` лежит только имя символа, вес задать нечем, и
+ * рядом с нашим тонким контуром они читались тяжело. Заодно домик в
+ * панели перестал отличаться от домика в списке «Ещё» — это был разный
+ * рисунок. Режим `template`: цвет кладёт система, из `iconColor`.
+ */
+export default function ClientTabs() {
+  const { p } = useApp();
+  const sel = p.name === 'light' ? p.text : p.primary;
+  return (
+    /* Материал и цвета задаём явно. Панель системная, а переключатель
+       темы наш: UIKit о нём не знает и берёт оформление у телефона —
+       оттого на светлой теме панель выходила серой, если система была
+       в тёмном режиме. */
+    /* Выделенная вкладка: в тёмной теме лайм, в светлой — чернила.
+       Лайм на светлой панели в подписи пропадает, а затемнённый лайм —
+       это оливковый, который в меню и не понравился. */
+    <NativeTabs
+      tintColor={sel}
+      blurEffect={p.name === 'light' ? 'systemChromeMaterialLight' : 'systemChromeMaterialDark'}
+      iconColor={{ default: p.text3, selected: sel }}
+      labelStyle={{
+        default: { color: p.text3 },
+        selected: { color: sel },
+      }}>
+
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/home.png')} />
+        <NativeTabs.Trigger.Label>Сегодня</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="week">
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/cal.png')} />
+        <NativeTabs.Trigger.Label>Неделя</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      {/* Порядок тот же, что в вебе: чат третий, тренировки четвёртые.
+          Разный порядок у одних и тех же пяти вкладок сбивает с толку
+          сильнее, чем любая из возможных расстановок по отдельности:
+          человек открывает приложение после сайта и промахивается. */}
+      <NativeTabs.Trigger name="chat">
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/chat.png')} />
+        <NativeTabs.Trigger.Label>Чат</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="workouts">
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/dumbbell.png')} />
+        <NativeTabs.Trigger.Label>Тренировки</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="more">
+        <NativeTabs.Trigger.Icon renderingMode="template"
+          src={require('../../assets/tabs/kebab.png')} />
+        <NativeTabs.Trigger.Label>Ещё</NativeTabs.Trigger.Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
+  );
+}
